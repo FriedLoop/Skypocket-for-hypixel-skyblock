@@ -1,0 +1,47 @@
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/fxaa",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "FxaaConfig": [
+                    { "name": "EdgeThreshold", "type": "float", "value": 0.200 },
+                    { "name": "EdgeThresholdMin", "type": "float", "value": 0.080 },
+                    { "name": "Subpix", "type": "float", "value": 0.45 },
+                    { "name": "Sharpen", "type": "float", "value": 0.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/sharpen",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap",
+                    "bilinear": true
+                }
+            ],
+            "output": "minecraft:main",
+            "uniforms": {
+                "FxaaConfig": [
+                    { "name": "EdgeThreshold", "type": "float", "value": 0.200 },
+                    { "name": "EdgeThresholdMin", "type": "float", "value": 0.080 },
+                    { "name": "Subpix", "type": "float", "value": 0.45 },
+                    { "name": "Sharpen", "type": "float", "value": 0.0 }
+                ]
+            }
+        }
+    ]
+}

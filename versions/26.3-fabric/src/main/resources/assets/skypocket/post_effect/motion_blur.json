@@ -1,0 +1,76 @@
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/motion_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                },
+                {
+                    "sampler_name": "Depth",
+                    "target": "minecraft:main",
+                    "use_depth_buffer": true,
+                    "bilinear": false
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "BlurConfig": [
+                    {
+                        "name": "InvViewProj",
+                        "type": "matrix4x4",
+                        "value": [ 1.0, 0.0, 0.0, 0.0,
+                                   0.0, 1.0, 0.0, 0.0,
+                                   0.0, 0.0, 1.0, 0.0,
+                                   0.0, 0.0, 0.0, 1.0 ]
+                    },
+                    {
+                        "name": "PrevViewProj",
+                        "type": "matrix4x4",
+                        "value": [ 1.0, 0.0, 0.0, 0.0,
+                                   0.0, 1.0, 0.0, 0.0,
+                                   0.0, 0.0, 1.0, 0.0,
+                                   0.0, 0.0, 0.0, 1.0 ]
+                    },
+                    { "name": "Strength", "type": "float", "value": 0.65 },
+                    { "name": "Scale", "type": "float", "value": 1.0 },
+                    { "name": "MaxRadius", "type": "float", "value": 32.0 },
+                    { "name": "ZZeroToOne", "type": "float", "value": 1.0 },
+                    { "name": "FarDepth", "type": "float", "value": 0.0001 },
+                    { "name": "MaxVelocity", "type": "float", "value": 1.0 },
+                    { "name": "MaxParallax", "type": "float", "value": 1.0 },
+                    { "name": "Debug", "type": "float", "value": 0.0 },
+                    { "name": "CamX", "type": "float", "value": 0.0 },
+                    { "name": "CamY", "type": "float", "value": 0.0 },
+                    { "name": "CamZ", "type": "float", "value": 0.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap"
+                }
+            ],
+            "uniforms": {
+                "BlitConfig": [
+                    {
+                        "name": "ColorModulate",
+                        "type": "vec4",
+                        "value": [ 1.0, 1.0, 1.0, 1.0 ]
+                    }
+                ]
+            },
+            "output": "minecraft:main"
+        }
+    ]
+}

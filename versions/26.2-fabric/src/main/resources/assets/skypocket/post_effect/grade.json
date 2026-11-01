@@ -1,0 +1,50 @@
+{
+    "targets": {
+        "swap": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/grade",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": false
+                }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "GradeConfig": [
+                    { "name": "Exposure", "type": "float", "value": 1.05 },
+                    { "name": "Contrast", "type": "float", "value": 1.12 },
+                    { "name": "Saturation", "type": "float", "value": 1.10 },
+                    { "name": "Gamma", "type": "float", "value": 0.98 },
+                    { "name": "Lift", "type": "float", "value": 0.005 },
+                    { "name": "Temperature", "type": "float", "value": 0.5 },
+                    { "name": "Vignette", "type": "float", "value": 0.30 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "swap"
+                }
+            ],
+            "uniforms": {
+                "BlitConfig": [
+                    {
+                        "name": "ColorModulate",
+                        "type": "vec4",
+                        "value": [ 1.0, 1.0, 1.0, 1.0 ]
+                    }
+                ]
+            },
+            "output": "minecraft:main"
+        }
+    ]
+}

@@ -1,0 +1,91 @@
+{
+    "targets": {
+        "bloom_h": {},
+        "bloom_v": {},
+        "composite": {}
+    },
+    "passes": [
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/bloom_pre",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": true
+                }
+            ],
+            "output": "bloom_h",
+            "uniforms": {
+                "BloomConfig": [
+                    { "name": "BloomStrength", "type": "float", "value": 0.8 },
+                    { "name": "BloomThreshold", "type": "float", "value": 0.65 },
+                    { "name": "BloomRadius", "type": "float", "value": 20.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/bloom_blur",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "bloom_h",
+                    "bilinear": true
+                }
+            ],
+            "output": "bloom_v",
+            "uniforms": {
+                "BloomConfig": [
+                    { "name": "BloomStrength", "type": "float", "value": 0.8 },
+                    { "name": "BloomThreshold", "type": "float", "value": 0.65 },
+                    { "name": "BloomRadius", "type": "float", "value": 20.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "skypocket:post/bloom_apply",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "minecraft:main",
+                    "bilinear": false
+                },
+                {
+                    "sampler_name": "Bloom",
+                    "target": "bloom_v",
+                    "bilinear": true
+                }
+            ],
+            "output": "composite",
+            "uniforms": {
+                "BloomConfig": [
+                    { "name": "BloomStrength", "type": "float", "value": 0.8 },
+                    { "name": "BloomThreshold", "type": "float", "value": 0.65 },
+                    { "name": "BloomRadius", "type": "float", "value": 20.0 }
+                ]
+            }
+        },
+        {
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                {
+                    "sampler_name": "In",
+                    "target": "composite"
+                }
+            ],
+            "uniforms": {
+                "BlitConfig": [
+                    {
+                        "name": "ColorModulate",
+                        "type": "vec4",
+                        "value": [ 1.0, 1.0, 1.0, 1.0 ]
+                    }
+                ]
+            },
+            "output": "minecraft:main"
+        }
+    ]
+}

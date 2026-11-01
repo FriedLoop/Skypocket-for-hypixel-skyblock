@@ -1,0 +1,37 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.skypocket.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ItemInHandRendererMixin",
+    "LivingEntityMixin",
+    "KeyboardInputMixin",
+    "MinecraftAccessor",
+    "FontManagerAccessor",
+    "CameraMixin",
+    "HudMixin",
+    "GameRendererMixin",
+    "GameRendererAccessor",
+    "ShaderManagerAccessor",
+    "PostChainAccessor",
+    "PostPassAccessor",
+    "EntityMixin",
+    "LivingEntityRendererMixin",
+    "EnderDragonRendererMixin",
+    "EntityRendererMixin",
+    "AbstractArrowAccessor",
+    "StuckInBodyLayerMixin",
+    "ClientPacketListenerMixin",
+    "MultiPlayerGameModeMixin",
+    "TextDisplayAccessor",
+    "GuiGraphicsExtractorMixin",
+    "GuiGraphicsExtractorAccessor",
+    "MouseHandlerMixin",
+    "ChatComponentMixin",
+    "ChatComponentAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
