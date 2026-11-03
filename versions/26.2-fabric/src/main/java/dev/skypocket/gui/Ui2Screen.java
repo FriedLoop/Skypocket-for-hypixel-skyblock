@@ -20,7 +20,9 @@ import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 import dev.skypocket.ui.input.WheelEvent;
 import dev.skypocket.ui.mc.McUiPainter;
+import dev.skypocket.ui.widget.ColorField;
 import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.Dropdown;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -111,7 +113,9 @@ public abstract class Ui2Screen extends Screen {
 
     private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
         if (element instanceof Control control
-                && (control.isFocused() || control.isPressed() || control.flashActive())) {
+                && (control.isFocused() || control.isPressed() || control.flashActive()
+                || (control instanceof ColorField color && color.isOpen())
+                || (control instanceof Dropdown dropdown && dropdown.isOpen()))) {
             dynamic.add(control);
         }
         for (UiElement child : element.children()) {

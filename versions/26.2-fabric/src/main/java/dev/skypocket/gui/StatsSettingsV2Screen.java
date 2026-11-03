@@ -194,17 +194,10 @@ public final class StatsSettingsV2Screen extends Ui2Screen {
 
     @Override
     protected boolean cacheAllowed() {
-        if (!super.cacheAllowed()) {
-            return false;
-        }
-        // The popup is drawn live on top of the page; caching the page underneath would leave the
-        // swatch stale while the picker is being dragged.
-        for (ColorField field : colorFields) {
-            if (field.isOpen()) {
-                return false;
-            }
-        }
-        return true;
+        // Keep the page base cached while the picker is open. The open color row is collected as a
+        // dynamic control and repainted live, so its swatch stays current while the popup is drawn
+        // on top; disabling the whole page was the main source of the picker FPS drop.
+        return super.cacheAllowed();
     }
 
     @Override
