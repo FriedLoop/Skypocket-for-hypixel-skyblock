@@ -1,0 +1,140 @@
+package dev.skypocket.ui.mc;
+
+import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.render.GuiPixels;
+import dev.skypocket.ui.Rect;
+import dev.skypocket.ui.UiPainter;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+
+/**
+ * The single production painter for the reusable UI: MC rounded surfaces and device-pixel snapping
+ * live here, while widgets only see the platform-neutral UiPainter contract.
+ */
+public final class McUiPainter implements UiPainter {
+    private final GuiGraphicsExtractor graphics;
+
+    public McUiPainter(GuiGraphicsExtractor graphics) {
+        this.graphics = graphics;
+    }
+
+    public GuiGraphicsExtractor graphics() {
+        return graphics;
+    }
+
+    @Override
+    public void fill(Rect rect, int color) {
+        int x0 = Math.round(rect.x());
+        int y0 = Math.round(rect.y());
+        int x1 = Math.max(x0, Math.round(rect.right()));
+        int y1 = Math.max(y0, Math.round(rect.bottom()));
+        graphics.fill(x0, y0, x1, y1, color);
+    }
+
+    @Override
+    public void fillRounded(Rect rect, float radius, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedRect(graphics, x, y, w, h, Math.max(0, Math.round(radius)), color);
+    }
+
+    @Override
+    public void fillRoundedTop(Rect rect, float radius, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedTopRect(graphics, x, y, w, h, Math.max(0, Math.round(radius)), color);
+    }
+
+    @Override
+    public void fillRoundedBottom(Rect rect, float radius, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedBottomRect(graphics, x, y, w, h, Math.max(0, Math.round(radius)),
+                color);
+    }
+
+    @Override
+    public void outline(Rect rect, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        graphics.outline(x, y, w, h, color);
+    }
+
+    @Override
+    public void outlineRounded(Rect rect, float radius, int color) {
+        surface(rect, radius, 0, color);
+    }
+
+    @Override
+    public void surface(Rect rect, float radius, int fill, int border) {
+        if (border == 0) {
+            // Card language: brightness and shadow, not a permanent border ring.
+            fillRounded(rect, radius, fill);
+            return;
+        }
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedBorderedRect(graphics, x, y, w, h,
+                Math.max(0, Math.round(radius)), fill, border);
+    }
+
+    @Override
+    public void pill(Rect rect, int fill, int border) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        int radius = Math.max(1, h / 2);
+        if (border == 0) {
+            GuiPixels.fillRoundedRect(graphics, x, y, w, h, radius, fill);
+        } else {
+            GuiPixels.fillRoundedBorderedRect(graphics, x, y, w, h, radius, fill, border);
+        }
+    }
+
+    @Override
+    public void shadow(Rect rect, float radius) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        int r = Math.max(1, Math.round(radius));
+        GuiPixels.fillRoundedRect(graphics, x - 2, y + 2, w + 4, h + 2, r + 2, 0x26000000);
+        GuiPixels.fillRoundedRect(graphics, x - 1, y + 1, w + 2, h + 1, r + 1, 0x33000000);
+    }
+
+    @Override
+    public void text(String text, float x, float y, int color) {
+        ClickGuiFonts.drawText(graphics, text, x, y, color, false);
+    }
+
+    @Override
+    public float textWidth(String text) {
+        return ClickGuiFonts.width(text);
+    }
+
+    @Override
+    public float lineHeight() {
+        return ClickGuiFonts.lineHeight();
+    }
+
+    @Override
+    public void pushClip(Rect rect) {
+        graphics.enableScissor((int) Math.floor(rect.x()), (int) Math.floor(rect.y()),
+                (int) Math.ceil(rect.right()), (int) Math.ceil(rect.bottom()));
+    }
+
+    @Override
+    public void popClip() {
+        graphics.disableScissor();
+    }
+}

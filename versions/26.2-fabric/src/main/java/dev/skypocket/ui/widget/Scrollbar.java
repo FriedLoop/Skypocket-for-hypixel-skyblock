@@ -98,8 +98,8 @@ public final class Scrollbar extends Control {
         if (owner.maxScroll() <= 0f) {
             return;
         }
-        painter.fill(bounds(), TRACK_COLOR);
-        painter.fill(new Rect(bounds().x() - 1f, thumbY(), bounds().width() + 2f, thumbHeight()),
-                THUMB_COLOR);
+        painter.fillRounded(bounds(), 2f, TRACK_COLOR);
+        painter.fillRounded(new Rect(bounds().x() - 1f, thumbY(), bounds().width() + 2f, thumbHeight()),
+                2f, THUMB_COLOR);
     }
 }

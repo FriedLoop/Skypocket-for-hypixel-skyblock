@@ -128,7 +128,8 @@ public final class TextField extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), background());
+        painter.shadow(bounds(), palette.radius());
+        painter.surface(bounds(), palette.radius(), background(), 0);
         paintFocus(painter);
         painter.pushClip(bounds());
 

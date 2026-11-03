@@ -85,7 +85,9 @@ public abstract class Control extends Box {
 
     protected void paintFocus(UiPainter painter) {
         if (focused) {
-            painter.outline(bounds(), palette.focus());
+            // Keep the button's own surface inside the ring; drawing only the stroke on a
+            // transparent rect can make some painters fill the whole rounded area.
+            painter.surface(bounds(), palette.radius(), background(), palette.focus());
         }
     }
 }

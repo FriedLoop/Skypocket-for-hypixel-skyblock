@@ -33,15 +33,18 @@ public final class Switch extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), background());
+        painter.shadow(bounds(), palette.radius());
+        painter.surface(bounds(), palette.radius(), background(), 0);
         paintFocus(painter);
         float trackWidth = 28f;
         float trackX = bounds().right() - trackWidth - 4f;
         float trackY = bounds().y() + (bounds().height() - 12f) / 2f;
         int trackColor = value.getAsBoolean() ? palette.accent() : palette.outline();
-        painter.fill(new dev.skypocket.ui.Rect(trackX, trackY, trackWidth, 12f), trackColor);
+        painter.pill(new dev.skypocket.ui.Rect(trackX, trackY, trackWidth, 12f), trackColor,
+                palette.outline());
         float knobX = value.getAsBoolean() ? trackX + trackWidth - 10f : trackX + 2f;
-        painter.fill(new dev.skypocket.ui.Rect(knobX, trackY + 2f, 8f, 8f), palette.text());
+        painter.fillRounded(new dev.skypocket.ui.Rect(knobX, trackY + 2f, 8f, 8f), 4f,
+                palette.text());
         painter.text(label, bounds().x() + 6f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.text());
     }

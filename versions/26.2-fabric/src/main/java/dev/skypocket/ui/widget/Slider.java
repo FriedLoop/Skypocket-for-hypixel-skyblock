@@ -93,16 +93,17 @@ public final class Slider extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), background());
+        painter.shadow(bounds(), palette.radius());
+        painter.surface(bounds(), palette.radius(), background(), 0);
         paintFocus(painter);
         float trackX = bounds().x() + 8f;
         float trackY = bounds().y() + bounds().height() - 6f;
         float trackWidth = Math.max(1f, bounds().width() - 16f);
-        painter.fill(new Rect(trackX, trackY, trackWidth, 3f), palette.outline());
+        painter.pill(new Rect(trackX, trackY, trackWidth, 3f), palette.outline(), 0);
         double t = (value.getAsDouble() - min) / (max - min);
         float knobX = trackX + (float) t * trackWidth;
-        painter.fill(new Rect(trackX, trackY, knobX - trackX, 3f), palette.accent());
-        painter.fill(new Rect(knobX - 2f, trackY - 3f, 4f, 9f), palette.text());
+        painter.pill(new Rect(trackX, trackY, knobX - trackX, 3f), palette.accent(), 0);
+        painter.fillRounded(new Rect(knobX - 2f, trackY - 3f, 4f, 9f), 2f, palette.text());
         painter.text(label, bounds().x() + 6f, bounds().y() + 2f, palette.muted());
         String shown = String.format(format, value.getAsDouble());
         painter.text(shown, bounds().right() - painter.textWidth(shown) - 6f,

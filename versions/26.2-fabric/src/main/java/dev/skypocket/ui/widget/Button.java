@@ -8,8 +8,17 @@ import java.util.function.Supplier;
 
 /** A focusable push button with a dynamic label. */
 public final class Button extends Control {
+    public enum SurfaceMode {
+        CARD,
+        MENU_ONLY,
+        MENU_TOP,
+        MENU_MIDDLE,
+        MENU_BOTTOM
+    }
+
     private final Supplier<String> label;
     private final Runnable action;
+    private final SurfaceMode surfaceMode;
 
     public Button(String label, Runnable action) {
         this(() -> label, action, Style.builder().width(100f).height(24f).build(),
@@ -21,9 +30,20 @@ public final class Button extends Control {
     }
 
     public Button(Supplier<String> label, Runnable action, Style style, WidgetPalette palette) {
+        this(label, action, style, palette, SurfaceMode.CARD);
+    }
+
+    public Button(String label, Runnable action, Style style, WidgetPalette palette,
+                  SurfaceMode surfaceMode) {
+        this(() -> label, action, style, palette, surfaceMode);
+    }
+
+    public Button(Supplier<String> label, Runnable action, Style style, WidgetPalette palette,
+                  SurfaceMode surfaceMode) {
         super(style, palette);
         this.label = Objects.requireNonNull(label);
         this.action = Objects.requireNonNull(action);
+        this.surfaceMode = Objects.requireNonNull(surfaceMode);
     }
 
     @Override
@@ -33,8 +53,23 @@ public final class Button extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), background());
-        paintFocus(painter);
+        if (surfaceMode == SurfaceMode.CARD) {
+            painter.shadow(bounds(), palette.radius());
+            painter.surface(bounds(), palette.radius(), background(), 0);
+            paintFocus(painter);
+        } else if (surfaceMode == SurfaceMode.MENU_ONLY) {
+            painter.fillRounded(bounds(), palette.radius(), background());
+            paintFocus(painter);
+        } else if (surfaceMode == SurfaceMode.MENU_TOP) {
+            painter.fillRoundedTop(bounds(), palette.radius(), background());
+            paintFocus(painter);
+        } else if (surfaceMode == SurfaceMode.MENU_BOTTOM) {
+            painter.fillRoundedBottom(bounds(), palette.radius(), background());
+            paintFocus(painter);
+        } else {
+            painter.fill(bounds(), background());
+            paintFocus(painter);
+        }
         String text = label.get();
         float x = bounds().x() + (bounds().width() - painter.textWidth(text)) / 2f;
         float y = bounds().y() + (bounds().height() - painter.lineHeight()) / 2f;

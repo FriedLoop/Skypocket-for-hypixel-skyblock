@@ -17,6 +17,8 @@ public final class Ui2Theme {
                 ClickGuiStyle.accent(),
                 ClickGuiStyle.text(),
                 ClickGuiStyle.textMuted(),
-                ClickGuiStyle.accent());
+                ClickGuiStyle.accent(),
+                ClickGuiStyle.RADIUS,
+                ClickGuiStyle.PILL);
     }
 }

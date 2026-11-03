@@ -47,8 +47,13 @@ public final class Dropdown extends Control {
         popup.visible(false);
         for (int i = 0; i < this.options.size(); i++) {
             int index = i;
+            Button.SurfaceMode mode = this.options.size() == 1 ? Button.SurfaceMode.MENU_ONLY
+                    : i == 0 ? Button.SurfaceMode.MENU_TOP
+                    : i == this.options.size() - 1 ? Button.SurfaceMode.MENU_BOTTOM
+                    : Button.SurfaceMode.MENU_MIDDLE;
             popup.add(new Button(this.options.get(i), () -> select(index),
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette));
+                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette,
+                    mode));
         }
     }
 
@@ -111,7 +116,8 @@ public final class Dropdown extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), background());
+        painter.shadow(bounds(), palette.radius());
+        painter.surface(bounds(), palette.radius(), background(), 0);
         paintFocus(painter);
         int index = selected.getAsInt();
         String value = index >= 0 && index < options.size() ? options.get(index) : label;

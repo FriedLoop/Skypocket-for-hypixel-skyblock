@@ -818,10 +818,14 @@ layout(location = 0) out vec4 fragColor;
 - `Ui2TestScreen` 已改用真实 Button/Switch/Slider；临时 DemoButton 已删除。
 
 - `TextField`：单行编辑、光标、Backspace/Delete、左右/Home/End、IME 预编辑接口。
-- `Dropdown`：独立 popup layer，通过 `InputRouter.addLayer` 接收点击；选项由 Button 组成。
+- `Dropdown`：独立 popup layer，通过 `InputRouter.addLayer` 接收点击；选项由 Button 组成，菜单首/尾项只圆外侧角，中间项直角，避免每个选项像独立卡片。
 - `Scrollbar`：`ScrollView` 的绝对定位子控件，支持点击轨道和拖动滑块。
 - `LayoutEngine`：新增 `position: absolute` 与 left/right/top/bottom；绝对定位子元素不参与流式测量和 flex 分配。
 - `Ui2Theme`：把现有 `ClickGuiStyle` 的颜色 token 映射到 `WidgetPalette`。
+- `McUiPainter`：唯一的 MC 生产 painter，复用 `GuiPixels`/`ClickGuiStyle` 的圆角、pill、阴影与设备像素吸附；测试页旧的私有 `GuiPainter` 已删除。
+- `UiPainter`：新增 `fillRounded` / `outlineRounded` / `surface` / `pill` / `shadow`。
+- `WidgetPalette`：增加 `radius` / `pillRadius`，由 `ClickGuiStyle.RADIUS/PILL` 映射。
+- 控件表面不带常驻边框环，使用明度、按下色和轻微阴影建立层次；焦点是背景填充加 accent 圆角描边，不覆盖内容。
 - `TextField`：已接入 `preeditUpdated`，支持 IME 预编辑显示；提交仍通过 `charTyped`。
 
 **尚未完成**：MC 平台 Painter 的独立封装、TextField 点击定位光标、Dropdown 外部点击关闭、滚动条悬停反馈。

@@ -13,7 +13,6 @@ import dev.skypocket.ui.Style;
 import dev.skypocket.ui.Text;
 import dev.skypocket.ui.TextMeasurer;
 import dev.skypocket.ui.UiElement;
-import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.InputRouter;
 import dev.skypocket.ui.input.KeyEvent;
 import dev.skypocket.ui.input.Keys;
@@ -28,6 +27,7 @@ import dev.skypocket.ui.widget.Slider;
 import dev.skypocket.ui.widget.Switch;
 import dev.skypocket.ui.widget.TextField;
 import dev.skypocket.ui.widget.WidgetPalette;
+import dev.skypocket.ui.mc.McUiPainter;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -136,13 +136,12 @@ public final class Ui2TestScreen extends Screen {
         ClickGuiFonts.setRenderScale(1f);
         layoutUi();
 
-        GuiPainter painter = new GuiPainter(graphics);
+        McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(originX, originY);
         pose.scale(fitScale, fitScale);
-        painter.fill(new Rect(0f, 0f, DESIGN_W, DESIGN_H), 0xF0181A1F);
-        graphics.outline(0, 0, (int) DESIGN_W, (int) DESIGN_H, 0xFF3A3E48);
+        painter.surface(new Rect(0f, 0f, DESIGN_W, DESIGN_H), 8f, 0xF0181A1F, 0);
         drawElement(painter, root);
         if (dropdown.isOpen()) {
             drawElement(painter, dropdown.popup());
@@ -171,18 +170,19 @@ public final class Ui2TestScreen extends Screen {
         }
     }
 
-    private void drawElement(GuiPainter painter, UiElement element) {
+    private void drawElement(McUiPainter painter, UiElement element) {
         if (!element.visible()) {
             return;
         }
-        Matrix3x2fStack pose = painter.graphics.pose();
+        Matrix3x2fStack pose = painter.graphics().pose();
         pose.pushMatrix();
         pose.translate(element.offsetX(), element.offsetY());
 
         boolean scissor = element instanceof ScrollView;
         if (scissor) {
             ScrollView view = (ScrollView) element;
-            painter.fill(view.bounds(), 0xFF20232A);
+            painter.shadow(view.bounds(), 4f);
+            painter.surface(view.bounds(), 4f, 0xFF20232A, 0);
             painter.pushClip(view.bounds());
         }
 
@@ -332,51 +332,4 @@ public final class Ui2TestScreen extends Screen {
         return bits;
     }
 
-    /** Adapter from the UI painter to the existing ClickGUI text and GUI primitives. */
-    private static final class GuiPainter implements UiPainter {
-        private final GuiGraphicsExtractor graphics;
-
-        private GuiPainter(GuiGraphicsExtractor graphics) {
-            this.graphics = graphics;
-        }
-
-        @Override
-        public void fill(Rect rect, int color) {
-            graphics.fill((int) rect.x(), (int) rect.y(), (int) rect.right(), (int) rect.bottom(),
-                    color);
-        }
-
-        @Override
-        public void outline(Rect rect, int color) {
-            // outline takes x, y, width, height.
-            graphics.outline((int) rect.x(), (int) rect.y(), (int) rect.width(),
-                    (int) rect.height(), color);
-        }
-
-        @Override
-        public void text(String text, float x, float y, int color) {
-            ClickGuiFonts.drawText(graphics, text, x, y, color, false);
-        }
-
-        @Override
-        public float textWidth(String text) {
-            return ClickGuiFonts.width(text);
-        }
-
-        @Override
-        public float lineHeight() {
-            return ClickGuiFonts.lineHeight();
-        }
-
-        @Override
-        public void pushClip(Rect rect) {
-            graphics.enableScissor((int) Math.floor(rect.x()), (int) Math.floor(rect.y()),
-                    (int) Math.ceil(rect.right()), (int) Math.ceil(rect.bottom()));
-        }
-
-        @Override
-        public void popClip() {
-            graphics.disableScissor();
-        }
-    }
 }
