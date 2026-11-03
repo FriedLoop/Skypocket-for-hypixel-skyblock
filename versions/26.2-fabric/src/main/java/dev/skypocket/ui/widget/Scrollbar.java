@@ -75,7 +75,8 @@ public final class Scrollbar extends Control {
         if (max <= 0f || travel <= 0f) {
             return;
         }
-        float y = pointerY - bounds().y() - dragOffset;
+        float localY = pointerY - ancestorOffsetY();
+        float y = localY - bounds().y() - dragOffset;
         float t = Math.max(0f, Math.min(1f, y / travel));
         owner.scrollTo(t * max);
     }

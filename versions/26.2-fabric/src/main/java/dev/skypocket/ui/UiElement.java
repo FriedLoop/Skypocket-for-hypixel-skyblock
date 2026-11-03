@@ -122,6 +122,41 @@ public abstract class UiElement {
         return x >= bounds.x() && y >= bounds.y() && x < bounds.right() && y < bounds.bottom();
     }
 
+    /** Sum of ancestor visual offsets; add to local bounds to get root/design coordinates. */
+    public final float ancestorOffsetX() {
+        float x = 0f;
+        for (UiElement node = parent; node != null; node = node.parent) {
+            x += node.offsetX();
+        }
+        return x;
+    }
+
+    public final float ancestorOffsetY() {
+        float y = 0f;
+        for (UiElement node = parent; node != null; node = node.parent) {
+            y += node.offsetY();
+        }
+        return y;
+    }
+
+    public final float visualX() {
+        return bounds.x() + ancestorOffsetX();
+    }
+
+    public final float visualY() {
+        return bounds.y() + ancestorOffsetY();
+    }
+
+    /** True when this element is {@code ancestor} or one of its descendants. */
+    public final boolean isDescendantOf(UiElement ancestor) {
+        for (UiElement node = this; node != null; node = node.parent) {
+            if (node == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- input -----------------------------------------------------------------------------
 
     /** Whether a pointer may start an interaction on this element. */

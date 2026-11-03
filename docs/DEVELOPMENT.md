@@ -831,3 +831,27 @@ layout(location = 0) out vec4 fragColor;
 **尚未完成**：MC 平台 Painter 的独立封装、TextField 点击定位光标、Dropdown 外部点击关闭、滚动条悬停反馈。
 
 **下一步**：补滚动条和主题映射，然后迁移一个真实设置页；测试页继续作为回归入口。
+
+## 13. 玩家数值设置页垂直切片
+
+**入口**：`/skypocket statsui`，或代码中 `new StatsSettingsV2Screen()`。旧 ClickGUI 仍是 fallback。
+
+**宿主**：`Ui2Screen` 统一处理自适应缩放、布局、绘制、输入、键盘/IME 和 Esc 退出；`StatsSettingsV2Screen` 只负责把 `ModuleRegistry.byId("stats_display").settings()` 映射成元素树。
+
+**已迁移**：
+
+- 风格 Header + 切换经典/现代 Action
+- 原版 HUD 分组的 5 个 Boolean
+- 文字行 3 个 Boolean + 3 个 Slider
+- 经典/现代条件区（依赖 `Setting.isVisible()`，切换风格后重建）
+- 现代条宽度/高度/数值开关及 6 组条开关/大小
+- 高级分组的重置位置/恢复颜色 Action
+- 8 个 `ColorSetting`，通过 v2 `ColorField` + 完整 ColorPicker 编辑
+- 模块启用开关、滚动和关闭
+- 标题、Header/Group、Switch/Slider、按钮和提示均已接入 `Localization`
+
+**v2 ColorField / ColorPicker**：色块行显示 ARGB，点击打开独立 layer；弹层按旧版 `ImmediateColorPicker` 复刻，包含 2D SV 方块、Hue/Alpha 条、14 个预设色块，以及 HEX/RGBA TextField 编辑。它不依赖旧 `ImmediateColorPicker` 渲染路径；颜色字段焦点离开行/弹层时自动关闭。
+
+**暂未完成**：Group 折叠、hint tooltip 和旧面板缓存仍未接入。
+
+**下一步**：验证完整 ColorPicker 的观感/交互（尤其 SV 方块和 HEX/RGBA 输入），再把页面嵌入统一 ClickGUI 内容区。

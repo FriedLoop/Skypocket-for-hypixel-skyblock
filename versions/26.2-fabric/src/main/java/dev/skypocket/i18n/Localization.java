@@ -66,6 +66,11 @@ public final class Localization {
     EN.put("阈值", "Threshold");
     EN.put("半径", "Radius");
     EN.put("玩家数值显示", "Player Stats");
+    EN.put("关闭", "Close");
+    EN.put("启用", "Enabled");
+    EN.put("找不到 stats_display 模块", "stats_display module not found");
+    EN.put("颜色编辑暂未迁移到 UI v2", "Color editing is not available in this UI v2 page yet");
+    EN.put("（待迁移）", "(pending migration)");
     EN.put("切换到现代风格", "Switch to Modern Style");
     EN.put("切换到经典风格", "Switch to Classic Style");
     EN.put("法力不足时闪烁", "Blink When Mana Low");

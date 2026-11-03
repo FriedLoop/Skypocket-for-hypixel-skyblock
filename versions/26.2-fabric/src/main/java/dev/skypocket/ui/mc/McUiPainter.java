@@ -113,6 +113,30 @@ public final class McUiPainter implements UiPainter {
     }
 
     @Override
+    public void fillGradient(Rect rect, int top, int bottom) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        graphics.fillGradient(x, y, x + w, y + h, top, bottom);
+    }
+
+    @Override
+    public void fillHorizontalGradient(Rect rect, int left, int right) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        // GuiGraphicsExtractor only exposes a vertical gradient; rotate the pose for horizontal.
+        org.joml.Matrix3x2fStack pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(x, y);
+        pose.rotate((float) (Math.PI / 2));
+        graphics.fillGradient(0, -w, h, 0, right, left);
+        pose.popMatrix();
+    }
+
+    @Override
     public void text(String text, float x, float y, int color) {
         ClickGuiFonts.drawText(graphics, text, x, y, color, false);
     }

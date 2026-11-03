@@ -75,6 +75,17 @@ public final class Dropdown extends Control {
         popup.visible(false);
     }
 
+    /** Closes only when focus left both the field and its option popup. */
+    public void closeIfFocusOutside(dev.skypocket.ui.UiElement focused) {
+        if (!open) {
+            return;
+        }
+        if (focused == null
+                || (!focused.isDescendantOf(this) && !focused.isDescendantOf(popup))) {
+            close();
+        }
+    }
+
     private void select(int index) {
         onChange.accept(index);
         close();

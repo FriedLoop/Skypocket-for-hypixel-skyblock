@@ -81,9 +81,11 @@ public final class Slider extends Control {
     }
 
     private void updateFromPointer(float pointerX) {
+        // Pointer events are in root coordinates; bounds may live inside a scrolled card or popup.
+        float localX = pointerX - ancestorOffsetX();
         float trackX = bounds().x() + 8f;
         float trackWidth = Math.max(1f, bounds().width() - 16f);
-        double t = Math.max(0.0, Math.min(1.0, (pointerX - trackX) / trackWidth));
+        double t = Math.max(0.0, Math.min(1.0, (localX - trackX) / trackWidth));
         onChange.accept(clamp(min + (max - min) * t));
     }
 

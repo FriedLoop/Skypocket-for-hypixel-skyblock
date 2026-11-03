@@ -1,6 +1,7 @@
 package dev.skypocket.ui.widget;
 
 import dev.skypocket.ui.Box;
+import dev.skypocket.ui.Painted;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.KeyEvent;
@@ -8,7 +9,7 @@ import dev.skypocket.ui.input.Keys;
 import dev.skypocket.ui.input.PointerEvent;
 
 /** Shared focus, hover and press state for interactive widgets. */
-public abstract class Control extends Box {
+public abstract class Control extends Box implements Painted {
     private static final long KEY_FLASH_NANOS = 120_000_000L;
 
     protected final WidgetPalette palette;
@@ -70,6 +71,10 @@ public abstract class Control extends Box {
     @Override
     public void onFocusChanged(boolean focused) {
         this.focused = focused;
+    }
+
+    public boolean isFocused() {
+        return focused;
     }
 
     protected abstract void activate();

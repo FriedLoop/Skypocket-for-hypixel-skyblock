@@ -49,6 +49,16 @@ public interface UiPainter {
     default void shadow(Rect rect, float radius) {
     }
 
+    /** Vertical gradient, top colour to bottom colour. */
+    default void fillGradient(Rect rect, int top, int bottom) {
+        fill(rect, top);
+    }
+
+    /** Horizontal gradient, left colour to right colour. */
+    default void fillHorizontalGradient(Rect rect, int left, int right) {
+        fill(rect, left);
+    }
+
     void text(String text, float x, float y, int color);
 
     float textWidth(String text);

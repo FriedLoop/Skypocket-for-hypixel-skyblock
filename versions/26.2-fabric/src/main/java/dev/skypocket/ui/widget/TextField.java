@@ -10,21 +10,39 @@ import dev.skypocket.ui.input.PreeditEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Single-line editable text field with cursor movement and IME pre-edit support. */
 public final class TextField extends Control {
     private final String placeholder;
+    private final String label;
     private final StringBuilder value = new StringBuilder();
     private int cursor;
     private String preedit = "";
+    private Consumer<String> changeHandler = text -> {
+    };
 
     public TextField(String placeholder) {
         this(placeholder, Style.builder().width(220f).height(22f).build(), WidgetPalette.DARK);
     }
 
     public TextField(String placeholder, Style style, WidgetPalette palette) {
+        this(placeholder, null, style, palette);
+    }
+
+    public TextField(String placeholder, String label, Style style, WidgetPalette palette) {
         super(style, palette);
         this.placeholder = Objects.requireNonNull(placeholder);
+        this.label = label;
+    }
+
+    public TextField onChange(Consumer<String> handler) {
+        changeHandler = Objects.requireNonNull(handler);
+        return this;
+    }
+
+    private void changed() {
+        changeHandler.accept(value.toString());
     }
 
     public String text() {
@@ -77,6 +95,7 @@ public final class TextField extends Control {
         value.insert(cursor, event.text());
         cursor += event.text().length();
         preedit = "";
+        changed();
         return true;
     }
 
@@ -93,6 +112,7 @@ public final class TextField extends Control {
                 if (cursor > 0) {
                     value.deleteCharAt(cursor - 1);
                     cursor--;
+                    changed();
                 }
                 preedit = "";
                 return true;
@@ -100,6 +120,7 @@ public final class TextField extends Control {
             case Keys.DELETE -> {
                 if (cursor < value.length()) {
                     value.deleteCharAt(cursor);
+                    changed();
                 }
                 preedit = "";
                 return true;
@@ -134,8 +155,14 @@ public final class TextField extends Control {
         painter.pushClip(bounds());
 
         String shown = value.toString();
+        float labelWidth = 0f;
         float textX = bounds().x() + 6f;
         float textY = bounds().y() + (bounds().height() - painter.lineHeight()) / 2f;
+        if (label != null && !label.isEmpty()) {
+            painter.text(label, textX, textY, palette.muted());
+            labelWidth = painter.textWidth(label) + 3f;
+            textX += labelWidth;
+        }
         if (shown.isEmpty() && preedit.isEmpty()) {
             painter.text(placeholder, textX, textY, palette.muted());
         } else {

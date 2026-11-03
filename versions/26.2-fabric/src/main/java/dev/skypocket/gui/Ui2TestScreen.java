@@ -6,6 +6,7 @@ import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.LayoutEngine;
+import dev.skypocket.ui.Painted;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.ScrollView;
 import dev.skypocket.ui.Size;
@@ -21,7 +22,6 @@ import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 import dev.skypocket.ui.input.WheelEvent;
 import dev.skypocket.ui.widget.Button;
-import dev.skypocket.ui.widget.Control;
 import dev.skypocket.ui.widget.Dropdown;
 import dev.skypocket.ui.widget.Slider;
 import dev.skypocket.ui.widget.Switch;
@@ -186,8 +186,8 @@ public final class Ui2TestScreen extends Screen {
             painter.pushClip(view.bounds());
         }
 
-        if (element instanceof Control control) {
-            control.paint(painter);
+        if (element instanceof Painted painted) {
+            painted.paint(painter);
         } else if (element instanceof Text text) {
             painter.text(text.value(), text.bounds().x(), text.bounds().y(), 0xFFE6EAF2);
         }
@@ -224,7 +224,14 @@ public final class Ui2TestScreen extends Screen {
         layoutUi();
         input.pointerDown(new PointerEvent(localX(event.x()), localY(event.y()),
                 canonicalButton(event.button()), modifiers));
+        dropdown.closeIfFocusOutside(input.focused());
         return true;
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        layoutUi();
+        input.pointerMove(PointerEvent.move(localX(mouseX), localY(mouseY), modifiers));
     }
 
     @Override
@@ -259,6 +266,7 @@ public final class Ui2TestScreen extends Screen {
         }
         modifiers = modifierBits(event);
         input.keyDown(new KeyEvent(canonicalKey(event), 0, modifiers, true));
+        dropdown.closeIfFocusOutside(input.focused());
         return true;
     }
 
