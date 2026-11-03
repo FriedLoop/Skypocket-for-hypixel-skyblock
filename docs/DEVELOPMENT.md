@@ -832,11 +832,11 @@ layout(location = 0) out vec4 fragColor;
 
 **下一步**：补滚动条和主题映射，然后迁移一个真实设置页；测试页继续作为回归入口。
 
-## 13. 玩家数值设置页垂直切片
+## 13. 玩家数值设置页
 
-**入口**：`/skypocket statsui`，或代码中 `new StatsSettingsV2Screen()`。旧 ClickGUI 仍是 fallback。
+**入口**：统一 ClickGUI 中打开「玩家数值显示」详情页。`/skypocket statsui` 和独立 `StatsSettingsV2Screen` 已删除。
 
-**宿主**：`Ui2Screen` 统一处理自适应缩放、布局、绘制、输入、键盘/IME 和 Esc 退出；`StatsSettingsV2Screen` 只负责把 `ModuleRegistry.byId("stats_display").settings()` 映射成元素树。
+**宿主**：`OneClickScreen` 提供面板壳、导航和标题；`StatsSettingsPage` 只负责把 `ModuleRegistry.byId("stats_display").settings()` 映射成元素树，并持有自己的 `InputRouter`、滚动和颜色弹层。独立调试阶段使用的 `Ui2Screen` 宿主代码仍保留，供后续其他页面复用。
 
 **已迁移**：
 
@@ -852,12 +852,10 @@ layout(location = 0) out vec4 fragColor;
 
 **v2 ColorField / ColorPicker**：色块行显示 ARGB，点击打开独立 layer；弹层按旧版 `ImmediateColorPicker` 复刻，包含 2D SV 方块、Hue/Alpha 条、14 个预设色块，以及 HEX/RGBA TextField 编辑。它不依赖旧 `ImmediateColorPicker` 渲染路径；颜色字段焦点离开行/弹层时自动关闭。
 
-**暂未完成**：Group 折叠、hint tooltip 和旧面板缓存仍未接入。
+**暂未完成**：Group 折叠、hint tooltip；统一入口当前暂时绕过整块面板缓存。
 
-**页面缓存（静态底图 + 动态控件层）**：`Ui2Screen` 复用 `GuiPanelCache` 缓存页面底图；录制时 `Control.neutralPaint` 让控件以无焦点、无 pressed、无键盘高亮的稳定状态绘制。缓存 key 由布局 revision 和 `ScrollView` 滚动签名组成。命中缓存后，只遍历并实时重画当前 focused / pressed / flash 的控件，再绘制颜色弹层。焦点变化会触发一次底图重烘；颜色弹层打开时禁用页面缓存。
+**页面缓存（独立宿主阶段）**：`Ui2Screen` 复用 `GuiPanelCache` 缓存页面底图；录制时 `Control.neutralPaint` 让控件以无焦点、无 pressed、无键盘高亮的稳定状态绘制。缓存 key 由布局 revision 和 `ScrollView` 滚动签名组成。命中缓存后，只遍历并实时重画当前 focused / pressed / flash 的控件，再绘制颜色弹层。这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一。
 
-这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一：静止时一次 blit，交互时只重画活动控件。颜色弹层打开时页面底图继续缓存，只把打开弹层的颜色行作为动态控件覆盖，弹层本身实时绘制。
+**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。此路径暂时绕过整块 `GuiPanelCache`，先保证实时状态正确。
 
-**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。此路径暂时绕过整块 `GuiPanelCache`，先保证实时状态正确，后续再补页面级缓存。
-
-**下一步**：验证统一入口后删除 `/skypocket statsui` 独立页面，并清理旧 stats 设置渲染。
+**下一步**：为统一入口补页面级缓存，并清理旧 stats 设置渲染分支。
