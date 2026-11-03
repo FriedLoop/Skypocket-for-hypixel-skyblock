@@ -21,13 +21,12 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
 /**
- * A glyph provider that rasterises with FreeType's <b>light</b> hinting instead of the default target.
+ * A glyph provider backed by FreeType, with a selectable hinting mode for the font comparison.
  *
- * <p>Why this exists: the Click GUI rasterises each glyph at the exact size it will be drawn at, so the
- * rasteriser's hinting is the whole of the text's perceived quality. The vanilla provider uses FreeType's
- * default target, which snaps stems onto the pixel grid - crisp, but at small sizes it distorts letter
- * shapes and leaves some strokes a pixel lighter than their neighbours, which reads as "less smooth"
- * next to a UI that uses light hinting.
+ * <p>The Click GUI rasterises each glyph at the exact size it will be drawn at, so the rasteriser's
+ * hinting is the whole of the text's perceived quality. Light hinting (the default) keeps the letter
+ * shapes intact; the default target snaps stems more aggressively; no hinting keeps the outline smooth
+ * but can look softer. The font lab exposes all three so the same page can be compared.
  *
  * <p>The pixels are copied out of FreeType ourselves and written into a single-channel image. The
  * obvious shortcut - {@link NativeImage#copyFromFont} - cannot be used: it re-loads the glyph with its
@@ -39,16 +38,21 @@ import java.nio.IntBuffer;
  */
 final class LightHintGlyphProvider implements GlyphProvider {
 
-    /** Render target for the outline: light hinting, grayscale coverage. */
-    private static final int LOAD_FLAGS =
-            FreeType.FT_LOAD_DEFAULT | (FreeType.FT_RENDER_MODE_LIGHT << 16);
-
     private final FT_Face face;
     private final IntSet codepoints;
+    private final int loadFlags;
+    private final int renderMode;
     private boolean closed;
 
-    LightHintGlyphProvider(FT_Face face, int pixelSize, float shiftY) {
+    LightHintGlyphProvider(FT_Face face, int pixelSize, float shiftY, FontLab.Hinting hinting) {
         this.face = face;
+        this.loadFlags = switch (hinting) {
+            case LIGHT -> FreeType.FT_LOAD_DEFAULT | (FreeType.FT_RENDER_MODE_LIGHT << 16);
+            case NORMAL -> FreeType.FT_LOAD_DEFAULT;
+            case NONE -> FreeType.FT_LOAD_NO_HINTING;
+        };
+        this.renderMode = hinting == FontLab.Hinting.LIGHT
+                ? FreeType.FT_RENDER_MODE_LIGHT : FreeType.FT_RENDER_MODE_NORMAL;
         synchronized (FreeTypeUtil.LIBRARY_LOCK) {
             FreeTypeUtil.assertError(FreeType.FT_Set_Pixel_Sizes(face, 0, pixelSize),
                     "Setting glyph size");
@@ -79,11 +83,11 @@ final class LightHintGlyphProvider implements GlyphProvider {
             if (index == 0) {
                 return null;
             }
-            if (FreeType.FT_Load_Glyph(face, index, LOAD_FLAGS) != 0) {
+            if (FreeType.FT_Load_Glyph(face, index, loadFlags) != 0) {
                 return null;
             }
             FT_GlyphSlot slot = face.glyph();
-            if (FreeType.FT_Render_Glyph(slot, FreeType.FT_RENDER_MODE_LIGHT) != 0) {
+            if (FreeType.FT_Render_Glyph(slot, renderMode) != 0) {
                 return null;
             }
             float advance = slot.advance().x() / 64.0f;
@@ -91,8 +95,12 @@ final class LightHintGlyphProvider implements GlyphProvider {
             int width = bitmap.width();
             int height = bitmap.rows();
             byte[] coverage = width > 0 && height > 0 ? copy(bitmap) : null;
+            // MC's FontTexture allocates cells without a gutter. A transparent border keeps bilinear
+            // sampling from reading the neighbouring glyphs; it is a mitigation, not a complete fix
+            // for the hard-coded 0.01-normalized UV inset (see the UI v2 text renderer work).
+            int padding = width > 0 && height > 0 ? Math.max(2, FontLab.oversample() * 2) : 0;
             return new Glyph(GlyphInfo.simple(advance), width, height, slot.bitmap_left(),
-                    slot.bitmap_top(), coverage);
+                    slot.bitmap_top(), coverage, padding);
         }
     }
 
@@ -110,7 +118,9 @@ final class LightHintGlyphProvider implements GlyphProvider {
             int row = pitch >= 0 ? y : height - 1 - y;
             int base = row * stride;
             for (int x = 0; x < width; x++) {
-                out[y * width + x] = src.get(base + x);
+                // Gamma-correct the coverage before it enters the atlas: 1.0 is the identity, lower
+                // values thicken thin strokes, higher values thin them.
+                out[y * width + x] = (byte) FontLab.coverage(src.get(base + x) & 0xFF);
             }
         }
         return out;
@@ -157,13 +167,26 @@ final class LightHintGlyphProvider implements GlyphProvider {
         private final byte[] coverage;
 
         private Glyph(GlyphInfo info, int width, int height, float bearingX, float bearingY,
-                      byte[] coverage) {
+                      byte[] coverage, int padding) {
             this.info = info;
-            this.width = width;
-            this.height = height;
-            this.bearingX = bearingX;
-            this.bearingY = bearingY;
-            this.coverage = coverage;
+            int pad = width > 0 && height > 0 ? padding : 0;
+            this.width = width + pad * 2;
+            this.height = height + pad * 2;
+            // Move the quad outwards by the gutter while the ink stays at the same screen position:
+            // left/top bearings shrink by pad, and the content is copied pad pixels inwards.
+            this.bearingX = bearingX - pad;
+            this.bearingY = bearingY + pad;
+            this.coverage = pad == 0 ? coverage : pad(coverage, width, height, pad);
+        }
+
+        /** Copies the ink into a transparent border of {@code pad} texels on every side. */
+        private static byte[] pad(byte[] source, int width, int height, int pad) {
+            int stride = width + pad * 2;
+            byte[] out = new byte[stride * (height + pad * 2)];
+            for (int y = 0; y < height; y++) {
+                System.arraycopy(source, y * width, out, (y + pad) * stride + pad, width);
+            }
+            return out;
         }
 
         @Override

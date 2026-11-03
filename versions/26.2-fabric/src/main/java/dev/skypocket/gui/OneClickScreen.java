@@ -11,6 +11,7 @@ import dev.skypocket.gui.widget.TextFieldWidget;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiBlur;
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -285,7 +286,38 @@ public class OneClickScreen extends Screen {
                         }),
                         // Five-second line: frames, blits, bakes, and which gate a frame stopped at.
                         new Setting.BooleanSetting("面板缓存统计", () -> cfg.panelCacheStats,
-                                v -> cfg.panelCacheStats = v)
+                                v -> cfg.panelCacheStats = v),
+                        // UI v2 font comparison. These knobs are intentionally not persisted config:
+                        // they are temporary experiment controls and disappear when a policy is chosen.
+                        new Setting.Header("字体实验"),
+                        new Setting.BooleanSetting("实验：整数 advance", FontLab::integerAdvance,
+                                FontLab::setIntegerAdvance),
+                        new Setting.DropdownSetting("实验：原点定位", FontLab::originIds,
+                                FontLab::originId, FontLab::setOrigin),
+                        new Setting.DropdownSetting("实验：Hinting", FontLab::hintingIds,
+                                FontLab::hintingId, FontLab::setHinting),
+                        new Setting.DropdownSetting("实验：字重", FontLab::weightIds,
+                                FontLab::weightId, FontLab::setWeight),
+                        new Setting.DropdownSetting("实验：光栅倍率", FontLab::oversampleIds,
+                                FontLab::oversampleId, FontLab::setOversample),
+                        new Setting.BooleanSetting("实验：线性字体采样", FontLab::linearFilter,
+                                FontLab::setLinearFilter),
+                        new Setting.BooleanSetting("实验：自研字形图集", FontLab::atlasText,
+                                FontLab::setAtlasText),
+                        new Setting.SliderSetting("实验：覆盖率 Gamma", 0.8, 1.4,
+                                FontLab::gamma, FontLab::setGamma, "%.2f", 0.05),
+                        new Setting.ActionSetting("实验：应用最佳预设", () -> {
+                            FontLab.applyBestPreset();
+                            ConfigManager.touch();
+                        }),
+                        new Setting.ActionSetting("实验：应用 2x 平滑", () -> {
+                            FontLab.applySmoothPreset();
+                            ConfigManager.touch();
+                        }),
+                        new Setting.ActionSetting("实验：恢复原生字体", () -> {
+                            FontLab.applyCrispPreset();
+                            ConfigManager.touch();
+                        })
                 ), false)
         );
     }
@@ -343,6 +375,7 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+        dev.skypocket.render.ScissorTracker.reset();
         // Finish the close animation (then actually leave the screen).
         if (closing && animFinished()) {
             closing = false;
@@ -567,6 +600,9 @@ public class OneClickScreen extends Screen {
                 && ly < PanelGeometry.SEARCH_Y + PanelGeometry.NAV_SIZE;
     }
     private void drawPanel(GuiGraphicsExtractor graphics, int lmx, int lmy, float delta) {
+        // The cache records drawPanel with its own extractor. Start that recording with an empty
+        // scissor tracker so custom text states capture the scissor that belongs to this pass.
+        dev.skypocket.render.ScissorTracker.reset();
         PanelRenderer.drawBackground(graphics, view());
         PanelRenderer.drawTabs(graphics, view(), lmx, lmy);
 

@@ -16,6 +16,5 @@ public interface GuiGraphicsExtractorAccessor {
     @Accessor("guiRenderState")
     GuiRenderState sky$getRenderState();
 
-    // The scissor stack is package-private and cannot be accessed by type; the current clip is tracked
-    // instead, in GuiGraphicsExtractorMixin, by observing enableScissor/disableScissor.
+    // The scissor stack is package-private; the active clip is tracked by GuiScreenScissorMixin.
 }

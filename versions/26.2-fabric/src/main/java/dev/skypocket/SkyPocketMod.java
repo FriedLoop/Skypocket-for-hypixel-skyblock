@@ -15,6 +15,7 @@ import dev.skypocket.hud.MiningAbilityHudElement;
 import dev.skypocket.hud.MiningBreakHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
+import dev.skypocket.gui.Ui2TestScreen;
 import dev.skypocket.skyblock.MiningAbilityTracker;
 import dev.skypocket.skyblock.PlayerStatsTracker;
 import dev.skypocket.net.PingMonitor;
@@ -129,5 +130,10 @@ public final class SkyPocketMod implements ClientModInitializer {
                             Minecraft client = context.getSource().getClient();
                             client.schedule(() -> client.gui.setScreen(new OneClickScreen()));
                             return 1;
-                        })));
+                        })
+                        .then(ClientCommands.literal("uitest").executes(context -> {
+                            Minecraft client = context.getSource().getClient();
+                            client.schedule(() -> client.gui.setScreen(new Ui2TestScreen()));
+                            return 1;
+                        }))));
     }}

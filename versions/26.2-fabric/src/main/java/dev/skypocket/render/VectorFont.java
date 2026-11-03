@@ -25,7 +25,9 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -39,16 +41,11 @@ import java.util.Set;
  * font byte buffers are shared across all sizes so the (10&nbsp;MB CJK) font lives in
  * memory exactly once, rather than once per size.
  */
-final class VectorFont {
-    private static final String INTER = "assets/skypocket/font/inter.ttf";
+final class VectorFont implements AutoCloseable {
     private static final String NOTO = "assets/skypocket/font/notosanssc.ttf";
 
-    /** Rasterise with FreeType's light hinting; {@code false} falls back to the vanilla provider. */
-    private static final boolean LIGHT_HINTING = true;
-
-    /** Shared, never-freed font memory (FreeType only reads it). */
-    private static ByteBuffer interMemory;
-    private static ByteBuffer notoMemory;
+    /** Shared, never-freed font memory (FreeType only reads it), keyed by asset path. */
+    private static final Map<String, ByteBuffer> MEMORY = new HashMap<>();
 
     private final FontSet fontSet;
     final Font font;
@@ -56,6 +53,11 @@ final class VectorFont {
     private VectorFont(FontSet fontSet, Font font) {
         this.fontSet = fontSet;
         this.font = font;
+    }
+
+    @Override
+    public void close() {
+        fontSet.close();
     }
 
     /**
@@ -66,14 +68,19 @@ final class VectorFont {
      */
     static final class Builder {
         private final int pixelSize;
+        private final int generation;
         private final FontSet fontSet;
         private final List<GlyphProvider.Conditional> conditions = new ArrayList<>();
         private int slice;
 
-        Builder(int pixelSize) {
+        Builder(int pixelSize, int generation) {
             this.pixelSize = pixelSize;
+            this.generation = generation;
             Minecraft mc = Minecraft.getInstance();
-            Identifier id = Identifier.fromNamespaceAndPath(SkyPocketMod.MOD_ID, "vecfont_" + pixelSize);
+            // The lab can rebuild the same pixel size with a different hinting/gamma/weight, so the
+            // texture id must also carry the generation; reusing it collides with the previous atlas.
+            Identifier id = Identifier.fromNamespaceAndPath(SkyPocketMod.MOD_ID,
+                    "vecfont_" + generation + "_" + pixelSize);
             this.fontSet = new FontSet(new GlyphStitcher(mc.getTextureManager(), id));
         }
 
@@ -81,11 +88,19 @@ final class VectorFont {
             return pixelSize;
         }
 
+        int generation() {
+            return generation;
+        }
+
+        void close() {
+            fontSet.close();
+        }
+
         /** Runs one slice; returns the finished font, or null while more are needed. */
         VectorFont step() throws Exception {
             switch (slice++) {
-                case 0 -> conditions.add(provider(interMemory()));
-                case 1 -> conditions.add(provider(notoMemory()));
+                case 0 -> conditions.add(provider(memory(FontLab.weight().asset)));
+                case 1 -> conditions.add(provider(memory(NOTO)));
                 default -> {
                     fontSet.reload(conditions, Set.of());
                     return new VectorFont(fontSet, createFont(fontSet));
@@ -104,20 +119,19 @@ final class VectorFont {
             // edges come out soft - which is exactly the "less crisp than it should be" look. Rounding
             // keeps the intent (nudge the ink down to sit like vanilla) without paying that cost.
             float shiftY = Math.round(pixelSize / 9.0f);
-            // A/B switch: flip to false to go back to the vanilla rasteriser without touching anything
-            // else. See the class comment on LightHintGlyphProvider for why light hinting is preferred.
-            GlyphProvider provider = LIGHT_HINTING
-                    ? new LightHintGlyphProvider(face, pixelSize, shiftY)
-                    : new TrueTypeGlyphProvider(memory, face, pixelSize, 1.0f, 0f, shiftY, "");
+            GlyphProvider provider = new LightHintGlyphProvider(face, pixelSize, shiftY,
+                    FontLab.hinting());
             return new GlyphProvider.Conditional(provider, FontOption.Filter.ALWAYS_PASS);
         }
     }
 
     /** The MC {@link Font} over a prepared font set. */
     private static Font createFont(FontSet fontSet) {
-        // One shared wrapper (not allocated per text): advances rounded to whole
-        // pixels so the Click GUI's 1:1 mapping keeps glyphs on the pixel grid.
-        GlyphSource source = new IntegerAdvanceGlyphSource(fontSet.source(false));
+        // The old policy rounded advances to keep every glyph on the device grid. The lab can disable
+        // that so the internal pen positions stay fractional and the atlas is sampled between pixels.
+        GlyphSource source = FontLab.integerAdvance()
+                ? new IntegerAdvanceGlyphSource(fontSet.source(false))
+                : fontSet.source(false);
         EffectGlyph whiteGlyph = fontSet.whiteGlyph();
         return new Font(new Font.Provider() {
             @Override
@@ -148,18 +162,16 @@ final class VectorFont {
         }
     }
 
-    private static ByteBuffer interMemory() throws Exception {
-        if (interMemory == null) {
-            interMemory = load(INTER);
+    private static ByteBuffer memory(String path) throws Exception {
+        synchronized (MEMORY) {
+            ByteBuffer cached = MEMORY.get(path);
+            if (cached != null) {
+                return cached;
+            }
+            ByteBuffer loaded = load(path);
+            MEMORY.put(path, loaded);
+            return loaded;
         }
-        return interMemory;
-    }
-
-    private static ByteBuffer notoMemory() throws Exception {
-        if (notoMemory == null) {
-            notoMemory = load(NOTO);
-        }
-        return notoMemory;
     }
 
     private static ByteBuffer load(String path) throws Exception {

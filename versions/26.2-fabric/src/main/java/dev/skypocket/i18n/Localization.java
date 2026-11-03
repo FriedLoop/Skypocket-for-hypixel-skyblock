@@ -177,7 +177,8 @@ public final class Localization {
     EN.put("行高", "Row height");
     EN.put("聊天消息压缩", "Chat compacting");
     EN.put("压缩窗口(秒)", "Compact window (s)");
-    EN.put("调试信息", "Debug Info");
+    EN.put("调试信息", "Debug Info");
+
     EN.put("取整方式", "Rounding");
     EN.put("自动校准速度刻度", "Auto-calibrate speed");
     EN.put("相位对齐", "Tick phase alignment");
@@ -198,6 +199,18 @@ public final class Localization {
         EN.put("面板渲染缓存", "Panel Render Cache");
     EN.put("面板缓存统计", "Panel Cache Stats");
     EN.put("调试日志", "Debug Logging");
+    EN.put("字体实验", "Font Experiments");
+    EN.put("实验：整数 advance", "Exp: Integer Advance");
+    EN.put("实验：原点定位", "Exp: Origin Placement");
+    EN.put("实验：Hinting", "Exp: Hinting");
+    EN.put("实验：字重", "Exp: Weight");
+    EN.put("实验：光栅倍率", "Exp: Raster Scale");
+    EN.put("实验：线性字体采样", "Exp: Linear Font Sampling");
+    EN.put("实验：自研字形图集", "Exp: Custom Glyph Atlas");
+    EN.put("实验：覆盖率 Gamma", "Exp: Coverage Gamma");
+    EN.put("实验：应用最佳预设", "Exp: Apply Best Preset");
+    EN.put("实验：应用 2x 平滑", "Exp: Apply 2x Smooth");
+    EN.put("实验：恢复原生字体", "Exp: Restore Native Font");
     EN.put("主题", "Theme");
     EN.put("删除主题 ", "Delete theme ");
     EN.put("删除", "Delete");

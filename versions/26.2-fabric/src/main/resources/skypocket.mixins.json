@@ -27,6 +27,8 @@
     "TextDisplayAccessor",
     "GuiGraphicsExtractorMixin",
     "GuiGraphicsExtractorAccessor",
+    "GuiScreenScissorMixin",
+    "GlyphRenderStateMixin",
     "MouseHandlerMixin",
     "ChatComponentMixin",
     "ChatComponentAccessor"

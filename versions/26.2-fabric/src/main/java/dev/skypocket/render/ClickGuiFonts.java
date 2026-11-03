@@ -65,6 +65,8 @@ public final class ClickGuiFonts {
     private static int buildCooldown;
     /** Font currently being built slice by slice (null when the queue is idle). */
     private static VectorFont.Builder building;
+    /** Bumped whenever a lab option changes the raster, so an in-flight build is not published. */
+    private static int experimentGeneration;
     private static float renderScale = 1.0f;
     private static int currentPixelSize = -1;
     /** Cached font for the common scale = 1 case (avoids per-draw map lookups). */
@@ -80,6 +82,12 @@ public final class ClickGuiFonts {
     /** Called by the panel each frame with its design -> GUI pixel factor. */
     public static void setRenderScale(float scale) {
         renderScale = scale;
+        if (FontLab.atlasText()) {
+            // The custom glyph atlas has its own raster policy and does not need a FontSet.
+            currentVector = null;
+            currentPixelSize = -1;
+            return;
+        }
         if (vectorDisabled) {
             return;
         }
@@ -95,6 +103,10 @@ public final class ClickGuiFonts {
      * font (two face parses, one of them a 10 MB CJK font) on one tick still stuttered.
      */
     public static void tick() {
+        if (FontLab.atlasText()) {
+            AtlasText.tick();
+            return;
+        }
         if (vectorDisabled) {
             return;
         }
@@ -115,7 +127,7 @@ public final class ClickGuiFonts {
             if (next == null) {
                 return;
             }
-            building = new VectorFont.Builder(next);
+            building = new VectorFont.Builder(next, experimentGeneration);
         }
         VectorFont finished;
         try {
@@ -127,13 +139,49 @@ public final class ClickGuiFonts {
         }
         if (finished != null) {
             int size = building.pixelSize();
+            boolean current = building.generation() == experimentGeneration;
             synchronized (FONTS) {
-                FONTS.put(size, finished);
+                if (current) {
+                    FONTS.put(size, finished);
+                } else {
+                    finished.close();
+                }
                 PENDING.remove(size);
             }
             building = null;
+            // The visible text changes on an already-open panel; the cache key must notice.
+            if (current) {
+                ConfigManager.touch();
+            }
         }
         buildCooldown = SLICE_GAP_TICKS;
+    }
+
+    /**
+     * Drops every raster font after a font-lab option changed. The next frames use the bitmap fallback
+     * until the tick-driven builder has completed the new sizes.
+     */
+    public static void reloadExperimentFonts() {
+        AtlasText.reset();
+        synchronized (FONTS) {
+            experimentGeneration++;
+            for (VectorFont font : FONTS.values()) {
+                font.close();
+            }
+            FONTS.clear();
+            if (building != null) {
+                building.close();
+            }
+            PENDING.clear();
+            WIDTH_CACHE.clear();
+            widthCachePixel = -1;
+            currentVector = null;
+            currentPixelSize = -1;
+            building = null;
+            buildCooldown = 0;
+            rangeQueued = false;
+            vectorDisabled = false;
+        }
     }
 
     /**
@@ -185,8 +233,15 @@ public final class ClickGuiFonts {
      * the text size snaps to whole device pixels instead of being resampled.
      */
     private static int pixelSize(float renderScaleEquivalent) {
-        int size = Math.round(DESIGN_SIZE * renderScaleEquivalent * guiScale());
-        return Math.max(4, Math.min(128, size));
+        int size = Math.round(DESIGN_SIZE * renderScaleEquivalent * guiScale()
+                * FontLab.oversample());
+        return Math.max(4, Math.min(256, size));
+    }
+
+    /** Raster pixel size for the custom atlas path. */
+    private static int atlasPixelSize(float scale) {
+        int size = Math.round(DESIGN_SIZE * scale * deviceFactor() * FontLab.oversample());
+        return Math.max(4, Math.min(256, size));
     }
 
     /**
@@ -254,7 +309,7 @@ public final class ClickGuiFonts {
      * put glyphs on fractional pixels (soft text, uneven 1px shadows).
      */
     private static float vectorGlyphScale() {
-        float factor = deviceFactor();
+        float factor = deviceFactor() * FontLab.oversample();
         return factor > 0f ? 1.0f / factor : 1.0f;
     }
 
@@ -271,6 +326,10 @@ public final class ClickGuiFonts {
 
     /** Text width in design (panel) units, memoized per active pixel size. */
     public static int width(String text) {
+        if (FontLab.atlasText()) {
+            return AtlasText.width(text, 1.0f, deviceFactor(),
+                    atlasPixelSize(1.0f), FontLab.oversample());
+        }
         if (currentPixelSize != widthCachePixel) {
             WIDTH_CACHE.clear();
             widthCachePixel = currentPixelSize;
@@ -304,17 +363,29 @@ public final class ClickGuiFonts {
     /** Draws text at {@code scale} × the panel design size (e.g. headings). */
     public static void drawTextScaled(GuiGraphicsExtractor graphics, String text, float x, float y,
                                       int color, boolean shadow, float scale) {
+        if (FontLab.atlasText()) {
+            AtlasText.draw(graphics, text, x, y, color, shadow, scale, deviceFactor(),
+                    atlasPixelSize(scale), FontLab.oversample());
+            return;
+        }
         // Panel text is drawn with the vector font: each size is rasterised by FreeType at exactly the
         // pixel size it is drawn at, so no resampling happens anywhere on this path.
         VectorFont vector = vectorFor(scale);
         float s = vector != null ? vectorGlyphScale() : glyphScaleFor(scale);
-        // Snap the origin to whole DEVICE pixels. The vector font maps 1 raster px to
-        // 1 device px and integer advances keep glyphs on that grid, so the text (and
-        // its 1px shadow) stays crisp; the bitmap fallback snaps to GUI pixels.
-        float step = vector != null ? deviceFactor() : renderScale;
-        float grid = step > 0f ? 1.0f / step : 1.0f;
-        float snappedX = Math.round(x / grid) * grid;
-        float snappedY = Math.round((y + GLYPH_BASELINE * (1.0f - s)) / grid) * grid;
+        // The vector path can snap to a device pixel, half/quarter pixel or not at all. The bitmap
+        // fallback keeps its old GUI-pixel snap because its raster is not tied to device pixels.
+        float snappedX = x;
+        float snappedY = y + GLYPH_BASELINE * (1.0f - s);
+        float originStep = FontLab.origin().step;
+        if (vector != null && originStep > 0f) {
+            float grid = 1.0f / (deviceFactor() * originStep);
+            snappedX = Math.round(snappedX / grid) * grid;
+            snappedY = Math.round(snappedY / grid) * grid;
+        } else if (vector == null) {
+            float grid = 1.0f / Math.max(1.0e-4f, renderScale);
+            snappedX = Math.round(snappedX / grid) * grid;
+            snappedY = Math.round(snappedY / grid) * grid;
+        }
         var pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(snappedX, snappedY);

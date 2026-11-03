@@ -168,6 +168,7 @@ bloom {
                 "com.mojang.renderpearl.api.pipeline.DepthStencilState")
         replacement("com.mojang.blaze3d.platform.CompareOp",
                 "com.mojang.renderpearl.api.pipeline.CompareOp")
+        replacement("com.mojang.blaze3d.GpuFormat", "com.mojang.renderpearl.api.GpuFormat")
 
         // 26.3 replaced GLFW with an SDL-backed window layer; keys come from InputConstants now.
         replacement("import org.lwjgl.glfw.GLFW;", "")

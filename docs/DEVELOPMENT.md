@@ -674,3 +674,129 @@ layout(location = 0) out vec4 fragColor;
 3. 未验证：uniform 是否晚一帧生效（`PREVIOUS` 的采样时间点）。若将来在正常帧率下看到拖影方向错位，**先查这里**，而不是调强度常数。
 
 **教训**：后处理强度**不要直接用瞬时帧时长**。反比关系会把任何帧尖峰放大成可见的强度跳变；必须平滑 + 钳位，否则调参永远调不稳。
+
+## 10. UI v2（规划中，分支 `ui-v2`）
+
+**目标**：把 ClickGUI 的字体、布局、输入和缓存收敛成一套可长期维护、可复用的 UI 基础设施，取代当前"逐字号字体 + 整块面板缓存"的组合。当前 ClickGUI 在新实现覆盖主要页面前**必须保留为 fallback**。
+
+**已定方向**：
+
+- 参考 GuiLib 的思路，但**不引入、不复制 GuiLib**，也不引入 Kotlin。
+- 不做完整 CSS/DOM/React 框架；先做元素、样式、Flex 布局、输入和文本内核。CSS 只作为后续可选的语法层。
+- **不做 SDF/MSDF**。
+- 字体走：共享 FreeType Face + 动态字形图集 + 小数字形笔位 + 文本 run 缓存；不再要求"一个光栅像素固定对应一个设备像素"。
+- 不再把整块面板烘成纹理作为核心性能手段；布局、文本 run、绘制命令分别缓存。
+- UI 内核不得依赖 `Feature` / `Setting` / `ModuleRegistry`，后续再抽成独立 Gradle 模块。
+- 26.2 / 26.3 的身体共享，渲染、输入、鼠标按键等差异集中在平台适配层。
+
+**顺序**（每步验收后再进入下一步，禁止同时重写四层）：
+
+1. 字体观感实验：小数 advance、亚像素原点、2x 光栅、真实字重，确定默认策略。
+2. UI 内核：元素树、样式/主题、盒模型、Flex、布局缓存。
+3. UI 内核：输入、焦点、拖拽捕获、滚动、弹层、IME。
+4. 文字 v2：动态图集、真实 metrics、文本 run 缓存。
+5. 垂直切片：迁一个最复杂的设置页，关闭整块面板缓存并记录性能。
+6. 全量迁移 ClickGUI，退役旧缓存。
+7. 抽离可复用模块，补测试、文档和扩展示例。
+
+**固定验证**：双版本 build；面板缩放 0.5/0.75/1.0/1.25/1.5；GUI Scale 2/3；中英数混排；键盘焦点/拖拽/滚动；帧率、内存、首开耗时。
+
+### 10.1 字体实验结论（2026-11）
+
+已实测并否决"继续调 MC 原生 `Font` 管线"，证据如下：
+
+- `GlyphRenderState.textureSetup()` **硬编码** `FilterMode.NEAREST`；字体图集的采样模式不在字体对象上，改 `FontTexture` 的 sampler 也无效。
+- `FontTexture.add()` 的 UV 内缩写的是 **`0.01` 归一化 UV**，在 256px 图集上等于 **2.56px**，不是 0.01px；同时字形单元之间**没有 gutter**。
+- 只用 NEAREST：字形清晰但强整数步进，缩放会换一套字形，逐字号调参无解。
+- 切 LINEAR + 小数 advance：观感明显接近 SBO，但相邻字形渗色产生外侧噪点，边缘也会被 UV 内缩裁掉。
+- 给字形加 2–4px 透明 gutter 只能减轻噪点，不能根除。
+- 试图用 `GlyphBitmap.getLeft/right/top/bottom` 补偿 2.56px UV 内缩会造成字号大幅缩小（quad 与 UV 的耦合和假设不一致），**已回退，不要再试**。
+- 结论：**要同时做到无噪点、可线性采样、连续缩放，必须绕开 `FontTexture`，使用自研字形图集 + 自己的 UV/quad/linear sampler**。MC 原生字体管线到此为止。
+
+当前可用 fallback：**关闭线性采样、1x 光栅、整数 advance、Light/ Normal hinting**。字体实验旋钮只存在于调试组，正式迁移前删除。后续文字 v2 的验收必须包含：多缩放下无台阶、无外侧噪点、无缺边、首开不卡顿。
+
+### 10.2 自研图集原型（已跑通，2026-11）
+
+`AtlasText` 已作为可切换的文字后端接入 `ClickGuiFonts`，26.2 / 26.3 均已实机验证。当前选定的默认组合是：**自研图集 + 1x 光栅 + 整数 advance + Device 原点 + Hinting None + Regular + Gamma 1.0**；调试组提供「应用最佳预设」「应用 2x 平滑」「恢复原生字体」三个入口。
+
+**实现**：
+
+- 独立 1024×1024 RGBA 图集页，每字形 3px 透明 gutter，页间留 2px。
+- 每个字形 cell 先整块写透明，再写覆盖率；整页创建时也先上传全透明底。**不能依赖 `NativeImage(false)` 的默认内容。**
+- 共享 `FT_Face`，按 `(字体, 字号, 字符, hinting)` 懒加载；Noto 作为 CJK fallback。
+- 文本 run 按字符串 + 字号 + 设备比例缓存；相同文本不重复排版。
+- 字形用 `u0/v0/u1/v1` 显式提交，线性 clamp 采样。
+- 上传走队列，在 `run` 构建后和绘制前 `flush`；客户端 tick 可能因界面暂停而不可靠，不能只依赖 tick。
+- 字体实验开启时**绕过整块面板缓存**，直接实时绘制。自定义文字与现有面板缓存尚未完成兼容，这是后续工作。
+
+**关键教训**：
+
+- 不要用 `graphics.blit` 提交自研字形：即使日志中的 UV 正确，`BlitRenderState` 路径仍可能让所有字形取到第一个 cell。必须用自定义 `GuiElementRenderState` + `GpuTextureView` + 显式顶点 UV。
+- 自定义文字状态必须带 `scissorArea`。`enableScissor` 的参数是 **`x1,y1,x2,y2`**，不是 `x,y,w,h`，并且要按当前 pose 做 `transformAxisAligned`。用 `ScissorTracker` 维护裁剪栈，并每帧在 `extractRenderState` 开头清空，否则文字会溢出到 header、footer 和面板外。
+- 不要试图用 `GlyphBitmap.getLeft/right/top/bottom` 去补偿 MC 的 2.56px UV 内缩，会造成字号缩小；自研图集不要复用 `FontTexture`。
+- 图集调试导出 `TextureUtil.writeAsPNG` 的第一参数是**目录**，输出名是 `name_mip.png`；调试导出已从正式代码移除。
+
+**下一步**：保持自研图集作为可选实验，先对比多缩放下的观感；确认后把文字 run 批处理、页面淘汰、真实 metrics 和 UI 内核一起收敛，并决定是否彻底移除整块面板缓存。
+
+## 11. UI v2 布局内核（第一阶段）
+
+**位置**：`dev.skypocket.ui`，纯 Java，不依赖 Minecraft、业务配置或渲染代码，后续可整体抽成独立模块。
+
+**已实现**：
+
+- `Dimension`：auto / 固定值 / 百分比。
+- `Insets`、`Size`、`Rect`：盒模型与边界值。
+- `Style`：不可变样式；宽高为 **border-box**；padding 在内、margin 在外；支持 min/max、gap、row/column、justify、align、flexGrow、flexShrink、flexBasis。
+- `UiElement` / `Box` / `Text`：保留式元素树；文本通过 `TextMeasurer` 解耦。
+- `LayoutEngine`：测量 + Flex 布局；支持 padding/margin、gap、grow/shrink、justify、start/end/center/stretch、百分比和 auto 尺寸。
+- `Theme`：命名颜色和尺寸 token 的纯容器，不绑定 MC 类型。
+
+**已用最小示例验证**：
+
+- row：padding 10、gap 5、align center、flexGrow(1) 正确分配剩余宽度。
+- column：百分比宽度、自动交叉尺寸、grow 正确分配剩余高度。
+- space-between 和 flexShrink 的边界结果正确。
+
+**当前限制**：
+
+- 不支持 wrap、Grid、绝对定位、baseline、CSS 层叠/选择器。
+- 文本不支持自动换行；由 `TextMeasurer` 决定测量结果。
+- 尚未接入渲染器、输入层、焦点、滚动或现有 ClickGUI。
+- 根节点 auto 宽高会填满宿主；显式宽高按样式执行。
+
+**下一步**：实现输入、焦点、拖拽捕获、滚动和 IME，再做一个独立测试页面；之后才把现有 ClickGUI 页面按垂直切片迁移。
+
+## 12. UI v2 输入内核（第一阶段）
+
+**位置**：`dev.skypocket.ui.input`，同样不依赖 Minecraft。
+
+**已实现**：
+
+- `PointerEvent` / `WheelEvent` / `KeyEvent` / `TextInputEvent` / `PreeditEvent`
+- `InputRouter`：命中测试、事件冒泡、焦点、拖拽捕获、hover 切换、层叠根、Tab/Shift+Tab 焦点遍历、滚轮/键盘/文本/IME 路由
+- `UiElement`：父子关系、visible/enabled、clipChildren、焦点/文本/预编辑钩子
+- `Box` 改为可继承，供后续控件复用布局能力
+
+**已验证**：
+
+- 点击命中、按下后拖出原控件仍由捕获元素接收移动/抬起
+- 点击可把焦点交给最近的 focusable 祖先
+- Tab 在 focusable 元素间循环
+- 滚轮从命中元素向祖先冒泡
+
+**尚未完成**：
+
+- 真正的 ScrollView 控件与滚动偏移渲染
+- MC 输入适配层（26.2/26.3 鼠标键、键盘、IME）
+- 控件库（Button、Switch、Slider、TextField）
+
+**测试页**：`/skypocket uitest` 打开 `Ui2TestScreen`，覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和 Enter/Space 激活。测试页与正式 ClickGUI 完全隔离。26.2 / 26.3 已实机通过：滚动方向、裁剪、拖出后释放、点击计数、Tab/Shift+Tab、Enter/Space 激活和 Esc 退出均正常。
+
+**26.2 / 26.3 输入差异**：
+
+- 26.2 的 `KeyEvent.key()` 是 GLFW 键码；26.3 的 `key()` 是 SDL 键码，直接用 `256/257/258` 判断会导致 26.3 的 Esc、Tab、Enter 全部失效。
+- 跨版本必须使用 `InputWithModifiers` 的语义方法：`isEscape()`、`isCycleFocus()`、`isConfirmation()`，再转换成 `InputRouter` 自己的 canonical keys。
+- `GuiGraphicsExtractor.fill` 参数是 `x1,y1,x2,y2`，而 `outline` 是 `x,y,width,height`；混用会把焦点框画成巨大的矩形。
+- 滚轮事件的正 delta 表示向上；`ScrollView` 用 `scrollY - delta * step`，不要直接相加。
+
+**下一步**：为 `ScrollView` 补滚动条和键盘滚动，再实现 Button/Switch/Slider/TextField 基础控件；随后迁移一个真实设置页。
