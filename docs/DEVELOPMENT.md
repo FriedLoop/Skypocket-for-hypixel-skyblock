@@ -854,4 +854,8 @@ layout(location = 0) out vec4 fragColor;
 
 **暂未完成**：Group 折叠、hint tooltip 和旧面板缓存仍未接入。
 
-**下一步**：验证完整 ColorPicker 的观感/交互（尤其 SV 方块和 HEX/RGBA 输入），再把页面嵌入统一 ClickGUI 内容区。
+**页面缓存（静态底图 + 动态控件层）**：`Ui2Screen` 复用 `GuiPanelCache` 缓存页面底图；录制时 `Control.neutralPaint` 让控件以无焦点、无 pressed、无键盘高亮的稳定状态绘制。缓存 key 由布局 revision 和 `ScrollView` 滚动签名组成。命中缓存后，只遍历并实时重画当前 focused / pressed / flash 的控件，再绘制颜色弹层。焦点变化会触发一次底图重烘；颜色弹层打开时禁用页面缓存。
+
+这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一：静止时一次 blit，交互时只重画活动控件。
+
+**下一步**：实机验证缓存后的静止/滚动/弹层 FPS，再把页面嵌入统一 ClickGUI 内容区。

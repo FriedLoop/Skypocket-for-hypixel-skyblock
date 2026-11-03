@@ -11,6 +11,7 @@ import dev.skypocket.ui.input.PointerEvent;
 /** Shared focus, hover and press state for interactive widgets. */
 public abstract class Control extends Box implements Painted {
     private static final long KEY_FLASH_NANOS = 120_000_000L;
+    private static boolean neutralPaint;
 
     protected final WidgetPalette palette;
     protected boolean hovered;
@@ -63,6 +64,11 @@ public abstract class Control extends Box implements Painted {
         keyFlashUntil = System.nanoTime() + KEY_FLASH_NANOS;
     }
 
+    /** True while a keyboard activation tint is still visible. */
+    public boolean flashActive() {
+        return System.nanoTime() < keyFlashUntil;
+    }
+
     @Override
     public void onHoverChanged(boolean hovered) {
         this.hovered = hovered;
@@ -77,6 +83,19 @@ public abstract class Control extends Box implements Painted {
         return focused;
     }
 
+    public boolean isPressed() {
+        return pressed;
+    }
+
+    /** Base-layer recording: dynamic focus/press/flash must not be baked into the cache. */
+    public static void neutralPaint(boolean value) {
+        neutralPaint = value;
+    }
+
+    protected static boolean neutralPaint() {
+        return neutralPaint;
+    }
+
     protected abstract void activate();
 
     public abstract void paint(UiPainter painter);
@@ -84,12 +103,15 @@ public abstract class Control extends Box implements Painted {
     protected int background() {
         // Hover deliberately does not paint a fill: after activation the only persistent state is the
         // focus outline, so mouse and keyboard activation end in the same visual state.
+        if (neutralPaint) {
+            return palette.background();
+        }
         boolean active = pressed || System.nanoTime() < keyFlashUntil;
         return active ? palette.pressed() : palette.background();
     }
 
     protected void paintFocus(UiPainter painter) {
-        if (focused) {
+        if (focused && !neutralPaint) {
             // Keep the button's own surface inside the ring; drawing only the stroke on a
             // transparent rect can make some painters fill the whole rounded area.
             painter.surface(bounds(), palette.radius(), background(), palette.focus());

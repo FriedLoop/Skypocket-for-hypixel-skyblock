@@ -111,15 +111,24 @@ public final class ColorField extends Control {
         }
     }
 
-    /** Lays the popup under this row. */
-    public void layoutPopup(TextMeasurer measurer) {
+    /** Lays the popup inside the page viewport, above the row when there is no room below. */
+    public void layoutPopup(TextMeasurer measurer, float viewWidth, float viewHeight) {
         if (!open) {
             return;
         }
         syncFields();
-        LayoutEngine.layout(popup, ColorPickerPanel.CONTENT_W, ColorPickerPanel.CONTENT_H, measurer);
-        // Use visual coordinates so a row scrolled inside the page still anchors its popup.
-        popup.offset(visualX(), visualY() + bounds().height() + 2f);
+        float popupWidth = ColorPickerPanel.CONTENT_W;
+        float popupHeight = ColorPickerPanel.CONTENT_H;
+        LayoutEngine.layout(popup, popupWidth, popupHeight, measurer);
+        float x = Math.max(0f, Math.min(visualX(), Math.max(0f, viewWidth - popupWidth)));
+        float below = visualY() + bounds().height() + 2f;
+        float y = below >= 0f && below + popupHeight <= viewHeight
+                ? below
+                : visualY() - popupHeight - 2f;
+        // Never let a field's clip cross the page/render area; that is what made RenderPearl reject
+        // the scissor while the wheel was scrolling an open popup near the bottom/top edge.
+        y = Math.max(0f, Math.min(y, Math.max(0f, viewHeight - popupHeight)));
+        popup.offset(x, y);
     }
 
     @Override

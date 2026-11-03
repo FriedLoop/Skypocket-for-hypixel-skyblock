@@ -2,6 +2,7 @@ package dev.skypocket.gui;
 
 import dev.skypocket.gui.widget.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.LayoutEngine;
@@ -19,12 +20,16 @@ import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 import dev.skypocket.ui.input.WheelEvent;
 import dev.skypocket.ui.mc.McUiPainter;
+import dev.skypocket.ui.widget.Control;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2fStack;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Shared host for UI v2 pages: fit-to-window scaling, layout, painting, input routing and MC key
@@ -40,6 +45,8 @@ public abstract class Ui2Screen extends Screen {
     protected int originY;
     protected int modifiers;
     private boolean layoutDirty = true;
+    private long renderRevision;
+    private UiElement lastFocused;
 
     protected Ui2Screen(Component title, float designWidth, float designHeight) {
         super(title);
@@ -55,6 +62,102 @@ public abstract class Ui2Screen extends Screen {
 
     protected final void invalidateLayout() {
         layoutDirty = true;
+        renderRevision++;
+    }
+
+    /** Layout-only refresh (popup layer/scroll anchor) without invalidating the page base. */
+    protected final void invalidateLayoutOnly() {
+        layoutDirty = true;
+    }
+
+    protected boolean cacheAllowed() {
+        // The cache corrects for the target/pose size mismatch, so a fit scale below 1 is fine.
+        // Keep a lower bound only to avoid baking a postage stamp on a tiny window.
+        return fitScale >= 0.5f;
+    }
+
+    private long pageCacheKey() {
+        return renderRevision * 31_415_926_535L + scrollSignature(root);
+    }
+
+    private static long scrollSignature(UiElement element) {
+        long hash = 0L;
+        if (element instanceof ScrollView scroll) {
+            hash = Float.floatToIntBits(scroll.scrollY()) * 1_000_003L;
+        }
+        for (UiElement child : element.children()) {
+            hash = hash * 31L + scrollSignature(child);
+        }
+        return hash;
+    }
+
+    private void drawPageContent(GuiGraphicsExtractor graphics) {
+        ScissorTracker.reset(graphics);
+        Control.neutralPaint(true);
+        try {
+            drawElement(new McUiPainter(graphics), root);
+        } finally {
+            Control.neutralPaint(false);
+        }
+    }
+
+    private void drawDynamicControls(McUiPainter painter) {
+        Set<UiElement> dynamic = new HashSet<>();
+        collectDynamic(root, dynamic);
+        if (!dynamic.isEmpty()) {
+            drawDynamicElement(painter, root, dynamic);
+        }
+    }
+
+    private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
+        if (element instanceof Control control
+                && (control.isFocused() || control.isPressed() || control.flashActive())) {
+            dynamic.add(control);
+        }
+        for (UiElement child : element.children()) {
+            collectDynamic(child, dynamic);
+        }
+    }
+
+    private boolean drawDynamicElement(McUiPainter painter, UiElement element,
+                                       Set<UiElement> dynamic) {
+        boolean any = dynamic.contains(element);
+        for (UiElement child : element.children()) {
+            any |= containsDynamic(child, dynamic);
+        }
+        if (!any || !element.visible()) {
+            return false;
+        }
+        Matrix3x2fStack pose = painter.graphics().pose();
+        pose.pushMatrix();
+        pose.translate(element.offsetX(), element.offsetY());
+        boolean scroll = element instanceof ScrollView;
+        if (scroll) {
+            painter.pushClip(element.bounds());
+        }
+        if (dynamic.contains(element) && element instanceof Control control) {
+            control.paint(painter);
+        }
+        for (UiElement child : element.children()) {
+            drawDynamicElement(painter, child, dynamic);
+        }
+        if (scroll) {
+            painter.popClip();
+        }
+        pose.popMatrix();
+        return true;
+    }
+
+    private static boolean containsDynamic(UiElement element, Set<UiElement> dynamic) {
+        if (dynamic.contains(element)) {
+            return true;
+        }
+        for (UiElement child : element.children()) {
+            if (containsDynamic(child, dynamic)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -84,12 +187,28 @@ public abstract class Ui2Screen extends Screen {
         ClickGuiFonts.setRenderScale(1f);
         layoutUi();
 
+        UiElement focused = input.focused();
+        if (focused != lastFocused) {
+            // Values of the previously focused control may now only exist in the live overlay; bake
+            // them into the base once focus moves away.
+            lastFocused = focused;
+            renderRevision++;
+        }
+
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(originX, originY);
         pose.scale(fitScale, fitScale);
-        drawElement(painter, root);
+        boolean cached = cacheAllowed() && GuiPanelCache.draw(graphics, pageCacheKey(),
+                (int) designWidth, (int) designHeight, fitScale, fitScale, false,
+                (pageGraphics, pageMouseX, pageMouseY, pageDelta) ->
+                        drawPageContent(pageGraphics), 0, 0, delta);
+        if (!cached) {
+            drawElement(painter, root);
+        } else {
+            drawDynamicControls(painter);
+        }
         drawOverlays(painter);
         pose.popMatrix();
     }
@@ -183,8 +302,9 @@ public abstract class Ui2Screen extends Screen {
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
         layoutUi();
         input.pointerMove(PointerEvent.move(localX(event.x()), localY(event.y()), modifiers));
-        // Dragging a scrollbar changes the popup anchor, even though the element tree did not change.
-        invalidateLayout();
+        // Drag itself does not invalidate the page base; a scrollbar changes the scroll signature,
+        // while a slider stays a live focused overlay.
+        invalidateLayoutOnly();
         return true;
     }
 
@@ -194,7 +314,7 @@ public abstract class Ui2Screen extends Screen {
         input.pointerUp(new PointerEvent(localX(event.x()), localY(event.y()),
                 canonicalButton(event.button()), modifiers));
         // A control may have opened a dropdown/color popup on release.
-        invalidateLayout();
+        invalidateLayoutOnly();
         return true;
     }
 
@@ -204,7 +324,7 @@ public abstract class Ui2Screen extends Screen {
         layoutUi();
         input.wheel(new WheelEvent(localX(mouseX), localY(mouseY), (float) verticalAmount,
                 modifiers));
-        invalidateLayout();
+        invalidateLayoutOnly();
         return true;
     }
 

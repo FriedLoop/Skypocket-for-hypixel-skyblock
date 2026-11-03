@@ -176,7 +176,7 @@ public final class TextField extends Control {
                     painter.textWidth(preedit), 1f), palette.accent());
             caretX = textX + painter.textWidth(shown) + painter.textWidth(preedit);
         }
-        if (focused) {
+        if (focused && !neutralPaint()) {
             painter.fill(new Rect(caretX, bounds().y() + 4f, 1f, bounds().height() - 8f),
                     palette.text());
         }

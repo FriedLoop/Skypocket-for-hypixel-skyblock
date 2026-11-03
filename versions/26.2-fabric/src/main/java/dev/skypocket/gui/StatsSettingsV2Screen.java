@@ -2,6 +2,7 @@ package dev.skypocket.gui;
 
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.i18n.Localization;
+import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.ScrollView;
@@ -50,7 +51,7 @@ public final class StatsSettingsV2Screen extends Ui2Screen {
                 .padding(10f)
                 .gap(8f)
                 .direction(Style.Direction.COLUMN)
-                .build(), palette);
+                .build(), palette, false);
 
         Box header = Box.of(Style.builder()
                         .direction(Style.Direction.ROW)
@@ -192,9 +193,44 @@ public final class StatsSettingsV2Screen extends Ui2Screen {
     }
 
     @Override
+    protected boolean cacheAllowed() {
+        if (!super.cacheAllowed()) {
+            return false;
+        }
+        // The popup is drawn live on top of the page; caching the page underneath would leave the
+        // swatch stale while the picker is being dragged.
+        for (ColorField field : colorFields) {
+            if (field.isOpen()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        boolean handled = super.mouseReleased(event);
+        // A color popup may have opened/closed on release; rebake the base so its swatch is current.
+        invalidateLayout();
+        return handled;
+    }
+
+    @Override
+    public void onClose() {
+        GuiPanelCache.release();
+        super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        GuiPanelCache.release();
+        super.removed();
+    }
+
+    @Override
     protected void onLayout(TextMeasurer measurer) {
         for (ColorField field : colorFields) {
-            field.layoutPopup(measurer);
+            field.layoutPopup(measurer, DESIGN_W, DESIGN_H);
             if (field.isOpen()) {
                 if (!input.layers().contains(field.popup())) {
                     input.addLayer(field.popup());
