@@ -792,6 +792,14 @@ layout(location = 0) out vec4 fragColor;
 
 **测试页**：`/skypocket uitest` 打开 `Ui2TestScreen`，覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和 Enter/Space 激活。测试页与正式 ClickGUI 完全隔离。26.2 / 26.3 已实机通过：滚动方向、裁剪、拖出后释放、点击计数、Tab/Shift+Tab、Enter/Space 激活和 Esc 退出均正常。
 
+**测试页小窗口适配**：测试页按窗口尺寸等比缩放（`fitScale`），鼠标坐标反向除以该缩放；否则退出全屏后固定 340 设计高度会让 ScrollView 的 scissor 超出 render area，触发 RenderPearl 的 `Scissor ... out of bounds` 崩溃。
+
+**崩溃修复（ScissorTracker）**：
+
+- `ScissorTracker` 不再使用全局 ThreadLocal；现在按 `GuiGraphicsExtractor` 实例隔离（WeakHashMap），构造函数时清空该实例的栈，其他 mod 的 GUI 不会共享或继承我们的裁剪状态。
+- `ScreenRectangle.intersection` 对不相交矩形可能返回 `null`；直接 `ArrayDeque.push(null)` 会 NPE，导致所有 GUI 崩溃。现在交集为空时降级为 `ScreenRectangle.empty()`，不再推入 null。
+- mixin 只旁路观察 `enableScissor`/`disableScissor`，不取消、不修改参数和返回值；原版和其他 mod 的渲染行为不变。代价是每次 scissor 调用多一次 map 查找和 deque push/pop。
+
 **26.2 / 26.3 输入差异**：
 
 - 26.2 的 `KeyEvent.key()` 是 GLFW 键码；26.3 的 `key()` 是 SDL 键码，直接用 `256/257/258` 判断会导致 26.3 的 Esc、Tab、Enter 全部失效。
@@ -799,4 +807,23 @@ layout(location = 0) out vec4 fragColor;
 - `GuiGraphicsExtractor.fill` 参数是 `x1,y1,x2,y2`，而 `outline` 是 `x,y,width,height`；混用会把焦点框画成巨大的矩形。
 - 滚轮事件的正 delta 表示向上；`ScrollView` 用 `scrollY - delta * step`，不要直接相加。
 
-**下一步**：为 `ScrollView` 补滚动条和键盘滚动，再实现 Button/Switch/Slider/TextField 基础控件；随后迁移一个真实设置页。
+**基础控件（第一批）**：
+
+- `UiPainter`：控件绘制抽象（fill/outline/text/clip），与 MC 解耦。
+- `WidgetPalette`：第一批控件配色。
+- `Control`：focus/pressed、指针、Enter/Space 激活；键盘激活有 120ms 的短暂按下高亮，焦点描边独立保留。控件不绘制 hover 填充，避免鼠标停留导致激活后残留高亮；鼠标与键盘激活后的最终视觉一致。
+- `Button`：动态文案 + action。
+- `Switch`：BooleanSupplier/Consumer。
+- `Slider`：拖拽捕获、左右键微调、数值显示。
+- `Ui2TestScreen` 已改用真实 Button/Switch/Slider；临时 DemoButton 已删除。
+
+- `TextField`：单行编辑、光标、Backspace/Delete、左右/Home/End、IME 预编辑接口。
+- `Dropdown`：独立 popup layer，通过 `InputRouter.addLayer` 接收点击；选项由 Button 组成。
+- `Scrollbar`：`ScrollView` 的绝对定位子控件，支持点击轨道和拖动滑块。
+- `LayoutEngine`：新增 `position: absolute` 与 left/right/top/bottom；绝对定位子元素不参与流式测量和 flex 分配。
+- `Ui2Theme`：把现有 `ClickGuiStyle` 的颜色 token 映射到 `WidgetPalette`。
+- `TextField`：已接入 `preeditUpdated`，支持 IME 预编辑显示；提交仍通过 `charTyped`。
+
+**尚未完成**：MC 平台 Painter 的独立封装、TextField 点击定位光标、Dropdown 外部点击关闭、滚动条悬停反馈。
+
+**下一步**：补滚动条和主题映射，然后迁移一个真实设置页；测试页继续作为回归入口。

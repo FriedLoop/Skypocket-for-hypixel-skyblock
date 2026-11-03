@@ -1,6 +1,7 @@
 package dev.skypocket.ui;
 
 import dev.skypocket.ui.input.WheelEvent;
+import dev.skypocket.ui.widget.Scrollbar;
 
 /**
  * A vertical scroll viewport with one content box. Content must be laid out with its intrinsic height;
@@ -8,6 +9,7 @@ import dev.skypocket.ui.input.WheelEvent;
  */
 public final class ScrollView extends Box {
     private final Box content;
+    private final Scrollbar scrollbar;
     private final float scrollStep;
     private float scrollY;
 
@@ -26,6 +28,8 @@ public final class ScrollView extends Box {
                 .build();
         content.style(contentStyle);
         add(content);
+        scrollbar = new Scrollbar(this);
+        add(scrollbar);
         clipsChildren(true);
     }
 
@@ -64,4 +68,5 @@ public final class ScrollView extends Box {
         scrollTo(scrollY - event.delta() * scrollStep);
         return scrollY != before;
     }
+
 }

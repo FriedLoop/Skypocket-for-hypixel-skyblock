@@ -6,11 +6,14 @@ import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.LayoutEngine;
+import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.ScrollView;
 import dev.skypocket.ui.Size;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.Text;
+import dev.skypocket.ui.TextMeasurer;
 import dev.skypocket.ui.UiElement;
+import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.InputRouter;
 import dev.skypocket.ui.input.KeyEvent;
 import dev.skypocket.ui.input.Keys;
@@ -18,6 +21,13 @@ import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 import dev.skypocket.ui.input.WheelEvent;
+import dev.skypocket.ui.widget.Button;
+import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.Dropdown;
+import dev.skypocket.ui.widget.Slider;
+import dev.skypocket.ui.widget.Switch;
+import dev.skypocket.ui.widget.TextField;
+import dev.skypocket.ui.widget.WidgetPalette;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -25,19 +35,30 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2fStack;
 
+import java.util.List;
+
 /**
  * A small, intentionally separate page for validating the UI v2 layout and input core before any
  * existing ClickGUI screen is migrated. Open it with {@code /skypocket uitest}.
  */
 public final class Ui2TestScreen extends Screen {
     private static final float DESIGN_W = 360f;
-    private static final float DESIGN_H = 280f;
+    private static final float DESIGN_H = 340f;
+    private final WidgetPalette palette = Ui2Theme.palette();
 
     private final Box root;
     private final ScrollView scroll;
     private final InputRouter input;
+    private final TextField textField;
+    private final Dropdown dropdown;
+    private final int[] rowClicks = new int[18];
+    private int actionCount;
+    private int choice;
+    private boolean enabled;
+    private double scaleValue = 50.0;
     private int originX;
     private int originY;
+    private float fitScale = 1f;
     private int modifiers;
 
     public Ui2TestScreen() {
@@ -47,19 +68,39 @@ public final class Ui2TestScreen extends Screen {
                 .direction(Style.Direction.COLUMN)
                 .gap(4f)
                 .build());
-        for (int i = 1; i <= 18; i++) {
-            content.add(new DemoButton("Row " + i, Style.builder()
-                    .width(Dimension.percent(100f)).height(24f).build()));
+        for (int i = 0; i < rowClicks.length; i++) {
+            int index = i;
+            content.add(new Button(
+                    () -> "Row " + (index + 1) + (rowClicks[index] == 0 ? ""
+                            : "  x" + rowClicks[index]),
+                    () -> rowClicks[index]++,
+                    Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
         }
 
         scroll = new ScrollView(Style.builder().height(150f).padding(4f).build(), content);
+        Box controls = Box.of(Style.builder()
+                        .direction(Style.Direction.ROW)
+                        .height(20f)
+                        .gap(6f)
+                        .build(),
+                new Switch("Enabled", () -> enabled, value -> enabled = value,
+                        Style.builder().width(140f).height(20f).build(), palette),
+                new Slider("Value", 0, 100, () -> scaleValue, value -> scaleValue = value, "%.0f",
+                        Style.builder().width(180f).height(20f).build(), palette));
+        textField = new TextField("Type here...", Style.builder()
+                .width(Dimension.percent(100f)).height(22f).build(), palette);
+        dropdown = new Dropdown("Choice", List.of("Alpha", "Beta", "Gamma"), () -> choice,
+                value -> choice = value,
+                Style.builder().width(160f).height(20f).build(), palette);
         Box footer = Box.of(Style.builder()
                         .direction(Style.Direction.ROW)
                         .height(24f)
                         .gap(6f)
                         .build(),
-                new DemoButton("Action A", Style.builder().width(100f).height(24f).build()),
-                new DemoButton("Action B", Style.builder().width(100f).height(24f).build()));
+                new Button("Action A", () -> actionCount++,
+                        Style.builder().width(100f).height(24f).build(), palette),
+                new Button("Action B", () -> actionCount++,
+                        Style.builder().width(100f).height(24f).build(), palette));
         root = Box.of(Style.builder()
                         .width(DESIGN_W)
                         .height(DESIGN_H)
@@ -69,6 +110,9 @@ public final class Ui2TestScreen extends Screen {
                         .build(),
                 new Text("UI v2: layout + input", Style.builder().height(18f).build()),
                 scroll,
+                controls,
+                textField,
+                dropdown,
                 footer);
         input = new InputRouter(root);
     }
@@ -76,6 +120,8 @@ public final class Ui2TestScreen extends Screen {
     @Override
     protected void init() {
         ClickGuiFonts.setRenderScale(1f);
+        // Without this the screen never receives charTyped/text input from the game.
+        minecraft.onTextInputFocusChange(this, true);
         layoutUi();
     }
 
@@ -86,91 +132,81 @@ public final class Ui2TestScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        ScissorTracker.reset();
+        ScissorTracker.reset(graphics);
         ClickGuiFonts.setRenderScale(1f);
         layoutUi();
 
+        GuiPainter painter = new GuiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(originX, originY);
-        graphics.fill(0, 0, (int) DESIGN_W, (int) DESIGN_H, 0xF0181A1F);
+        pose.scale(fitScale, fitScale);
+        painter.fill(new Rect(0f, 0f, DESIGN_W, DESIGN_H), 0xF0181A1F);
         graphics.outline(0, 0, (int) DESIGN_W, (int) DESIGN_H, 0xFF3A3E48);
-        drawElement(graphics, root);
+        drawElement(painter, root);
+        if (dropdown.isOpen()) {
+            drawElement(painter, dropdown.popup());
+        }
         pose.popMatrix();
     }
 
     private void layoutUi() {
-        originX = Math.round((width - DESIGN_W) / 2f);
-        originY = Math.round((height - DESIGN_H) / 2f);
-        LayoutEngine.layout(root, DESIGN_W, DESIGN_H,
-                (text, maxWidth) -> new Size(ClickGuiFonts.width(text), ClickGuiFonts.lineHeight()));
+        float margin = 8f;
+        fitScale = Math.max(0.1f, Math.min(1f, Math.min(
+                (width - margin * 2f) / DESIGN_W,
+                (height - margin * 2f) / DESIGN_H)));
+        originX = Math.round((width - DESIGN_W * fitScale) / 2f);
+        originY = Math.round((height - DESIGN_H * fitScale) / 2f);
+        TextMeasurer measurer = (text, maxWidth) ->
+                new Size(ClickGuiFonts.width(text), ClickGuiFonts.lineHeight());
+        LayoutEngine.layout(root, DESIGN_W, DESIGN_H, measurer);
         scroll.refresh();
+        dropdown.layoutPopup(measurer);
+        if (dropdown.isOpen()) {
+            if (!input.layers().contains(dropdown.popup())) {
+                input.addLayer(dropdown.popup());
+            }
+        } else {
+            input.removeLayer(dropdown.popup());
+        }
     }
 
-    private void drawElement(GuiGraphicsExtractor graphics, UiElement element) {
+    private void drawElement(GuiPainter painter, UiElement element) {
         if (!element.visible()) {
             return;
         }
-        Matrix3x2fStack pose = graphics.pose();
+        Matrix3x2fStack pose = painter.graphics.pose();
         pose.pushMatrix();
         pose.translate(element.offsetX(), element.offsetY());
 
         boolean scissor = element instanceof ScrollView;
         if (scissor) {
             ScrollView view = (ScrollView) element;
-            graphics.fill((int) view.bounds().x(), (int) view.bounds().y(),
-                    (int) view.bounds().right(), (int) view.bounds().bottom(), 0xFF20232A);
-            graphics.enableScissor((int) Math.floor(view.bounds().x()),
-                    (int) Math.floor(view.bounds().y()),
-                    (int) Math.ceil(view.bounds().right()),
-                    (int) Math.ceil(view.bounds().bottom()));
+            painter.fill(view.bounds(), 0xFF20232A);
+            painter.pushClip(view.bounds());
         }
 
-        if (element instanceof DemoButton button) {
-            drawButton(graphics, button);
+        if (element instanceof Control control) {
+            control.paint(painter);
         } else if (element instanceof Text text) {
-            ClickGuiFonts.drawText(graphics, text.value(), text.bounds().x(), text.bounds().y(),
-                    buttonTextColor(element), false);
+            painter.text(text.value(), text.bounds().x(), text.bounds().y(), 0xFFE6EAF2);
         }
 
         for (UiElement child : element.children()) {
-            drawElement(graphics, child);
+            drawElement(painter, child);
         }
         if (scissor) {
-            graphics.disableScissor();
+            painter.popClip();
         }
         pose.popMatrix();
     }
 
-    private void drawButton(GuiGraphicsExtractor graphics, DemoButton button) {
-        int color = button.pressed()
-                ? 0xFF536B9C
-                : button.hovered() ? 0xFF3A4356 : 0xFF2A2F39;
-        graphics.fill((int) button.bounds().x(), (int) button.bounds().y(),
-                (int) button.bounds().right(), (int) button.bounds().bottom(), color);
-        if (button.focused()) {
-            // outline takes x, y, width, height (unlike fill, which takes x1, y1, x2, y2).
-            graphics.outline((int) button.bounds().x(), (int) button.bounds().y(),
-                    (int) button.bounds().width(), (int) button.bounds().height(), 0xFF9FB7FF);
-        }
-        String label = button.label();
-        int textWidth = ClickGuiFonts.width(label);
-        ClickGuiFonts.drawText(graphics, label,
-                button.bounds().x() + (button.bounds().width() - textWidth) / 2f,
-                button.bounds().y() + (button.bounds().height() - ClickGuiFonts.lineHeight()) / 2f,
-                0xFFFFFFFF, false);
-    }
-
-    private int buttonTextColor(UiElement element) {
-        return 0xFFE6EAF2;
-    }
-
     private float localX(double screenX) {
-        return (float) screenX - originX;
+        return ((float) screenX - originX) / fitScale;
     }
 
     private float localY(double screenY) {
-        return (float) screenY - originY;
+        return ((float) screenY - originY) / fitScale;
     }
 
     private int canonicalButton(int button) {
@@ -247,11 +283,24 @@ public final class Ui2TestScreen extends Screen {
         if (event.isConfirmation()) {
             return Keys.ENTER;
         }
+        if (event.isLeft()) {
+            return Keys.LEFT;
+        }
+        if (event.isRight()) {
+            return Keys.RIGHT;
+        }
         // 26.2 uses GLFW space (32); 26.3 uses SDL space (44). Normalise both for button activation.
         if (event.input() == 32 || event.input() == 44) {
             return 32;
         }
-        return event.input();
+        // 26.3 exposes SDL scancodes for these editing keys; 26.2 already returns the GLFW values.
+        return switch (event.input()) {
+            case 42 -> Keys.BACKSPACE;
+            case 76 -> Keys.DELETE;
+            case 74 -> Keys.HOME;
+            case 77 -> Keys.END;
+            default -> event.input();
+        };
     }
 
     @Override
@@ -259,6 +308,13 @@ public final class Ui2TestScreen extends Screen {
         if (event.isAllowedChatCharacter()) {
             input.textInput(new TextInputEvent(event.codepointAsString()));
         }
+        return true;
+    }
+
+    @Override
+    public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
+        input.preedit(new dev.skypocket.ui.input.PreeditEvent(
+                event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
         return true;
     }
 
@@ -276,76 +332,51 @@ public final class Ui2TestScreen extends Screen {
         return bits;
     }
 
-    private static final class DemoButton extends Box {
-        private final String base;
-        private boolean pressed;
-        private boolean hovered;
-        private boolean focused;
-        private int clicks;
+    /** Adapter from the UI painter to the existing ClickGUI text and GUI primitives. */
+    private static final class GuiPainter implements UiPainter {
+        private final GuiGraphicsExtractor graphics;
 
-        private DemoButton(String base, Style style) {
-            super(style);
-            this.base = base;
-        }
-
-        private String label() {
-            return clicks == 0 ? base : base + "  x" + clicks;
+        private GuiPainter(GuiGraphicsExtractor graphics) {
+            this.graphics = graphics;
         }
 
         @Override
-        public boolean acceptsPointer() {
-            return true;
+        public void fill(Rect rect, int color) {
+            graphics.fill((int) rect.x(), (int) rect.y(), (int) rect.right(), (int) rect.bottom(),
+                    color);
         }
 
         @Override
-        public boolean focusable() {
-            return true;
+        public void outline(Rect rect, int color) {
+            // outline takes x, y, width, height.
+            graphics.outline((int) rect.x(), (int) rect.y(), (int) rect.width(),
+                    (int) rect.height(), color);
         }
 
         @Override
-        public boolean onPointerDown(PointerEvent event) {
-            pressed = true;
-            return true;
+        public void text(String text, float x, float y, int color) {
+            ClickGuiFonts.drawText(graphics, text, x, y, color, false);
         }
 
         @Override
-        public boolean onPointerUp(PointerEvent event) {
-            if (pressed) {
-                clicks++;
-            }
-            pressed = false;
-            return true;
+        public float textWidth(String text) {
+            return ClickGuiFonts.width(text);
         }
 
         @Override
-        public boolean onKeyDown(KeyEvent event) {
-            if (event.key() == Keys.ENTER || event.key() == 32) {
-                clicks++;
-                return true;
-            }
-            return false;
+        public float lineHeight() {
+            return ClickGuiFonts.lineHeight();
         }
 
         @Override
-        public void onHoverChanged(boolean hovered) {
-            this.hovered = hovered;
+        public void pushClip(Rect rect) {
+            graphics.enableScissor((int) Math.floor(rect.x()), (int) Math.floor(rect.y()),
+                    (int) Math.ceil(rect.right()), (int) Math.ceil(rect.bottom()));
         }
 
         @Override
-        public void onFocusChanged(boolean focused) {
-            this.focused = focused;
-        }
-
-        private boolean pressed() {
-            return pressed;
-        }
-
-        private boolean hovered() {
-            return hovered;
-        }
-
-        private boolean focused() {
-            return focused;
+        public void popClip() {
+            graphics.disableScissor();
         }
     }
 }

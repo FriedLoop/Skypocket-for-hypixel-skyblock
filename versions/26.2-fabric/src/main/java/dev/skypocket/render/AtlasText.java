@@ -179,7 +179,7 @@ public final class AtlasText {
         }
         dev.skypocket.mixin.GuiGraphicsExtractorAccessor accessor =
                 (dev.skypocket.mixin.GuiGraphicsExtractorAccessor) graphics;
-        ScreenRectangle scissor = ScissorTracker.current();
+        ScreenRectangle scissor = ScissorTracker.current(graphics);
         for (Map.Entry<AtlasPage, List<Quad>> entry : batches.entrySet()) {
             AtlasPage page = entry.getKey();
             accessor.sky$getRenderState().addGuiElement(new AtlasRunRenderState(

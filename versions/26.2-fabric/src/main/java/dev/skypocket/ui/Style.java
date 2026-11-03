@@ -12,6 +12,11 @@ public final class Style {
         COLUMN
     }
 
+    public enum Position {
+        FLOW,
+        ABSOLUTE
+    }
+
     public enum Justify {
         START,
         END,
@@ -45,6 +50,11 @@ public final class Style {
     private final float flexGrow;
     private final float flexShrink;
     private final Dimension flexBasis;
+    private final Position position;
+    private final Dimension left;
+    private final Dimension right;
+    private final Dimension top;
+    private final Dimension bottom;
 
     private Style(Builder builder) {
         width = builder.width;
@@ -62,6 +72,11 @@ public final class Style {
         flexGrow = builder.flexGrow;
         flexShrink = builder.flexShrink;
         flexBasis = builder.flexBasis;
+        position = builder.position;
+        left = builder.left;
+        right = builder.right;
+        top = builder.top;
+        bottom = builder.bottom;
     }
 
     public static Builder builder() {
@@ -128,6 +143,26 @@ public final class Style {
         return flexBasis;
     }
 
+    public Position position() {
+        return position;
+    }
+
+    public Dimension left() {
+        return left;
+    }
+
+    public Dimension right() {
+        return right;
+    }
+
+    public Dimension top() {
+        return top;
+    }
+
+    public Dimension bottom() {
+        return bottom;
+    }
+
     public static final class Builder {
         private Dimension width = Dimension.AUTO;
         private Dimension height = Dimension.AUTO;
@@ -144,6 +179,11 @@ public final class Style {
         private float flexGrow;
         private float flexShrink = 1f;
         private Dimension flexBasis = Dimension.AUTO;
+        private Position position = Position.FLOW;
+        private Dimension left = Dimension.AUTO;
+        private Dimension right = Dimension.AUTO;
+        private Dimension top = Dimension.AUTO;
+        private Dimension bottom = Dimension.AUTO;
 
         public Builder from(Style style) {
             width = style.width;
@@ -161,6 +201,11 @@ public final class Style {
             flexGrow = style.flexGrow;
             flexShrink = style.flexShrink;
             flexBasis = style.flexBasis;
+            position = style.position;
+            left = style.left;
+            right = style.right;
+            top = style.top;
+            bottom = style.bottom;
             return this;
         }
 
@@ -253,6 +298,47 @@ public final class Style {
         public Builder flexBasis(Dimension value) {
             flexBasis = Objects.requireNonNull(value);
             return this;
+        }
+
+        public Builder position(Position value) {
+            position = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder left(Dimension value) {
+            left = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder right(Dimension value) {
+            right = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder right(float value) {
+            return right(Dimension.points(value));
+        }
+
+        public Builder top(Dimension value) {
+            top = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder top(float value) {
+            return top(Dimension.points(value));
+        }
+
+        public Builder bottom(Dimension value) {
+            bottom = Objects.requireNonNull(value);
+            return this;
+        }
+
+        public Builder bottom(float value) {
+            return bottom(Dimension.points(value));
+        }
+
+        public Builder left(float value) {
+            return left(Dimension.points(value));
         }
 
         public Style build() {

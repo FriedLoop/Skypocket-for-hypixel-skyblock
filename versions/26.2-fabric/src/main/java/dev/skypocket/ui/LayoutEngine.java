@@ -45,14 +45,20 @@ public final class LayoutEngine {
             contentWidth = textSize.width();
             contentHeight = textSize.height();
         } else {
-            List<Size> children = new ArrayList<>();
+            List<UiElement> flow = new ArrayList<>();
             for (UiElement child : node.children()) {
+                if (child.style().position() != Style.Position.ABSOLUTE) {
+                    flow.add(child);
+                }
+            }
+            List<Size> children = new ArrayList<>();
+            for (UiElement child : flow) {
                 children.add(measureNode(child, contentAvailableWidth, contentAvailableHeight, text));
             }
             float main = 0f;
             float cross = 0f;
             for (int i = 0; i < children.size(); i++) {
-                UiElement child = node.children().get(i);
+                UiElement child = flow.get(i);
                 Size size = children.get(i);
                 Insets margin = child.style().margin();
                 if (style.direction() == Style.Direction.ROW) {
@@ -94,11 +100,17 @@ public final class LayoutEngine {
         float contentHeight = Math.max(0f, height - padding.vertical());
         boolean row = style.direction() == Style.Direction.ROW;
 
+        List<UiElement> flow = new ArrayList<>();
+        for (UiElement child : node.children()) {
+            if (child.style().position() != Style.Position.ABSOLUTE) {
+                flow.add(child);
+            }
+        }
         List<ChildLayout> children = new ArrayList<>();
         float mainBasis = 0f;
         float growTotal = 0f;
         float shrinkTotal = 0f;
-        for (UiElement child : node.children()) {
+        for (UiElement child : flow) {
             Size size = measureNode(child, contentWidth, contentHeight, text);
             Style childStyle = child.style();
             Insets margin = childStyle.margin();
@@ -218,6 +230,40 @@ public final class LayoutEngine {
             if (i + 1 < children.size()) {
                 cursor += style.gap() + between;
             }
+        }
+        layoutAbsoluteChildren(node, contentX, contentY, contentWidth, contentHeight, text);
+    }
+
+    /** Lays out absolute children relative to this node's content box. */
+    private static void layoutAbsoluteChildren(UiElement node, float contentX, float contentY,
+                                               float contentWidth, float contentHeight,
+                                               TextMeasurer text) {
+        for (UiElement child : node.children()) {
+            Style style = child.style();
+            if (style.position() != Style.Position.ABSOLUTE) {
+                continue;
+            }
+            float left = resolveOr(style.left(), contentWidth, Float.NaN);
+            float right = resolveOr(style.right(), contentWidth, Float.NaN);
+            float top = resolveOr(style.top(), contentHeight, Float.NaN);
+            float bottom = resolveOr(style.bottom(), contentHeight, Float.NaN);
+            float width = resolveOr(style.width(), contentWidth, Float.NaN);
+            float height = resolveOr(style.height(), contentHeight, Float.NaN);
+            if (width != width) {
+                width = left == left && right == right ? Math.max(0f, contentWidth - left - right)
+                        : measureNode(child, contentWidth, contentHeight, text).width();
+            }
+            if (height != height) {
+                height = top == top && bottom == bottom ? Math.max(0f, contentHeight - top - bottom)
+                        : measureNode(child, contentWidth, contentHeight, text).height();
+            }
+            if (left != left) {
+                left = right == right ? contentWidth - right - width : 0f;
+            }
+            if (top != top) {
+                top = bottom == bottom ? contentHeight - bottom - height : 0f;
+            }
+            layoutNode(child, contentX + left, contentY + top, width, height, text);
         }
     }
 

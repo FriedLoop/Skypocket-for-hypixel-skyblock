@@ -375,7 +375,7 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        dev.skypocket.render.ScissorTracker.reset();
+        dev.skypocket.render.ScissorTracker.reset(graphics);
         // Finish the close animation (then actually leave the screen).
         if (closing && animFinished()) {
             closing = false;
@@ -602,7 +602,7 @@ public class OneClickScreen extends Screen {
     private void drawPanel(GuiGraphicsExtractor graphics, int lmx, int lmy, float delta) {
         // The cache records drawPanel with its own extractor. Start that recording with an empty
         // scissor tracker so custom text states capture the scissor that belongs to this pass.
-        dev.skypocket.render.ScissorTracker.reset();
+        dev.skypocket.render.ScissorTracker.reset(graphics);
         PanelRenderer.drawBackground(graphics, view());
         PanelRenderer.drawTabs(graphics, view(), lmx, lmy);
 
