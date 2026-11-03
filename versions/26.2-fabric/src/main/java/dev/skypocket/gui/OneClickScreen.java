@@ -13,6 +13,10 @@ import dev.skypocket.render.ClickGuiBlur;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
+import dev.skypocket.ui.input.Keys;
+import dev.skypocket.ui.input.Modifiers;
+import dev.skypocket.ui.input.PreeditEvent;
+import dev.skypocket.ui.mc.McUiPainter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -76,6 +80,9 @@ public class OneClickScreen extends Screen {
     private Feature viewingFeature;
     private final List<Feature> features;
     private final List<Setting> panelSettings;
+    private StatsSettingsPage statsPage;
+    private Feature statsPageFeature;
+    private float statsPageHeight = -1f;
 
     public OneClickScreen() {
         super(Component.literal("SkyPocket"));
@@ -139,6 +146,80 @@ public class OneClickScreen extends Screen {
     /** Snapshot of the state the panel geometry reads (see {@link PanelGeometry}). */
     private PanelView view() {
         return new PanelView(settingsTab, viewingFeature, selected, scrollY, search, features);
+    }
+
+    private boolean statsPageActive() {
+        return !settingsTab && viewingFeature != null && "stats_display".equals(viewingFeature.id());
+    }
+
+    private float statsPageTop() {
+        return contentTop() + 28f;
+    }
+
+    private void ensureStatsPage() {
+        if (!statsPageActive()) {
+            statsPage = null;
+            statsPageFeature = null;
+            statsPageHeight = -1f;
+            return;
+        }
+        float height = Math.max(20f, contentBottom() - statsPageTop());
+        if (statsPage == null || statsPageFeature != viewingFeature || statsPageHeight != height) {
+            statsPage = new StatsSettingsPage(viewingFeature, Ui2Theme.palette(),
+                    Setting.WIDGET_WIDTH, height);
+            statsPageFeature = viewingFeature;
+            statsPageHeight = height;
+        }
+    }
+
+    private float statsLocalX(double lx) {
+        return (float) lx - contentLeft();
+    }
+
+    private float statsLocalY(double ly) {
+        return (float) ly - statsPageTop();
+    }
+
+    private int canonicalKey(KeyEvent event) {
+        if (event.isCycleFocus()) {
+            return Keys.TAB;
+        }
+        if (event.isEscape()) {
+            return Keys.ESCAPE;
+        }
+        if (event.isConfirmation()) {
+            return Keys.ENTER;
+        }
+        if (event.isLeft()) {
+            return Keys.LEFT;
+        }
+        if (event.isRight()) {
+            return Keys.RIGHT;
+        }
+        if (event.input() == 32 || event.input() == 44) {
+            return 32;
+        }
+        return switch (event.input()) {
+            case 42 -> Keys.BACKSPACE;
+            case 76 -> Keys.DELETE;
+            case 74 -> Keys.HOME;
+            case 77 -> Keys.END;
+            default -> event.input();
+        };
+    }
+
+    private int pageModifiers(KeyEvent event) {
+        int bits = 0;
+        if (event.hasShiftDown()) {
+            bits |= Modifiers.SHIFT;
+        }
+        if (event.hasControlDown()) {
+            bits |= Modifiers.CONTROL;
+        }
+        if (event.hasAltDown()) {
+            bits |= Modifiers.ALT;
+        }
+        return bits;
     }
 
     /**
@@ -330,6 +411,10 @@ public class OneClickScreen extends Screen {
     private void rebuildSettingsWidgets() {
         clearWidgets();
         TextFieldWidget.clearFocus();
+        if (statsPageActive()) {
+            ensureStatsPage();
+            return;
+        }
         int left = contentLeft();
         int top = contentTop() - scrollY;
         if (settingsTab) {
@@ -426,8 +511,10 @@ public class OneClickScreen extends Screen {
         }
         long cacheKey = PanelCacheKey.of(view(), lmx, lmy, sidebarHighlightY, contentRevision,
                 ToggleAnimation.signature(), animFinished());
-        if (!GuiPanelCache.draw(graphics, cacheKey, PANEL_W, PANEL_H, scaleX, scaleY,
-                animating || moving, this::drawPanel, lmx, lmy, delta)) {
+        // The v2 stats page owns live controls and its own popup layers; baking the whole panel would
+        // freeze its focused/pressed states. Draw the shell and page live while it is open.
+        if (statsPageActive() || !GuiPanelCache.draw(graphics, cacheKey, PANEL_W, PANEL_H, scaleX,
+                scaleY, animating || moving, this::drawPanel, lmx, lmy, delta)) {
             drawPanel(graphics, lmx, lmy, delta);
         }
         pose.popMatrix();
@@ -567,11 +654,18 @@ public class OneClickScreen extends Screen {
         transitionFrom = viewingFeature;
         transitionFromScroll = scrollY;
         transitionDir = id.isEmpty() ? -1 : 1;
-        transitionStartMs = System.currentTimeMillis();
+        boolean v2Page = "stats_display".equals(id)
+                || (viewingFeature != null && "stats_display".equals(viewingFeature.id()));
+        // The v2 page is a live element tree, not a SettingsView pane; the normal slide would draw the
+        // old settings for one frame. Switch it directly instead.
+        transitionStartMs = v2Page ? 0L : System.currentTimeMillis();
         viewingFeature = id.isEmpty() ? null : ModuleRegistry.byId(id);
         scrollY = 0;
         layout();
         rebuildSettingsWidgets();
+        if (v2Page) {
+            ensureStatsPage();
+        }
     }
 
     /** Back/forward buttons, to the left of the search box; they never scroll with the content. */
@@ -644,10 +738,20 @@ public class OneClickScreen extends Screen {
             // Masked like the card hover: widgets scrolled below the footer (or above the tab
             // bar) are clipped away by the scissor, so they must not report a hover either.
             boolean body = inBody(lmx, lmy);
-            super.extractRenderState(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY, delta);
-            // Rows that converted away from widgets draw here: inside the same scissor, after the widget
-            // layer, so they clip and scroll exactly like the rest of the page.
-            drawImmediateRows(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY);
+            if (statsPageActive()) {
+                ensureStatsPage();
+                statsPage.layout();
+                Matrix3x2fStack pagePose = graphics.pose();
+                pagePose.pushMatrix();
+                pagePose.translate(contentLeft(), statsPageTop());
+                statsPage.draw(new McUiPainter(graphics));
+                pagePose.popMatrix();
+            } else {
+                super.extractRenderState(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY, delta);
+                // Rows that converted away from widgets draw here: inside the same scissor, after the widget
+                // layer, so they clip and scroll exactly like the rest of the page.
+                drawImmediateRows(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY);
+            }
             graphics.disableScissor();
         }
 
@@ -791,6 +895,13 @@ public class OneClickScreen extends Screen {
         if (!inBody(lx, ly)) {
             return false;
         }
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.layout();
+            statsPage.pointerDown(statsLocalX(lx), statsLocalY(ly),
+                    Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         // Rows without widgets are handled by the shared renderer: it knows the row types, the open
         // dropdown lists and the slider drag, and the settings card in the HUD editor uses the same code.
         int rowLeft = contentLeft();
@@ -869,6 +980,12 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.layout();
+            statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly), shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (dev.skypocket.gui.setting.SettingsView.drag(viewState, rowsWithY(),
                 contentLeft(), Setting.WIDGET_WIDTH, lx, ly)) {
             return true;
@@ -884,6 +1001,13 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.layout();
+            statsPage.pointerUp(statsLocalX(lx), statsLocalY(ly),
+                    Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (dev.skypocket.gui.setting.SettingsView.release(viewState)) {
             return true;
         }
@@ -903,6 +1027,13 @@ public class OneClickScreen extends Screen {
             // The wheel must not scroll anything while the cursor is outside the panel body
             // (outside the GUI, over the tab strip, or over the footer).
             return false;
+        }
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.layout();
+            statsPage.wheel(statsLocalX(lx), statsLocalY(ly), (float) verticalAmount,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
         }
         // An open dropdown's list owns the wheel while the cursor is over it (it is drawn by the page
         // now, so it answers through the setting rather than as a widget).
@@ -927,6 +1058,21 @@ public class OneClickScreen extends Screen {
     private boolean ctrlDown;
 
     @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (statsPageActive()) {
+            layout();
+            double lx = localX(mouseX);
+            double ly = localY(mouseY);
+            if (inBody(lx, ly)) {
+                ensureStatsPage();
+                statsPage.layout();
+                statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
+                        shiftDown ? Modifiers.SHIFT : 0);
+            }
+        }
+    }
+
+    @Override
     public boolean keyReleased(KeyEvent event) {
         int key = event.key();
         if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
@@ -934,6 +1080,12 @@ public class OneClickScreen extends Screen {
         }
         if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
             ctrlDown = false;
+        }
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), false));
+            return true;
         }
         return super.keyReleased(event);
     }
@@ -960,6 +1112,21 @@ public class OneClickScreen extends Screen {
         }
         if (devDrawer.isOpen() && key == GLFW.GLFW_KEY_ESCAPE) {
             devDrawer.close();
+            return true;
+        }
+        if (statsPageActive()) {
+            ensureStatsPage();
+            if (event.isEscape()) {
+                if (statsPage.hasOpenPopup()) {
+                    statsPage.closePopups();
+                } else {
+                    onClose();
+                }
+                return true;
+            }
+            statsPage.layout();
+            statsPage.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), true));
             return true;
         }
         // A focused field inside an open colour picker owns the keys (the picker draws its own fields).
@@ -1003,6 +1170,12 @@ public class OneClickScreen extends Screen {
             if (!typed.isEmpty() && devDrawer.charTyped(typed.charAt(0))) {
                 return true;
             }
+            if (statsPageActive()) {
+                ensureStatsPage();
+                statsPage.layout();
+                statsPage.textInput(typed);
+                return true;
+            }
             if (!typed.isEmpty()
                     && dev.skypocket.gui.setting.SettingsView.charTyped(viewState, rowsWithY(), typed.charAt(0))) {
                 return true;
@@ -1022,6 +1195,17 @@ public class OneClickScreen extends Screen {
         scrollY = 0;
         layout();
         return true;
+    }
+
+    @Override
+    public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
+        if (statsPageActive()) {
+            ensureStatsPage();
+            statsPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
+                    event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
+            return true;
+        }
+        return super.preeditUpdated(event);
     }
 
     @Override

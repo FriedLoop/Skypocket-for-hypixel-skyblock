@@ -858,4 +858,6 @@ layout(location = 0) out vec4 fragColor;
 
 这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一：静止时一次 blit，交互时只重画活动控件。颜色弹层打开时页面底图继续缓存，只把打开弹层的颜色行作为动态控件覆盖，弹层本身实时绘制。
 
-**下一步**：实机验证缓存后的静止/滚动/弹层 FPS，再把页面嵌入统一 ClickGUI 内容区。
+**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。此路径暂时绕过整块 `GuiPanelCache`，先保证实时状态正确，后续再补页面级缓存。
+
+**下一步**：验证统一入口后删除 `/skypocket statsui` 独立页面，并清理旧 stats 设置渲染。
