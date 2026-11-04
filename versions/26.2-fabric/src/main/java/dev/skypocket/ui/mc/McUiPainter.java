@@ -177,12 +177,14 @@ public final class McUiPainter implements UiPainter {
 
     @Override
     public void text(String text, float x, float y, int color) {
-        ClickGuiFonts.drawText(graphics, text, x, y, color, false);
+        ClickGuiFonts.drawText(graphics, dev.skypocket.i18n.Localization.auto(text),
+                x, y, color, false);
     }
 
     @Override
     public void textScaled(String text, float x, float y, int color, float scale) {
-        ClickGuiFonts.drawTextScaled(graphics, text, x, y, color, false, scale);
+        ClickGuiFonts.drawTextScaled(graphics, dev.skypocket.i18n.Localization.auto(text),
+                x, y, color, false, scale);
     }
 
     @Override
@@ -193,12 +195,13 @@ public final class McUiPainter implements UiPainter {
             case SEMIBOLD -> dev.skypocket.render.FontLab.Weight.SEMIBOLD;
             default -> dev.skypocket.render.FontLab.Weight.REGULAR;
         };
-        ClickGuiFonts.drawTextWeighted(graphics, text, x, y, color, scale, mapped);
+        ClickGuiFonts.drawTextWeighted(graphics, dev.skypocket.i18n.Localization.auto(text),
+                x, y, color, scale, mapped);
     }
 
     @Override
     public float textWidth(String text) {
-        return ClickGuiFonts.width(text);
+        return ClickGuiFonts.width(dev.skypocket.i18n.Localization.auto(text));
     }
 
     @Override

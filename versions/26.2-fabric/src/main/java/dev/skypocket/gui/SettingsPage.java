@@ -119,7 +119,8 @@ public final class SettingsPage {
 
     public void layout() {
         TextMeasurer measurer = (text, maxWidth) ->
-                new Size(ClickGuiFonts.width(text), ClickGuiFonts.lineHeight());
+                new Size(ClickGuiFonts.width(
+                        dev.skypocket.i18n.Localization.auto(text)), ClickGuiFonts.lineHeight());
         LayoutEngine.layout(root, width, height, measurer);
         if (scroll != null) {
             scroll.refresh();
@@ -278,12 +279,20 @@ public final class SettingsPage {
     }
 
     private void drawElement(McUiPainter painter, UiElement element) {
+        drawElement(painter, element, null);
+    }
+
+    private void drawElement(McUiPainter painter, UiElement element, ScrollView viewport) {
         if (!element.visible()) {
+            return;
+        }
+        if (viewport != null && !intersects(element, viewport)) {
             return;
         }
         Matrix3x2fStack pose = painter.graphics().pose();
         pose.pushMatrix();
         pose.translate(element.offsetX(), element.offsetY());
+        ScrollView nextViewport = element instanceof ScrollView view ? view : viewport;
         if (element instanceof ScrollView view) {
             // The cards already sit on the ClickGUI shell; an extra dark page fill makes the
             // whole content pane look like a second surface behind them.
@@ -300,12 +309,23 @@ public final class SettingsPage {
             }
         }
         for (UiElement child : element.children()) {
-            drawElement(painter, child);
+            drawElement(painter, child, nextViewport);
         }
         if (element instanceof ScrollView) {
             painter.popClip();
         }
         pose.popMatrix();
+    }
+
+    private static boolean intersects(UiElement element, ScrollView viewport) {
+        float ex = element.visualX();
+        float ey = element.visualY();
+        float vx = viewport.visualX();
+        float vy = viewport.visualY();
+        return ex + element.bounds().width() >= vx
+                && ex <= vx + viewport.bounds().width()
+                && ey + element.bounds().height() >= vy
+                && ey <= vy + viewport.bounds().height();
     }
 
     public boolean pointerDown(float x, float y, int button, int modifiers) {

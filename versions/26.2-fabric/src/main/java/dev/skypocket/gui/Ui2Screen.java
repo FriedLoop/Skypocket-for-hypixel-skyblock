@@ -234,7 +234,8 @@ public abstract class Ui2Screen extends Screen {
         originX = Math.round((width - designWidth * fitScale) / 2f);
         originY = Math.round((height - designHeight * fitScale) / 2f);
         TextMeasurer measurer = (text, maxWidth) ->
-                new Size(ClickGuiFonts.width(text), ClickGuiFonts.lineHeight());
+                new Size(ClickGuiFonts.width(
+                        dev.skypocket.i18n.Localization.auto(text)), ClickGuiFonts.lineHeight());
         LayoutEngine.layout(root, designWidth, designHeight, measurer);
         onLayout(measurer);
     }

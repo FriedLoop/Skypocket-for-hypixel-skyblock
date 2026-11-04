@@ -423,6 +423,10 @@ public final class Localization {
     private static final Set<String> MISSING = new HashSet<>();
 
     public static String tr(String zh) {
+        if (zh == null || zh.isEmpty() || !hasCjk(zh)) {
+            // Already-localized English (or a non-translatable token) must not be looked up again.
+            return zh;
+        }
         if (!isEnglish()) {
             return zh;
         }
@@ -436,6 +440,39 @@ public final class Localization {
             return zh;
         }
         return en;
+    }
+
+    /**
+     * Drawing-boundary translation: UI text is localized even when a constructor forgot to call
+     * {@link #tr}. Already-English text contains no CJK and returns immediately; explicit tr() calls
+     * are therefore safe to double-pass.
+     */
+    public static String auto(String text) {
+        if (text == null || text.isEmpty() || !hasCjk(text)) {
+            return text;
+        }
+        if (!isEnglish()) {
+            return text;
+        }
+        String en = EN.get(text);
+        if (en == null) {
+            if (MISSING.add(text)) {
+                LOGGER.warn("missing English translation: {}", text);
+            }
+            return text;
+        }
+        return en;
+    }
+
+    private static boolean hasCjk(String text) {
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            if ((cp >= 0x3400 && cp <= 0x9FFF) || (cp >= 0xF900 && cp <= 0xFAFF)) {
+                return true;
+            }
+            i += Character.charCount(cp);
+        }
+        return false;
     }
 
     private static boolean isEnglish() {

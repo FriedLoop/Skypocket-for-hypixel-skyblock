@@ -154,7 +154,8 @@ public class OneClickScreen extends Screen {
                     "held_item_name", "post_process", "chat_compact",
                     "damage_splash_compact", "scrollable_tooltips", "player_glow",
                     "dragon_glow", "hitbox", "block_outline", "hide_players",
-                    "hand_item", "fishing_hotspot_overlay", "commissions");
+                    "hand_item", "fishing_hotspot_overlay", "commissions",
+                    "mining_ability_reminder", "mining_break_predict");
 
     private boolean statsPageActive() {
         return !settingsTab && viewingFeature != null
