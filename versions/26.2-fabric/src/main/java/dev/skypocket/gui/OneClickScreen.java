@@ -80,6 +80,7 @@ public class OneClickScreen extends Screen {
     private Feature viewingFeature;
     private final List<Feature> features;
     private final List<Setting> panelSettings;
+    private final Feature panelFeature;
     private SettingsPage statsPage;
     private Feature statsPageFeature;
     private float statsPageHeight = -1f;
@@ -89,6 +90,15 @@ public class OneClickScreen extends Screen {
         ModuleRegistry.init();
         this.features = ModuleRegistry.features();
         this.panelSettings = buildPanelSettings();
+        this.panelFeature = new Feature() {
+            @Override public String id() { return "__settings"; }
+            @Override public String name() { return Localization.tr("设置"); }
+            @Override public String rawName() { return "设置"; }
+            @Override public Category category() { return Category.RENDER; }
+            @Override public boolean isEnabled() { return true; }
+            @Override public void setEnabled(boolean value) { }
+            @Override public List<Setting> settings() { return panelSettings; }
+        };
     }
 
     @Override
@@ -159,22 +169,22 @@ public class OneClickScreen extends Screen {
                     "crosshair");
 
     private boolean statsPageActive() {
-        return !settingsTab && viewingFeature != null
-                && V2_PAGE_IDS.contains(viewingFeature.id());
+        return settingsTab || (viewingFeature != null
+                && V2_PAGE_IDS.contains(viewingFeature.id()));
     }
 
     private float statsPageTop() {
-        return contentTop() + 18f;
+        return contentTop() + (settingsTab ? 8f : 18f);
     }
 
     private float statsPageWidth() {
-        // Use the full content pane: the page's right padding reserves the scrollbar strip, while
-        // the cards keep the same visual width instead of leaving dead space at the right edge.
-        return contentWidth();
+        // Main settings has no sidebar/search/back column, so it gets the full panel width. Module
+        // pages still live beside the sidebar.
+        return settingsTab ? PANEL_W - 32f : contentWidth();
     }
 
     private float statsPageLeft() {
-        return SIDEBAR_W;
+        return settingsTab ? 16f : SIDEBAR_W;
     }
 
     /** Page-cache blit origin snapped to a whole GUI-scaled unit. */
@@ -191,11 +201,19 @@ public class OneClickScreen extends Screen {
             // Keep the page through the 180 ms slide-out so drawPane can animate the outgoing side.
             return;
         }
+        Feature target = settingsTab ? panelFeature : viewingFeature;
+        if (target == null) {
+            return;
+        }
         float height = Math.max(20f, contentBottom() - statsPageTop());
-        if (statsPage == null || statsPageFeature != viewingFeature || statsPageHeight != height) {
-            statsPage = new SettingsPage(viewingFeature, Ui2Theme.palette(),
-                    statsPageWidth(), height);
-            statsPageFeature = viewingFeature;
+        if (statsPage == null || statsPageFeature != target || statsPageHeight != height) {
+            float pageWidth = statsPageWidth();
+            float columnWidth = settingsTab
+                    ? pageWidth - 30f
+                    : Math.min(520f, pageWidth - 30f);
+            statsPage = new SettingsPage(target, Ui2Theme.palette(),
+                    pageWidth, height, columnWidth);
+            statsPageFeature = target;
             statsPageHeight = height;
         }
     }
@@ -360,10 +378,19 @@ public class OneClickScreen extends Screen {
                         () -> cfg.clickGuiScale, v -> cfg.clickGuiScale = (float) v, "%.1f", ClickGuiFonts.SCALE_STEP),
                 new Setting.BooleanSetting("SkyBlock 模块仅在 SkyBlock 生效", () -> cfg.skyBlockModulesOnly,
                         v -> cfg.skyBlockModulesOnly = v),
-                new Setting.ActionSetting(
-                        () -> Localization.tr("语言") + ": " + Localization.displayName(),
-                        () -> {
-                            Localization.cycleLanguage();
+                new Setting.DropdownSetting("语言",
+                        () -> List.of("跟随系统", "中文", "English"),
+                        Localization::displayName,
+                        value -> {
+                            String code = switch (value) {
+                                case "中文" -> "zh_cn";
+                                case "English" -> "en_us";
+                                default -> "system";
+                            };
+                            if (code.equals(cfg.language)) {
+                                return;
+                            }
+                            cfg.language = code;
                             ConfigManager.save();
                             Minecraft mc = Minecraft.getInstance();
                             mc.schedule(() -> {
@@ -1016,6 +1043,7 @@ public class OneClickScreen extends Screen {
         viewingFeature = null;
         scrollY = 0;
         rebuildSettingsWidgets();
+        ensureStatsPage();
     }
 
     @Override

@@ -50,6 +50,7 @@ public final class SettingsPage {
     private final WidgetPalette palette;
     private final float width;
     private final float height;
+    private final float columnWidth;
     private final List<ColorField> colorFields = new ArrayList<>();
     private final List<Dropdown> dropdowns = new ArrayList<>();
     private Box root;
@@ -61,10 +62,16 @@ public final class SettingsPage {
     private float renderScaleY = 1f;
 
     public SettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
+        this(feature, palette, width, height, Math.min(520f, Math.max(200f, width - 30f)));
+    }
+
+    public SettingsPage(Feature feature, WidgetPalette palette, float width, float height,
+                        float columnWidth) {
         this.feature = feature;
         this.palette = palette;
         this.width = width;
         this.height = height;
+        this.columnWidth = Math.max(200f, Math.min(columnWidth, width - 30f));
         rebuild();
     }
 
@@ -93,11 +100,12 @@ public final class SettingsPage {
                     .gap(4f)
                     .build());
             buildSettings(content, feature.settings());
+            float columnLeft = (width - columnWidth) / 2f;
             scroll = new ScrollView(Style.builder()
                     .position(Style.Position.ABSOLUTE)
-                    .left(15f)
+                    .left(columnLeft)
                     .top(0f)
-                    .width(520f)
+                    .width(columnWidth)
                     .height(height)
                     .padding(2f)
                     .build(), content, 24f, false);
@@ -105,7 +113,7 @@ public final class SettingsPage {
             Scrollbar bar = scroll.scrollbar();
             bar.style(Style.builder()
                     .position(Style.Position.ABSOLUTE)
-                    .left(540f)
+                    .left(columnLeft + columnWidth + 5f)
                     .top(4f)
                     .bottom(4f)
                     .width(6f)

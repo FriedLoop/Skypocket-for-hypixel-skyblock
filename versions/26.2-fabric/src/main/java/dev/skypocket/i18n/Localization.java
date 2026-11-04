@@ -323,6 +323,8 @@ public final class Localization {
         EN.put("全部", "All");
         EN.put("搜索...", "Search...");
         EN.put("语言", "Language");
+    EN.put("跟随系统", "System");
+    EN.put("中文", "Chinese");
         // crosshair
         EN.put("描边", "Stroke");
         EN.put("描边宽度", "Stroke Width");
