@@ -12,6 +12,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  */
 public final class McUiPainter implements UiPainter {
     private final GuiGraphicsExtractor graphics;
+    private final java.util.ArrayDeque<Boolean> clipStack = new java.util.ArrayDeque<>();
 
     public McUiPainter(GuiGraphicsExtractor graphics) {
         this.graphics = graphics;
@@ -153,12 +154,25 @@ public final class McUiPainter implements UiPainter {
 
     @Override
     public void pushClip(Rect rect) {
-        graphics.enableScissor((int) Math.floor(rect.x()), (int) Math.floor(rect.y()),
-                (int) Math.ceil(rect.right()), (int) Math.ceil(rect.bottom()));
+        int x0 = (int) Math.floor(rect.x());
+        int y0 = (int) Math.floor(rect.y());
+        int x1 = (int) Math.ceil(rect.right());
+        int y1 = (int) Math.ceil(rect.bottom());
+        if (x1 <= x0 || y1 <= y0) {
+            // Empty clips are legal in layout but not in RenderPearl's scissor API. Remember that this
+            // level did not enable a scissor so the matching pop does not disable the parent's.
+            clipStack.push(false);
+            return;
+        }
+        graphics.enableScissor(x0, y0, x1, y1);
+        clipStack.push(true);
     }
 
     @Override
     public void popClip() {
-        graphics.disableScissor();
+        Boolean enabled = clipStack.poll();
+        if (enabled != null && enabled) {
+            graphics.disableScissor();
+        }
     }
 }

@@ -158,9 +158,7 @@ public class OneClickScreen extends Screen {
 
     private void ensureStatsPage() {
         if (!statsPageActive()) {
-            statsPage = null;
-            statsPageFeature = null;
-            statsPageHeight = -1f;
+            // Keep the page through the 180 ms slide-out so drawPane can animate the outgoing side.
             return;
         }
         float height = Math.max(20f, contentBottom() - statsPageTop());
@@ -602,11 +600,18 @@ public class OneClickScreen extends Screen {
             ClickGuiFonts.drawText(graphics, feature.name(), SIDEBAR_W + 20,
                     contentTop() - paneScroll + 2,
                     dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
-            java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rows =
-                    dev.skypocket.gui.setting.SettingsView.layout(feature.settings(),
-                            contentTop() - paneScroll + 28);
-            dev.skypocket.gui.setting.SettingsView.draw(viewState, graphics, rows, contentLeft(),
-                    Setting.WIDGET_WIDTH, lmx - dx, lmy, contentTop(), contentBottom());
+            if (statsPage != null && statsPageFeature == feature) {
+                statsPage.layout();
+                pose.translate(contentLeft(), contentTop() - paneScroll + 28);
+                statsPage.draw(new McUiPainter(graphics));
+                pose.translate(-contentLeft(), -(contentTop() - paneScroll + 28));
+            } else {
+                java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rows =
+                        dev.skypocket.gui.setting.SettingsView.layout(feature.settings(),
+                                contentTop() - paneScroll + 28);
+                dev.skypocket.gui.setting.SettingsView.draw(viewState, graphics, rows, contentLeft(),
+                        Setting.WIDGET_WIDTH, lmx - dx, lmy, contentTop(), contentBottom());
+            }
         }
         pose.popMatrix();
     }
@@ -651,21 +656,18 @@ public class OneClickScreen extends Screen {
     }
 
     private void applyNavigation(String id) {
+        if (statsPage != null) {
+            statsPage.closePopups();
+        }
         transitionFrom = viewingFeature;
         transitionFromScroll = scrollY;
         transitionDir = id.isEmpty() ? -1 : 1;
-        boolean v2Page = "stats_display".equals(id)
-                || (viewingFeature != null && "stats_display".equals(viewingFeature.id()));
-        // The v2 page is a live element tree, not a SettingsView pane; the normal slide would draw the
-        // old settings for one frame. Switch it directly instead.
-        transitionStartMs = v2Page ? 0L : System.currentTimeMillis();
+        transitionStartMs = System.currentTimeMillis();
         viewingFeature = id.isEmpty() ? null : ModuleRegistry.byId(id);
         scrollY = 0;
         layout();
         rebuildSettingsWidgets();
-        if (v2Page) {
-            ensureStatsPage();
-        }
+        ensureStatsPage();
     }
 
     /** Back/forward buttons, to the left of the search box; they never scroll with the content. */

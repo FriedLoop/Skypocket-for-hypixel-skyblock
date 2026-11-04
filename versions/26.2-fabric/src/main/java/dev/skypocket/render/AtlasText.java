@@ -180,6 +180,10 @@ public final class AtlasText {
         dev.skypocket.mixin.GuiGraphicsExtractorAccessor accessor =
                 (dev.skypocket.mixin.GuiGraphicsExtractorAccessor) graphics;
         ScreenRectangle scissor = ScissorTracker.current(graphics);
+        if (scissor != null && (scissor.width() <= 0 || scissor.height() <= 0)) {
+            // Fully clipped text must not become a 0x0 scissor render state; RenderPearl rejects it.
+            return;
+        }
         for (Map.Entry<AtlasPage, List<Quad>> entry : batches.entrySet()) {
             AtlasPage page = entry.getKey();
             accessor.sky$getRenderState().addGuiElement(new AtlasRunRenderState(
