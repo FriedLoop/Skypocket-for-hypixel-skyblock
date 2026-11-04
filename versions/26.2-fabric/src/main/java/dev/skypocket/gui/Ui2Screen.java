@@ -107,7 +107,12 @@ public abstract class Ui2Screen extends Screen {
         Set<UiElement> dynamic = new HashSet<>();
         collectDynamic(root, dynamic);
         if (!dynamic.isEmpty()) {
-            drawDynamicElement(painter, root, dynamic);
+            Control.overlayPaint(true);
+            try {
+                drawDynamicElement(painter, root, dynamic);
+            } finally {
+                Control.overlayPaint(false);
+            }
         }
     }
 

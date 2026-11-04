@@ -153,7 +153,8 @@ public class OneClickScreen extends Screen {
             Set.of("stats_display", "clock", "day_count", "fps_tps_ping",
                     "held_item_name", "post_process", "chat_compact",
                     "damage_splash_compact", "scrollable_tooltips", "player_glow",
-                    "dragon_glow", "hitbox");
+                    "dragon_glow", "hitbox", "block_outline", "hide_players",
+                    "hand_item", "fishing_hotspot_overlay", "commissions");
 
     private boolean statsPageActive() {
         return !settingsTab && viewingFeature != null

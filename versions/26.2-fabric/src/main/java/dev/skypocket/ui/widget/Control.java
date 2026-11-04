@@ -12,6 +12,7 @@ import dev.skypocket.ui.input.PointerEvent;
 public abstract class Control extends Box implements Painted {
     private static final long KEY_FLASH_NANOS = 120_000_000L;
     private static boolean neutralPaint;
+    private static boolean overlayPaint;
 
     protected final WidgetPalette palette;
     private boolean flat;
@@ -95,7 +96,7 @@ public abstract class Control extends Box implements Painted {
     }
 
     protected void paintRowBackground(UiPainter painter) {
-        if (!flat || pressed || System.nanoTime() < keyFlashUntil) {
+        if (!flat || overlayPaint || pressed || System.nanoTime() < keyFlashUntil) {
             painter.surface(bounds(), palette.radius(), background(), 0);
         }
     }
@@ -107,6 +108,15 @@ public abstract class Control extends Box implements Painted {
 
     protected static boolean neutralPaint() {
         return neutralPaint;
+    }
+
+    /** Live overlays must repaint an opaque row so cached text underneath cannot ghost through. */
+    public static void overlayPaint(boolean value) {
+        overlayPaint = value;
+    }
+
+    protected static boolean overlayPaint() {
+        return overlayPaint;
     }
 
     protected abstract void activate();
