@@ -151,7 +151,7 @@ public class OneClickScreen extends Screen {
     /** Modules already using the v2 settings page tree. */
     private static final Set<String> V2_PAGE_IDS =
             Set.of("stats_display", "clock", "day_count", "fps_tps_ping",
-                    "held_item_name");
+                    "held_item_name", "post_process");
 
     private boolean statsPageActive() {
         return !settingsTab && viewingFeature != null
@@ -1257,6 +1257,9 @@ public class OneClickScreen extends Screen {
     /** Rebuilds widgets after a config change (e.g. language switch) so labels update. */
     public void rebuildAfterLanguageChange() {
         contentRevision++;
+        if (statsPage != null) {
+            statsPage.rebuild();
+        }
         layout();
         rebuildSettingsWidgets();
     }

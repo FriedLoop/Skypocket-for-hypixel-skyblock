@@ -26,6 +26,7 @@ import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
 import dev.skypocket.ui.widget.ColorField;
 import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.Dropdown;
 import dev.skypocket.ui.widget.Scrollbar;
 import dev.skypocket.ui.widget.Segmented;
 import dev.skypocket.ui.widget.Slider;
@@ -49,6 +50,7 @@ public final class SettingsPage {
     private final float width;
     private final float height;
     private final List<ColorField> colorFields = new ArrayList<>();
+    private final List<Dropdown> dropdowns = new ArrayList<>();
     private Box root;
     private ScrollView scroll;
     private InputRouter input;
@@ -75,6 +77,7 @@ public final class SettingsPage {
 
     public void rebuild() {
         colorFields.clear();
+        dropdowns.clear();
         Box page = new Box(Style.builder()
                 .width(width)
                 .height(height)
@@ -131,6 +134,16 @@ public final class SettingsPage {
                 input.removeLayer(field.popup());
             }
         }
+        for (Dropdown dropdown : dropdowns) {
+            dropdown.layoutPopup(measurer, width, height);
+            if (dropdown.isOpen()) {
+                if (!input.layers().contains(dropdown.popup())) {
+                    input.addLayer(dropdown.popup());
+                }
+            } else {
+                input.removeLayer(dropdown.popup());
+            }
+        }
     }
 
     public void draw(GuiGraphicsExtractor graphics, float scaleX, float scaleY, boolean animating) {
@@ -162,6 +175,11 @@ public final class SettingsPage {
             if (field.isOpen()) {
                 field.syncFields();
                 drawElement(painter, field.popup());
+            }
+        }
+        for (Dropdown dropdown : dropdowns) {
+            if (dropdown.isOpen()) {
+                drawElement(painter, dropdown.popup());
             }
         }
         pose.popMatrix();
@@ -204,7 +222,8 @@ public final class SettingsPage {
     private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
         if (element instanceof Control control
                 && (control.isFocused() || control.isPressed() || control.flashActive()
-                || (control instanceof ColorField color && color.isOpen()))) {
+                || (control instanceof ColorField color && color.isOpen())
+                || (control instanceof Dropdown dropdown && dropdown.isOpen()))) {
             dynamic.add(control);
         }
         for (UiElement child : element.children()) {
@@ -337,6 +356,11 @@ public final class SettingsPage {
                 return true;
             }
         }
+        for (Dropdown dropdown : dropdowns) {
+            if (dropdown.isOpen()) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -344,12 +368,18 @@ public final class SettingsPage {
         for (ColorField field : colorFields) {
             field.close();
         }
+        for (Dropdown dropdown : dropdowns) {
+            dropdown.close();
+        }
         input.focus(null);
     }
 
     private void closePopupsOutside() {
         for (ColorField field : colorFields) {
             field.closeIfFocusOutside(input.focused());
+        }
+        for (Dropdown dropdown : dropdowns) {
+            dropdown.closeIfFocusOutside(input.focused());
         }
     }
 
@@ -363,14 +393,9 @@ public final class SettingsPage {
                 if (card != null) {
                     content.add(card);
                 }
-                card = new Card(Style.builder()
-                        .width(Dimension.percent(100f))
-                        .padding(8f)
-                        .gap(2f)
-                        .direction(Style.Direction.COLUMN)
-                        .build(), palette);
+                card = newCard();
                 card.add(new Text(Localization.tr(header.label()),
-                        Style.builder().height(16f).build(), 1f, TextWeight.MEDIUM));
+                        Style.builder().height(16f).build(), 1f, TextWeight.SEMIBOLD));
                 if (header.subtitle() != null && !header.subtitle().isEmpty()) {
                     card.add(new Text(Localization.tr(header.subtitle()),
                             Style.builder().height(12f).build(), 0.82f, TextWeight.REGULAR)
@@ -378,19 +403,58 @@ public final class SettingsPage {
                 }
                 continue;
             }
+            if (setting instanceof Setting.GroupSetting group) {
+                // A group is a functional card, not a subsection of the previous card. The group
+                // switch becomes the card's title row; groups without switches get a text title.
+                if (card != null) {
+                    content.add(card);
+                    card = null;
+                }
+                Card groupCard = newCard();
+                if (group.hasSwitch()) {
+                    Box titleRow = new Box(Style.builder()
+                            .width(Dimension.percent(100f))
+                            .height(20f)
+                            .direction(Style.Direction.ROW)
+                            .build());
+                    titleRow.add(new Text(Localization.tr(group.label()),
+                            Style.builder().height(16f).flexGrow(1f).build(), 1f,
+                            TextWeight.SEMIBOLD));
+                    titleRow.add(new Switch("", group::switchValue, value -> {
+                        if (value != group.switchValue()) {
+                            group.toggleSwitch();
+                        }
+                    }, Style.builder().width(42f).height(20f).build(), palette).flat(true));
+                    groupCard.add(titleRow);
+                } else {
+                    groupCard.add(new Text(Localization.tr(group.label()),
+                            Style.builder().height(16f).build(), 1f, TextWeight.SEMIBOLD));
+                }
+                for (Setting child : group.children()) {
+                    if (child.isVisible()) {
+                        addSetting(groupCard, child);
+                    }
+                }
+                content.add(groupCard);
+                continue;
+            }
             if (card == null) {
-                card = new Card(Style.builder()
-                        .width(Dimension.percent(100f))
-                        .padding(8f)
-                        .gap(2f)
-                        .direction(Style.Direction.COLUMN)
-                        .build(), palette);
+                card = newCard();
             }
             addSetting(card, setting);
         }
         if (card != null) {
             content.add(card);
         }
+    }
+
+    private Card newCard() {
+        return new Card(Style.builder()
+                .width(Dimension.percent(100f))
+                .padding(8f)
+                .gap(2f)
+                .direction(Style.Direction.COLUMN)
+                .build(), palette);
     }
 
     private void addSetting(Box parent, Setting setting) {
@@ -407,6 +471,27 @@ public final class SettingsPage {
                     slider.max() - slider.min() > 20 ? "%.0f" : "%.2f",
                     Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
                     .flat(true));
+        } else if (setting instanceof Setting.DropdownSetting dropdownSetting) {
+            List<String> raw = dropdownSetting.options();
+            List<String> shown = new ArrayList<>();
+            for (String option : raw) {
+                shown.add(Localization.tr(option));
+            }
+            int initial = Math.max(0, raw.indexOf(dropdownSetting.value()));
+            Dropdown dropdown = new Dropdown(Localization.tr(setting.label()), shown,
+                    () -> {
+                        int selected = raw.indexOf(dropdownSetting.value());
+                        return selected >= 0 ? selected : initial;
+                    },
+                    index -> {
+                        if (index >= 0 && index < raw.size()) {
+                            dropdownSetting.select(raw.get(index));
+                            rebuild();
+                        }
+                    },
+                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette);
+            parent.add(dropdown);
+            dropdowns.add(dropdown);
         } else if (setting instanceof Setting.ColorSetting color) {
             ColorField field = new ColorField(Localization.tr(color.label()), color::value,
                     color::setValue, Localization.tr("关闭"),
@@ -426,7 +511,9 @@ public final class SettingsPage {
             }
             parent.add(new Segmented(options, choice::selected, index -> {
                 choice.select(index);
-                rebuild();
+                if (choice.rebuildsPage()) {
+                    rebuild();
+                }
             }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
         } else if (setting instanceof Setting.GroupSetting group) {
             if (group.hasSwitch()) {

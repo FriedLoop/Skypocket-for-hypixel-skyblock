@@ -409,6 +409,8 @@ public final class Localization {
         EN.put("视线长度", "Look Ray Length");
         EN.put("线宽", "Line Width");
         EN.put("竖向排版", "Vertical Layout");
+    EN.put("横向排版", "Horizontal Layout");
+    EN.put("排版", "Layout");
         EN.put("切换到横向排版", "Switch to Horizontal");
         EN.put("切换到竖向排版", "Switch to Vertical");
         EN.put("不限距离", "Unlimited Range");

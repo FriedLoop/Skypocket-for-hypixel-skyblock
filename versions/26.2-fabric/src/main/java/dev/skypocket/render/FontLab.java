@@ -40,12 +40,12 @@ public final class FontLab {
     }
 
     public enum Weight {
-        // The original inter.ttf shipped as OS/2 weight 700 (Bold), medium as 500 and semibold as
-        // 600. Map by actual weight so REGULAR is never heavier than MEDIUM/SEMIBOLD. A true 400
-        // Regular can replace the first asset later without changing call sites.
+        // The original inter.ttf shipped as OS/2 weight 700 (Bold); medium is 500 and semibold is
+        // 600. Use the real semibold asset for both MEDIUM and SEMIBOLD until a true 400/500
+        // hierarchy is available, so a SEMIBOLD text token actually renders at 600.
         REGULAR("Regular", "assets/skypocket/font/inter-medium.ttf"),
         MEDIUM("Medium", "assets/skypocket/font/inter-semibold.ttf"),
-        SEMIBOLD("SemiBold", "assets/skypocket/font/inter.ttf");
+        SEMIBOLD("SemiBold", "assets/skypocket/font/inter-semibold.ttf");
 
         public final String id;
         public final String asset;

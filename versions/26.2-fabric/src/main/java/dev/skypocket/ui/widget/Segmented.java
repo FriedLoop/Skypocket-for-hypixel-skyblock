@@ -12,14 +12,21 @@ import java.util.Objects;
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
-/** Mutually exclusive segmented choice; used for the stats display style. */
+/** Mutually exclusive segmented choice with an animated selection indicator. */
 public final class Segmented extends Control {
     private static final float GAP = 2f;
     private static final float INNER = 2f;
+    private static final long ANIM_NANOS = 140_000_000L;
 
     private final List<String> options;
     private final IntSupplier selected;
     private final IntConsumer onChange;
+    private int target;
+    private int pendingIndex = -1;
+    private float position;
+    private float animFrom;
+    private long animStart;
+    private boolean animating;
     private int pressedIndex = -1;
 
     public Segmented(List<String> options, IntSupplier selected, IntConsumer onChange,
@@ -31,13 +38,13 @@ public final class Segmented extends Control {
         if (this.options.isEmpty()) {
             throw new IllegalArgumentException("segmented control needs at least one option");
         }
+        target = clamp(selected.getAsInt());
+        position = target;
     }
 
     @Override
     protected void activate() {
-        // Pointer clicks choose an index; keyboard activation advances to the next option.
-        int next = (selected.getAsInt() + 1) % options.size();
-        onChange.accept(next);
+        startTo((target + 1) % options.size());
     }
 
     @Override
@@ -52,7 +59,7 @@ public final class Segmented extends Control {
         if (pressed) {
             int index = indexAt(event.x() - ancestorOffsetX());
             if (index >= 0) {
-                onChange.accept(index);
+                startTo(index);
             }
         }
         pressed = false;
@@ -64,10 +71,7 @@ public final class Segmented extends Control {
     public boolean onKeyDown(KeyEvent event) {
         if (event.key() == Keys.LEFT || event.key() == Keys.RIGHT) {
             int delta = event.key() == Keys.LEFT ? -1 : 1;
-            int next = Math.max(0, Math.min(options.size() - 1, selected.getAsInt() + delta));
-            if (next != selected.getAsInt()) {
-                onChange.accept(next);
-            }
+            startTo(clamp(target + delta));
             return true;
         }
         return super.onKeyDown(event);
@@ -75,27 +79,67 @@ public final class Segmented extends Control {
 
     @Override
     public void paint(UiPainter painter) {
+        int current = clamp(selected.getAsInt());
+        if (!animating && current != target) {
+            target = current;
+            position = current;
+        }
+        advance();
+
         painter.surface(bounds(), palette.radius(), palette.field(), 0);
         paintFocus(painter);
-        int current = Math.max(0, Math.min(options.size() - 1, selected.getAsInt()));
         int count = options.size();
         float innerW = bounds().width() - INNER * 2f - GAP * (count - 1);
         float segW = Math.max(1f, innerW / count);
+        float segH = bounds().height() - INNER * 2f;
+        // The accent is one continuous pill, so it can slide through the gap between segments.
+        float accentX = bounds().x() + INNER + position * (segW + GAP);
+        painter.fillRounded(new Rect(accentX, bounds().y() + INNER, segW, segH), 3f,
+                palette.accent());
+
         for (int i = 0; i < count; i++) {
             float x = bounds().x() + INNER + i * (segW + GAP);
-            Rect seg = new Rect(x, bounds().y() + INNER, segW,
-                    bounds().height() - INNER * 2f);
-            boolean active = i == current;
-            if (active) {
-                painter.fillRounded(seg, 3f, palette.accent());
-            } else if (i == pressedIndex) {
-                painter.fillRounded(seg, 3f, palette.hover());
-            }
+            Rect seg = new Rect(x, bounds().y() + INNER, segW, segH);
             String text = options.get(i);
             float tx = seg.x() + (seg.width() - painter.textWidth(text)) / 2f;
             float ty = seg.y() + (seg.height() - painter.lineHeight()) / 2f;
-            painter.text(text, tx, ty, active ? 0xFFFFFFFF : palette.muted());
+            painter.text(text, tx, ty, i == target ? 0xFFFFFFFF : palette.muted());
         }
+    }
+
+    private void startTo(int index) {
+        int next = clamp(index);
+        if (next == target) {
+            return;
+        }
+        target = next;
+        pendingIndex = next;
+        animFrom = position;
+        animStart = System.nanoTime();
+        animating = true;
+    }
+
+    private void advance() {
+        if (!animating) {
+            return;
+        }
+        float t = (System.nanoTime() - animStart) / (float) ANIM_NANOS;
+        if (t >= 1f) {
+            position = target;
+            animating = false;
+            int callback = pendingIndex;
+            pendingIndex = -1;
+            if (callback >= 0) {
+                onChange.accept(callback);
+            }
+            return;
+        }
+        float eased = 1f - (1f - t) * (1f - t);
+        position = animFrom + (target - animFrom) * eased;
+    }
+
+    private int clamp(int index) {
+        return Math.max(0, Math.min(options.size() - 1, index));
     }
 
     private int indexAt(float localX) {
@@ -107,6 +151,6 @@ public final class Segmented extends Control {
             return -1;
         }
         int index = (int) ((localX - bounds().x() - INNER) / (segW + GAP));
-        return Math.max(0, Math.min(count - 1, index));
+        return clamp(index);
     }
 }

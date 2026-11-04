@@ -442,6 +442,8 @@ public abstract class Setting {
 
         public String value() { return getter.get(); }
 
+        public List<String> options() { return options.get(); }
+
         /** Picks an option and folds the list back up, like the old list widget did. */
         public void select(String option) {
             setter.accept(option);
@@ -682,13 +684,24 @@ public abstract class Setting {
         private final List<String> options;
         private final IntSupplier getter;
         private final IntConsumer setter;
+        private final boolean rebuildsPage;
 
         public ChoiceSetting(String label, List<String> options, IntSupplier getter,
                              IntConsumer setter) {
+            this(label, options, getter, setter, false);
+        }
+
+        public ChoiceSetting(String label, List<String> options, IntSupplier getter,
+                             IntConsumer setter, boolean rebuildsPage) {
             super(label);
             this.options = List.copyOf(options);
             this.getter = getter;
             this.setter = setter;
+            this.rebuildsPage = rebuildsPage;
+        }
+
+        public boolean rebuildsPage() {
+            return rebuildsPage;
         }
 
         public List<String> options() {

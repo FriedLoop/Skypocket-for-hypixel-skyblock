@@ -526,9 +526,12 @@ final class ModuleDefinitions {
                         new Setting.BooleanSetting("TPS", () -> cfg.fpsTpsPingShowTps, v -> cfg.fpsTpsPingShowTps = v),
                         new Setting.BooleanSetting("Ping", () -> cfg.fpsTpsPingShowPing, v -> cfg.fpsTpsPingShowPing = v),
                         new Setting.SliderSetting("大小", 0.25, 6.0, () -> cfg.fpsTpsPingScale, v -> cfg.fpsTpsPingScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
-                        new Setting.ActionSetting(
-                                () -> Localization.tr(cfg.fpsTpsPingVertical ? "切换到横向排版" : "切换到竖向排版"),
-                                () -> cfg.fpsTpsPingVertical = !cfg.fpsTpsPingVertical)
+                        new Setting.ChoiceSetting("排版", List.of("竖向排版", "横向排版"),
+                                () -> cfg.fpsTpsPingVertical ? 0 : 1,
+                                index -> {
+                                    cfg.fpsTpsPingVertical = index == 0;
+                                    dev.skypocket.config.ConfigManager.touch();
+                                })
                 )));
     }
 
@@ -587,7 +590,7 @@ final class ModuleDefinitions {
                                 index -> {
                                     cfg.statsModernStyle = index == 1;
                                     rebuildPanelAfterStyleChange();
-                                }),
+                                }, true),
                         // Vanilla HUD is its own card: the style switch above only chooses the module's
                         // presentation and must not visually own the vanilla-element toggles.
                         new Setting.Header("原版 HUD", "隐藏原版元素，避免和本模块重复绘制"),

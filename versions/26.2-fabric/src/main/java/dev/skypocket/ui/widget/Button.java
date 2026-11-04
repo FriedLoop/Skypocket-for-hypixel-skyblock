@@ -56,17 +56,18 @@ public final class Button extends Control {
         if (surfaceMode == SurfaceMode.CARD) {
             painter.surface(bounds(), palette.radius(), background(), 0);
             paintFocus(painter);
-        } else if (surfaceMode == SurfaceMode.MENU_ONLY) {
-            painter.fillRounded(bounds(), palette.radius(), background());
-            paintFocus(painter);
-        } else if (surfaceMode == SurfaceMode.MENU_TOP) {
-            painter.fillRoundedTop(bounds(), palette.radius(), background());
-            paintFocus(painter);
-        } else if (surfaceMode == SurfaceMode.MENU_BOTTOM) {
-            painter.fillRoundedBottom(bounds(), palette.radius(), background());
-            paintFocus(painter);
         } else {
-            painter.fill(bounds(), background());
+            // Menu rows need a hover state; the normal card button deliberately keeps hover flat.
+            int fill = hovered && !pressed && !neutralPaint() ? palette.hover() : background();
+            if (surfaceMode == SurfaceMode.MENU_ONLY) {
+                painter.fillRounded(bounds(), palette.radius(), fill);
+            } else if (surfaceMode == SurfaceMode.MENU_TOP) {
+                painter.fillRoundedTop(bounds(), palette.radius(), fill);
+            } else if (surfaceMode == SurfaceMode.MENU_BOTTOM) {
+                painter.fillRoundedBottom(bounds(), palette.radius(), fill);
+            } else {
+                painter.fill(bounds(), fill);
+            }
             paintFocus(painter);
         }
         String text = label.get();
