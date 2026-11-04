@@ -105,6 +105,7 @@ public final class Localization {
     EN.put("六条共用，保证一组条的粗细一致", "Shared by all six, so they read as a set");
     EN.put("吸收血量作为第二层叠在它上面", "Absorption is drawn as a second layer over it");
     EN.put("高级", "Advanced");
+    EN.put("重置条位置与恢复默认颜色", "Reset bar positions and restore the default colours");
     EN.put("重置条位置", "Reset Bar Positions");
     EN.put("恢复默认颜色", "Reset Colours");
     EN.put("颜色", "Colours");

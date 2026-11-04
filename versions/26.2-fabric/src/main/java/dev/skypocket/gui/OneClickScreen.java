@@ -79,7 +79,7 @@ public class OneClickScreen extends Screen {
     private Feature viewingFeature;
     private final List<Feature> features;
     private final List<Setting> panelSettings;
-    private StatsSettingsPage statsPage;
+    private SettingsPage statsPage;
     private Feature statsPageFeature;
     private float statsPageHeight = -1f;
 
@@ -148,7 +148,10 @@ public class OneClickScreen extends Screen {
     }
 
     private boolean statsPageActive() {
-        return !settingsTab && viewingFeature != null && "stats_display".equals(viewingFeature.id());
+        if (settingsTab || viewingFeature == null) {
+            return false;
+        }
+        return "stats_display".equals(viewingFeature.id()) || "clock".equals(viewingFeature.id());
     }
 
     private float statsPageTop() {
@@ -181,7 +184,7 @@ public class OneClickScreen extends Screen {
         }
         float height = Math.max(20f, contentBottom() - statsPageTop());
         if (statsPage == null || statsPageFeature != viewingFeature || statsPageHeight != height) {
-            statsPage = new StatsSettingsPage(viewingFeature, Ui2Theme.palette(),
+            statsPage = new SettingsPage(viewingFeature, Ui2Theme.palette(),
                     statsPageWidth(), height);
             statsPageFeature = viewingFeature;
             statsPageHeight = height;

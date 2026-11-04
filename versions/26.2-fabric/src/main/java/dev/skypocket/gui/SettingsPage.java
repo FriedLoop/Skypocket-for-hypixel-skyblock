@@ -40,10 +40,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Content-only player-stats settings page. It owns an element tree, its input router and its popup
- * layers, but no Screen; the standalone debug page and the unified ClickGUI can both host it.
+ * Content-only settings page for a feature. It owns an element tree, its input router and its popup
+ * layers, but no Screen; the unified ClickGUI hosts it inside the content pane.
  */
-public final class StatsSettingsPage {
+public final class SettingsPage {
     private final Feature feature;
     private final WidgetPalette palette;
     private final float width;
@@ -57,7 +57,7 @@ public final class StatsSettingsPage {
     private float renderScaleX = 1f;
     private float renderScaleY = 1f;
 
-    public StatsSettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
+    public SettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
         this.feature = feature;
         this.palette = palette;
         this.width = width;
@@ -261,7 +261,8 @@ public final class StatsSettingsPage {
         pose.pushMatrix();
         pose.translate(element.offsetX(), element.offsetY());
         if (element instanceof ScrollView view) {
-            painter.surface(view.bounds(), 4f, 0xFF20232A, 0);
+            // The cards already sit on the ClickGUI shell; an extra dark page fill makes the
+            // whole content pane look like a second surface behind them.
             painter.pushClip(view.bounds());
         }
         if (element instanceof Painted painted) {
@@ -450,3 +451,4 @@ public final class StatsSettingsPage {
         }
     }
 }
+

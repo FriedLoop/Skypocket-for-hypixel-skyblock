@@ -721,23 +721,25 @@ final class ModuleDefinitions {
                         new Setting.SliderSetting("空气条大小", 0.25, 6.0, () -> cfg.statsAirBarScale,
                                 v -> cfg.statsAirBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
                                 .visibleWhen(() -> cfg.statsModernStyle),
-                        // Rarely needed, so it lives in a folded section rather than taking a row of
-                        // its own on a page that is already long.
-                        new Setting.GroupSetting("高级", List.of(
-                                new Setting.ActionSetting(() -> Localization.tr("重置条位置"),
-                                        () -> StatsBarHudElement.resetToDefaults(cfg)),
-                                new Setting.ActionSetting(() -> Localization.tr("恢复默认颜色"),
-                                        () -> {
-                                            cfg.statsHealthColor = dev.skypocket.config.ColorDefaults.STATS_HEALTH;
-                                            cfg.statsAbsorptionColor = dev.skypocket.config.ColorDefaults.STATS_ABSORPTION;
-                                            cfg.statsManaColor = dev.skypocket.config.ColorDefaults.STATS_MANA;
-                                            cfg.statsOverflowColor = dev.skypocket.config.ColorDefaults.STATS_OVERFLOW;
-                                            cfg.statsAirColor = dev.skypocket.config.ColorDefaults.STATS_AIR;
-                                            cfg.statsDefenseColor = dev.skypocket.config.ColorDefaults.STATS_DEFENSE;
-                                            cfg.statsSpeedColor = dev.skypocket.config.ColorDefaults.STATS_SPEED;
-                                            cfg.statsVitalityColor = dev.skypocket.config.ColorDefaults.STATS_VITALITY;
-                                            rebuildPanelAfterStyleChange();
-                                        })), false)
+                        // Advanced is its own card: it is a different kind of operation from the bar
+                        // switches above, and should not read as another bar row.
+                        new Setting.Header("高级", "重置条位置与恢复默认颜色")
+                                .visibleWhen(() -> cfg.statsModernStyle),
+                        new Setting.ActionSetting(() -> Localization.tr("重置条位置"),
+                                () -> StatsBarHudElement.resetToDefaults(cfg))
+                                .visibleWhen(() -> cfg.statsModernStyle),
+                        new Setting.ActionSetting(() -> Localization.tr("恢复默认颜色"),
+                                () -> {
+                                    cfg.statsHealthColor = dev.skypocket.config.ColorDefaults.STATS_HEALTH;
+                                    cfg.statsAbsorptionColor = dev.skypocket.config.ColorDefaults.STATS_ABSORPTION;
+                                    cfg.statsManaColor = dev.skypocket.config.ColorDefaults.STATS_MANA;
+                                    cfg.statsOverflowColor = dev.skypocket.config.ColorDefaults.STATS_OVERFLOW;
+                                    cfg.statsAirColor = dev.skypocket.config.ColorDefaults.STATS_AIR;
+                                    cfg.statsDefenseColor = dev.skypocket.config.ColorDefaults.STATS_DEFENSE;
+                                    cfg.statsSpeedColor = dev.skypocket.config.ColorDefaults.STATS_SPEED;
+                                    cfg.statsVitalityColor = dev.skypocket.config.ColorDefaults.STATS_VITALITY;
+                                    rebuildPanelAfterStyleChange();
+                                })
                                 .visibleWhen(() -> cfg.statsModernStyle)
                 )));
     }
