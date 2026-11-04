@@ -662,6 +662,14 @@ public class OneClickScreen extends Screen {
         if (target.equals(currentId())) {
             return;
         }
+        if (!target.isEmpty()) {
+            Feature feature = ModuleRegistry.byId(target);
+            // A module without settings has no detail page; the card click is already swallowed,
+            // but keyboard/history paths must not create one either.
+            if (feature == null || !feature.hasSettings()) {
+                return;
+            }
+        }
         backStack.push(currentId());
         forwardStack.clear();
         applyNavigation(target);
@@ -688,14 +696,18 @@ public class OneClickScreen extends Screen {
     }
 
     private void applyNavigation(String id) {
+        Feature next = id == null || id.isEmpty() ? null : ModuleRegistry.byId(id);
+        if (next != null && !next.hasSettings()) {
+            return;
+        }
         if (statsPage != null) {
             statsPage.closePopups();
         }
         transitionFrom = viewingFeature;
         transitionFromScroll = scrollY;
-        transitionDir = id.isEmpty() ? -1 : 1;
+        transitionDir = next == null ? -1 : 1;
         transitionStartMs = System.currentTimeMillis();
-        viewingFeature = id.isEmpty() ? null : ModuleRegistry.byId(id);
+        viewingFeature = next;
         scrollY = 0;
         layout();
         rebuildSettingsWidgets();
