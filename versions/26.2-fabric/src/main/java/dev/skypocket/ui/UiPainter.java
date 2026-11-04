@@ -35,6 +35,21 @@ public interface UiPainter {
         }
     }
 
+    /** Rounded fill using per-row corner rasterization; used for tiny swatches. */
+    default void fillRoundedCrisp(Rect rect, float radius, int color) {
+        fillRounded(rect, radius, color);
+    }
+
+    /** Rounded fill with a fixed device-space border ring, snapped once. */
+    default void surfaceBorderedFixed(Rect rect, float radius, int fill, int border) {
+        surface(rect, radius, fill, border);
+    }
+
+    /** One-device-pixel rounded outline drawn on top of existing content. */
+    default void strokeRounded(Rect rect, float radius, int color) {
+        outlineRounded(rect, radius, color);
+    }
+
     /** Pill surface; used by switch tracks and slider rails. */
     default void pill(Rect rect, int fill, int border) {
         float radius = rect.height() * 0.5f;
@@ -60,6 +75,17 @@ public interface UiPainter {
     }
 
     void text(String text, float x, float y, int color);
+
+    /** Text at a fraction of the design font size; used for secondary copy. */
+    default void textScaled(String text, float x, float y, int color, float scale) {
+        text(text, x, y, color);
+    }
+
+    /** Text with an explicit weight and size; used by page/group headings. */
+    default void textWeighted(String text, float x, float y, int color, float scale,
+                              TextWeight weight) {
+        textScaled(text, x, y, color, scale);
+    }
 
     float textWidth(String text);
 

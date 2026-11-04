@@ -17,14 +17,15 @@ public final class ColorPickerPanel extends Control {
     static final int SQUARE = 132;
     static final int BAR_W = 18;
     static final int GAP = 8;
-    static final int FIELD_X = 206;
+    static final int FIELD_X = 205;
     static final int FIELD_W = 52;
     static final int FIELD_H = 20;
     static final int CHANNEL_STEP = 28;
-    static final int PRESET_X = 266;
+    static final int PRESET_X = 265;
     static final int PRESET_Y = 8;
     static final int PRESET_W = 16;
     static final int PRESET_H = 16;
+    static final float PRESET_RADIUS = 4f;
     static final int PRESET_GAP = 3;
     static final int PRESET_COLS = 2;
 
@@ -282,11 +283,12 @@ public final class ColorPickerPanel extends Control {
             // Selection owns the border; hover only applies to unselected swatches. Otherwise a
             // quick click leaves a white hover ring that looks like a stale selection.
             int border = selected ? palette.accent() : hovered ? 0xFFFFFFFF : 0;
+            Rect swatch = new Rect(px, py, PRESET_W, PRESET_H);
+            // Smooth mask fill plus the independent 2px device-space ring.
+            painter.fillRounded(swatch, PRESET_RADIUS, 0xFF000000 | PRESETS[i]);
             if (border != 0) {
-                painter.outlineRounded(new Rect(px - 1f, py - 1f, PRESET_W + 2f, PRESET_H + 2f),
-                        3f, border);
+                painter.strokeRounded(swatch, PRESET_RADIUS, border);
             }
-            painter.fillRounded(new Rect(px, py, PRESET_W, PRESET_H), 2f, 0xFF000000 | PRESETS[i]);
         }
     }
 

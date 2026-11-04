@@ -360,6 +360,26 @@ public final class ClickGuiFonts {
         drawTextScaled(graphics, text, x, y, color, shadow, 1.0f);
     }
 
+    /** Draws text with an explicit weight. The atlas path honours it; the vector fallback uses the
+     * current global weight until per-weight vector caches are added. */
+    public static void drawTextWeighted(GuiGraphicsExtractor graphics, String text, float x, float y,
+                                        int color, float scale, FontLab.Weight weight) {
+        if (FontLab.atlasText()) {
+            AtlasText.draw(graphics, text, x, y, color, false, scale, deviceFactor(),
+                    atlasPixelSize(scale), FontLab.oversample(), weight);
+            return;
+        }
+        drawTextScaled(graphics, text, x, y, color, false, scale);
+    }
+
+    public static int widthWeighted(String text, FontLab.Weight weight) {
+        if (FontLab.atlasText()) {
+            return AtlasText.width(text, 1.0f, deviceFactor(), atlasPixelSize(1.0f),
+                    FontLab.oversample(), weight);
+        }
+        return width(text);
+    }
+
     /** Draws text at {@code scale} × the panel design size (e.g. headings). */
     public static void drawTextScaled(GuiGraphicsExtractor graphics, String text, float x, float y,
                                       int color, boolean shadow, float scale) {

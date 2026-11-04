@@ -95,8 +95,7 @@ public final class Slider extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.shadow(bounds(), palette.radius());
-        painter.surface(bounds(), palette.radius(), background(), 0);
+        paintRowBackground(painter);
         paintFocus(painter);
         float trackX = bounds().x() + 8f;
         float trackY = bounds().y() + bounds().height() - 6f;
@@ -104,9 +103,15 @@ public final class Slider extends Control {
         painter.pill(new Rect(trackX, trackY, trackWidth, 3f), palette.outline(), 0);
         double t = (value.getAsDouble() - min) / (max - min);
         float knobX = trackX + (float) t * trackWidth;
-        painter.pill(new Rect(trackX, trackY, knobX - trackX, 3f), palette.accent(), 0);
+        float accentWidth = Math.max(0f, knobX - 2f - trackX);
+        if (accentWidth > 0.5f) {
+            painter.pill(new Rect(trackX, trackY, accentWidth, 3f), palette.accent(), 0);
+        }
+        // The white knob has rounded corners; mask the track beneath it so its corner pixels do not
+        // show through as a few blue dots at integer knob positions.
+        painter.fill(new Rect(knobX - 3f, trackY - 3f, 6f, 9f), background());
         painter.fillRounded(new Rect(knobX - 2f, trackY - 3f, 4f, 9f), 2f, palette.text());
-        painter.text(label, bounds().x() + 6f, bounds().y() + 2f, palette.muted());
+        painter.text(label, bounds().x() + 6f, bounds().y() + 2f, palette.text());
         String shown = String.format(format, value.getAsDouble());
         painter.text(shown, bounds().right() - painter.textWidth(shown) - 6f,
                 bounds().y() + 2f, palette.text());

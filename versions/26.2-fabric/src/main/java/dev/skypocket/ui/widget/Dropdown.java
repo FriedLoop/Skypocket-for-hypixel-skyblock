@@ -127,7 +127,6 @@ public final class Dropdown extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.shadow(bounds(), palette.radius());
         painter.surface(bounds(), palette.radius(), background(), 0);
         paintFocus(painter);
         int index = selected.getAsInt();

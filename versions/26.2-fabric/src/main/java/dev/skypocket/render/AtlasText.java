@@ -133,8 +133,14 @@ public final class AtlasText {
     }
 
     /** Width in panel design units. */
-    public static int width(String text, float scale, float deviceFactor, int pixelSize, int oversample) {
-        Run run = run(text, scale, deviceFactor, pixelSize, oversample);
+    public static int width(String text, float scale, float deviceFactor, int pixelSize,
+                            int oversample) {
+        return width(text, scale, deviceFactor, pixelSize, oversample, FontLab.weight());
+    }
+
+    public static int width(String text, float scale, float deviceFactor, int pixelSize,
+                            int oversample, FontLab.Weight weight) {
+        Run run = run(text, scale, deviceFactor, pixelSize, oversample, weight);
         return Math.round(run.advanceRaster / (deviceFactor * oversample));
     }
 
@@ -145,7 +151,14 @@ public final class AtlasText {
     public static void draw(GuiGraphicsExtractor graphics, String text, float x, float y, int color,
                             boolean shadow, float scale, float deviceFactor, int pixelSize,
                             int oversample) {
-        Run run = run(text, scale, deviceFactor, pixelSize, oversample);
+        draw(graphics, text, x, y, color, shadow, scale, deviceFactor, pixelSize, oversample,
+                FontLab.weight());
+    }
+
+    public static void draw(GuiGraphicsExtractor graphics, String text, float x, float y, int color,
+                            boolean shadow, float scale, float deviceFactor, int pixelSize,
+                            int oversample, FontLab.Weight weight) {
+        Run run = run(text, scale, deviceFactor, pixelSize, oversample, weight);
         flushBeforeDraw();
         if (run.glyphs.isEmpty()) {
             return;
@@ -199,9 +212,10 @@ public final class AtlasText {
         return a | (r << 16) | (g << 8) | b;
     }
 
-    private static Run run(String text, float scale, float deviceFactor, int pixelSize, int oversample) {
+    private static Run run(String text, float scale, float deviceFactor, int pixelSize,
+                           int oversample, FontLab.Weight weight) {
         RunKey key = new RunKey(text, pixelSize, Float.floatToIntBits(scale),
-                Float.floatToIntBits(deviceFactor), oversample);
+                Float.floatToIntBits(deviceFactor), oversample, weight.asset);
         Run cached = RUNS.get(key);
         if (cached != null) {
             return cached;
@@ -217,7 +231,7 @@ public final class AtlasText {
                 i += Character.charCount(text.codePointAt(i));
                 continue;
             }
-            Glyph glyph = glyph(cp, pixelSize, oversample);
+            Glyph glyph = glyph(cp, pixelSize, oversample, weight);
             if (glyph == null) {
                 continue;
             }
@@ -235,8 +249,9 @@ public final class AtlasText {
         return run;
     }
 
-    private static Glyph glyph(int codepoint, int pixelSize, int oversample) {
-        String asset = FontLab.weight().asset;
+    private static Glyph glyph(int codepoint, int pixelSize, int oversample,
+                               FontLab.Weight weight) {
+        String asset = weight.asset;
         GlyphKey key = new GlyphKey(asset, pixelSize, codepoint, FontLab.hinting());
         Glyph cached = GLYPHS.get(key);
         if (cached != null) {
@@ -428,7 +443,8 @@ public final class AtlasText {
     private record GlyphKey(String asset, int pixelSize, int codepoint, FontLab.Hinting hinting) {
     }
 
-    private record RunKey(String text, int pixelSize, int scaleBits, int deviceBits, int oversample) {
+    private record RunKey(String text, int pixelSize, int scaleBits, int deviceBits, int oversample,
+                          String asset) {
     }
 
     private record Run(List<PlacedGlyph> glyphs, float advanceRaster) {

@@ -18,6 +18,11 @@ public final class ScrollView extends Box {
     }
 
     public ScrollView(Style style, Box content, float scrollStep) {
+        this(style, content, scrollStep, true);
+    }
+
+    /** {@code internalScrollbar=false} lets the host place the bar outside the clipped viewport. */
+    public ScrollView(Style style, Box content, float scrollStep, boolean internalScrollbar) {
         super(Style.builder().from(style).direction(Style.Direction.COLUMN).build());
         this.content = content;
         this.scrollStep = Math.max(1f, scrollStep);
@@ -29,8 +34,14 @@ public final class ScrollView extends Box {
         content.style(contentStyle);
         add(content);
         scrollbar = new Scrollbar(this);
-        add(scrollbar);
+        if (internalScrollbar) {
+            add(scrollbar);
+        }
         clipsChildren(true);
+    }
+
+    public Scrollbar scrollbar() {
+        return scrollbar;
     }
 
     public Box content() {

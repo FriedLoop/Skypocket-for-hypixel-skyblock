@@ -14,6 +14,7 @@ public abstract class Control extends Box implements Painted {
     private static boolean neutralPaint;
 
     protected final WidgetPalette palette;
+    private boolean flat;
     protected boolean hovered;
     protected boolean focused;
     protected boolean pressed;
@@ -85,6 +86,18 @@ public abstract class Control extends Box implements Painted {
 
     public boolean isPressed() {
         return pressed;
+    }
+
+    /** Flat rows sit directly on the card surface; pressed/focused states still paint. */
+    public Control flat(boolean value) {
+        flat = value;
+        return this;
+    }
+
+    protected void paintRowBackground(UiPainter painter) {
+        if (!flat || pressed || System.nanoTime() < keyFlashUntil) {
+            painter.surface(bounds(), palette.radius(), background(), 0);
+        }
     }
 
     /** Base-layer recording: dynamic focus/press/flash must not be baked into the cache. */

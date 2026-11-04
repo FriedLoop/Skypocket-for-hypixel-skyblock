@@ -13,6 +13,7 @@ import dev.skypocket.ui.Size;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.Text;
 import dev.skypocket.ui.TextMeasurer;
+import dev.skypocket.ui.TextWeight;
 import dev.skypocket.ui.UiElement;
 import dev.skypocket.ui.input.InputRouter;
 import dev.skypocket.ui.input.KeyEvent;
@@ -25,6 +26,8 @@ import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
 import dev.skypocket.ui.widget.ColorField;
 import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.Scrollbar;
+import dev.skypocket.ui.widget.Segmented;
 import dev.skypocket.ui.widget.Slider;
 import dev.skypocket.ui.widget.Switch;
 import dev.skypocket.ui.widget.WidgetPalette;
@@ -51,6 +54,8 @@ public final class StatsSettingsPage {
     private InputRouter input;
     private long renderRevision;
     private UiElement lastFocused;
+    private float renderScaleX = 1f;
+    private float renderScaleY = 1f;
 
     public StatsSettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
         this.feature = feature;
@@ -85,13 +90,28 @@ public final class StatsSettingsPage {
                     .build());
             buildSettings(content, feature.settings());
             scroll = new ScrollView(Style.builder()
+                    .position(Style.Position.ABSOLUTE)
+                    .left(15f)
+                    .top(0f)
+                    .width(520f)
                     .height(height)
                     .padding(2f)
-                    .build(), content);
+                    .build(), content, 24f, false);
             page.add(scroll);
+            Scrollbar bar = scroll.scrollbar();
+            bar.style(Style.builder()
+                    .position(Style.Position.ABSOLUTE)
+                    .left(540f)
+                    .top(4f)
+                    .bottom(4f)
+                    .width(6f)
+                    .build());
+            page.add(bar);
         }
         root = page;
         input = new InputRouter(root);
+        // The page cache must not reuse the texture from before a style/section rebuild.
+        renderRevision++;
     }
 
     public void layout() {
@@ -127,9 +147,15 @@ public final class StatsSettingsPage {
                 scaleX, scaleY, animating,
                 (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
                 0, 0, 0f);
+        renderScaleX = cached ? GuiPanelCache.lastBlitScaleX() : 1f;
+        renderScaleY = cached ? GuiPanelCache.lastBlitScaleY() : 1f;
         if (!cached) {
             drawElement(painter, root);
         } else {
+            // The cached texture is blitted with exactScale to stay 1:1 with texels. Live
+            // overlays must use the same scale about the same page origin, otherwise a popup
+            // drifts horizontally by a pixel at its right edge.
+            pose.scale(renderScaleX, renderScaleY);
             drawDynamicControls(painter);
         }
         for (ColorField field : colorFields) {
@@ -141,9 +167,20 @@ public final class StatsSettingsPage {
         pose.popMatrix();
     }
 
+    public float inputScaleX() {
+        return renderScaleX;
+    }
+
+    public float inputScaleY() {
+        return renderScaleY;
+    }
+
     private long pageCacheKey() {
         long scrollHash = scroll == null ? 0L : Float.floatToIntBits(scroll.scrollY());
-        return renderRevision * 31_415_926_535L + scrollHash;
+        // A rebuilt page can reuse renderRevision 0 and the same scroll offset; its identity prevents
+        // the global GuiPanelCache from blitting the previous layout's texture.
+        return System.identityHashCode(this) * 1_000_003L
+                + renderRevision * 31_415_926_535L + scrollHash;
     }
 
     private void drawBase(GuiGraphicsExtractor graphics) {
@@ -230,7 +267,12 @@ public final class StatsSettingsPage {
         if (element instanceof Painted painted) {
             painted.paint(painter);
         } else if (element instanceof Text text) {
-            painter.text(text.value(), text.bounds().x(), text.bounds().y(), 0xFFE6EAF2);
+            if (text.fontScale() == 1f && text.weight() == TextWeight.REGULAR) {
+                painter.text(text.value(), text.bounds().x(), text.bounds().y(), text.color());
+            } else {
+                painter.textWeighted(text.value(), text.bounds().x(), text.bounds().y(),
+                        text.color(), text.fontScale(), text.weight());
+            }
         }
         for (UiElement child : element.children()) {
             drawElement(painter, child);
@@ -327,10 +369,11 @@ public final class StatsSettingsPage {
                         .direction(Style.Direction.COLUMN)
                         .build(), palette);
                 card.add(new Text(Localization.tr(header.label()),
-                        Style.builder().height(16f).build()));
+                        Style.builder().height(16f).build(), 1f, TextWeight.MEDIUM));
                 if (header.subtitle() != null && !header.subtitle().isEmpty()) {
                     card.add(new Text(Localization.tr(header.subtitle()),
-                            Style.builder().height(12f).build()));
+                            Style.builder().height(12f).build(), 0.82f, TextWeight.REGULAR)
+                            .color(0xFFC5CDD9));
                 }
                 continue;
             }
@@ -355,21 +398,33 @@ public final class StatsSettingsPage {
                 if (value != bool.value()) {
                     bool.toggle();
                 }
-            }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette));
+            }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                    .flat(true));
         } else if (setting instanceof Setting.SliderSetting slider) {
             parent.add(new Slider(Localization.tr(slider.label()), slider.min(), slider.max(),
                     slider::value, slider::setValue,
                     slider.max() - slider.min() > 20 ? "%.0f" : "%.2f",
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette));
+                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                    .flat(true));
         } else if (setting instanceof Setting.ColorSetting color) {
             ColorField field = new ColorField(Localization.tr(color.label()), color::value,
                     color::setValue, Localization.tr("关闭"),
                     Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette);
+            field.flat(true);
             parent.add(field);
             colorFields.add(field);
         } else if (setting instanceof Setting.ActionSetting action) {
             parent.add(new Button(action.text(), () -> {
                 action.run();
+                rebuild();
+            }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
+        } else if (setting instanceof Setting.ChoiceSetting choice) {
+            List<String> options = new ArrayList<>();
+            for (String option : choice.options()) {
+                options.add(Localization.tr(option));
+            }
+            parent.add(new Segmented(options, choice::selected, index -> {
+                choice.select(index);
                 rebuild();
             }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
         } else if (setting instanceof Setting.GroupSetting group) {
@@ -378,7 +433,8 @@ public final class StatsSettingsPage {
                     if (value != group.switchValue()) {
                         group.toggleSwitch();
                     }
-                }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette));
+                }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                        .flat(true));
             } else {
                 parent.add(new Text(Localization.tr(group.label()),
                         Style.builder().height(14f).build()));

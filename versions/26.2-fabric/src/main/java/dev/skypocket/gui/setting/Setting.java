@@ -677,6 +677,53 @@ public abstract class Setting {
         }
     }
 
+    /** A mutually exclusive choice rendered as a segmented control in UI v2. */
+    public static final class ChoiceSetting extends Setting {
+        private final List<String> options;
+        private final IntSupplier getter;
+        private final IntConsumer setter;
+
+        public ChoiceSetting(String label, List<String> options, IntSupplier getter,
+                             IntConsumer setter) {
+            super(label);
+            this.options = List.copyOf(options);
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        public List<String> options() {
+            return options;
+        }
+
+        public int selected() {
+            return Math.max(0, Math.min(options.size() - 1, getter.getAsInt()));
+        }
+
+        public void select(int index) {
+            if (index >= 0 && index < options.size() && index != selected()) {
+                setter.accept(index);
+            }
+        }
+
+        @Override
+        public int height() {
+            return rowHeight();
+        }
+
+        @Override
+        public void build(int x, int y, Consumer<AbstractWidget> add) {
+            // Legacy SettingsView fallback: UI v2 renders this as a Segmented control.
+            add.accept(new LabelWidget(x, y, WIDGET_WIDTH, height(),
+                    Localization.tr(label) + ": " + Localization.tr(options.get(selected())),
+                    ClickGuiStyle.text(), false));
+        }
+
+        @Override
+        public boolean matches(String q) {
+            return false;
+        }
+    }
+
     /** A button that runs an action; supports a static or dynamic label. */
     public static final class ActionSetting extends Setting {
         private final Supplier<String> display;

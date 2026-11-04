@@ -149,9 +149,15 @@ public final class TextField extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.shadow(bounds(), palette.radius());
-        painter.surface(bounds(), palette.radius(), background(), 0);
-        paintFocus(painter);
+        int border = 0;
+        if (!neutralPaint()) {
+            border = focused ? palette.focus() : hovered ? palette.text() : 0;
+        }
+        // Fill with the smooth mask, then overlay the independent 2px device-space ring.
+        painter.surface(bounds(), palette.radius(), palette.field(), 0);
+        if (border != 0) {
+            painter.strokeRounded(bounds(), palette.radius(), border);
+        }
         painter.pushClip(bounds());
 
         String shown = value.toString();

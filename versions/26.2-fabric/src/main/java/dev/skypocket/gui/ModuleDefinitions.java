@@ -582,35 +582,35 @@ final class ModuleDefinitions {
                 () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
                 List.of(
                         new Setting.Header("风格", "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
-                        new Setting.ActionSetting(
-                                () -> Localization.tr(cfg.statsModernStyle ? "切换到经典风格" : "切换到现代风格"),
-                                () -> {
-                                    cfg.statsModernStyle = !cfg.statsModernStyle;
+                        new Setting.ChoiceSetting("风格", List.of("经典", "现代"),
+                                () -> cfg.statsModernStyle ? 1 : 0,
+                                index -> {
+                                    cfg.statsModernStyle = index == 1;
                                     rebuildPanelAfterStyleChange();
                                 }),
-                        // Which vanilla pieces to hide is a per-piece decision and style-dependent:
-                        // the classic style draws where they were, the modern one does not.
-                        new Setting.GroupSetting("原版 HUD", List.of(
-                                new Setting.BooleanSetting("隐藏原版生命条",
-                                        () -> cfg.statsHideVanillaHealth,
-                                        v -> cfg.statsHideVanillaHealth = v)
-                                        .hint("本模块会自己画血量，留着会两层叠在一起"),
-                                new Setting.BooleanSetting("隐藏原版饥饿条",
-                                        () -> cfg.statsHideVanillaFood,
-                                        v -> cfg.statsHideVanillaFood = v)
-                                        .hint("饥饿那一行被法力占用"),
-                                new Setting.BooleanSetting("隐藏原版空气泡",
-                                        () -> cfg.statsHideVanillaAir,
-                                        v -> cfg.statsHideVanillaAir = v)
-                                        .hint("它会正好落在法力的第二行上"),
-                                new Setting.BooleanSetting("隐藏原版盔甲条",
-                                        () -> cfg.statsHideVanillaArmor,
-                                        v -> cfg.statsHideVanillaArmor = v)
-                                        .hint("它和本模块的布局不冲突，所以默认留着"),
-                                new Setting.BooleanSetting("隐藏原版动作栏",
-                                        () -> cfg.statsHideVanillaActionBar,
-                                        v -> cfg.statsHideVanillaActionBar = v)
-                                        .hint("只隐藏绘制：数值仍然在读取，显示照常更新"))),
+                        // Vanilla HUD is its own card: the style switch above only chooses the module's
+                        // presentation and must not visually own the vanilla-element toggles.
+                        new Setting.Header("原版 HUD", "隐藏原版元素，避免和本模块重复绘制"),
+                        new Setting.BooleanSetting("隐藏原版生命条",
+                                () -> cfg.statsHideVanillaHealth,
+                                v -> cfg.statsHideVanillaHealth = v)
+                                .hint("本模块会自己画血量，留着会两层叠在一起"),
+                        new Setting.BooleanSetting("隐藏原版饥饿条",
+                                () -> cfg.statsHideVanillaFood,
+                                v -> cfg.statsHideVanillaFood = v)
+                                .hint("饥饿那一行被法力占用"),
+                        new Setting.BooleanSetting("隐藏原版空气泡",
+                                () -> cfg.statsHideVanillaAir,
+                                v -> cfg.statsHideVanillaAir = v)
+                                .hint("它会正好落在法力的第二行上"),
+                        new Setting.BooleanSetting("隐藏原版盔甲条",
+                                () -> cfg.statsHideVanillaArmor,
+                                v -> cfg.statsHideVanillaArmor = v)
+                                .hint("它和本模块的布局不冲突，所以默认留着"),
+                        new Setting.BooleanSetting("隐藏原版动作栏",
+                                () -> cfg.statsHideVanillaActionBar,
+                                v -> cfg.statsHideVanillaActionBar = v)
+                                .hint("只隐藏绘制：数值仍然在读取，显示照常更新"),
                         // Style-independent rows come first, style-specific blocks last: otherwise a
                         // conditional block sat between two unconditional ones and switching the style
                         // shifted everything below it, including rows that have nothing to do with it.
@@ -631,19 +631,28 @@ final class ModuleDefinitions {
                                 v -> cfg.statsSpeedColor = v),
                         new Setting.ColorSetting("活力颜色", () -> cfg.statsVitalityColor,
                                 v -> cfg.statsVitalityColor = v),
-                        new Setting.Header("文字行", "防御 / 速度 / 活力：两套风格下都显示，位置同样在「HUD 位置调整」页里拖"),
+                        // Classic-only: the modern style renders these values inside its bars, so
+                        // separate text rows would duplicate the same responsibility.
+                        new Setting.Header("文字行", "仅经典风格；现代风格的条已经直接显示这些数值")
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.BooleanSetting("防御文字", () -> cfg.statsDefenseEnabled,
-                                v -> cfg.statsDefenseEnabled = v),
+                                v -> cfg.statsDefenseEnabled = v)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.BooleanSetting("速度文字", () -> cfg.statsSpeedEnabled,
-                                v -> cfg.statsSpeedEnabled = v),
+                                v -> cfg.statsSpeedEnabled = v)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.BooleanSetting("活力文字", () -> cfg.statsVitalityEnabled,
-                                v -> cfg.statsVitalityEnabled = v),
+                                v -> cfg.statsVitalityEnabled = v)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.SliderSetting("防御文字大小", 0.25, 6.0, () -> cfg.statsDefenseScale,
-                                v -> cfg.statsDefenseScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
+                                v -> cfg.statsDefenseScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.SliderSetting("速度文字大小", 0.25, 6.0, () -> cfg.statsSpeedScale,
-                                v -> cfg.statsSpeedScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
+                                v -> cfg.statsSpeedScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.SliderSetting("活力文字大小", 0.25, 6.0, () -> cfg.statsVitalityScale,
-                                v -> cfg.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
+                                v -> cfg.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                                .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.Header("经典风格", "原版图标 + 精确数值；两行文字的位置在「HUD 位置调整」页里拖")
                                 .visibleWhen(() -> !cfg.statsModernStyle),
                         // Classic-only: blink the mana container when mana runs low.
@@ -671,13 +680,6 @@ final class ModuleDefinitions {
                         // without leaving the panel.
                         new Setting.Header("现代风格 · 条",
                                 "位置在「HUD 位置调整」页里逐条拖拽与缩放，这里只管粗细与开关")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("条宽", 40, 400, () -> cfg.statsBarWidth,
-                                v -> cfg.statsBarWidth = (int) Math.round(v), "%.0f", 2)
-                                .hint("六条共用，保证一组条的粗细一致")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("条高", 3, 20, () -> cfg.statsBarHeight,
-                                v -> cfg.statsBarHeight = (int) Math.round(v), "%.0f", 1)
                                 .visibleWhen(() -> cfg.statsModernStyle),
                         new Setting.BooleanSetting("条上显示数值", () -> cfg.statsBarShowValues,
                                 v -> cfg.statsBarShowValues = v)

@@ -54,7 +54,6 @@ public final class Button extends Control {
     @Override
     public void paint(UiPainter painter) {
         if (surfaceMode == SurfaceMode.CARD) {
-            painter.shadow(bounds(), palette.radius());
             painter.surface(bounds(), palette.radius(), background(), 0);
             paintFocus(painter);
         } else if (surfaceMode == SurfaceMode.MENU_ONLY) {

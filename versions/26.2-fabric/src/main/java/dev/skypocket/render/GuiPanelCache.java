@@ -82,6 +82,8 @@ public final class GuiPanelCache {
     private static int targetHeight;
     private static int targetGuiScale = 1;
     private static long lastKey = Long.MIN_VALUE;
+    private static float lastBlitScaleX = 1f;
+    private static float lastBlitScaleY = 1f;
     private static long recordedKey = Long.MIN_VALUE;
     private static long bakedKey = Long.MIN_VALUE;
     private static boolean recordedValid;
@@ -265,6 +267,8 @@ public final class GuiPanelCache {
         // laid out on a different grid than the live frame and then resampled, so labels and frames sit
         // a fraction of a pixel off - visible as "the cached panel is not quite where the live one is",
         // and worse for thin 1px details like text.
+        lastBlitScaleX = 1f;
+        lastBlitScaleY = 1f;
         float liveScale = Minecraft.getInstance().getWindow().getGuiScale();
         if (Math.abs(liveScale - Math.round(liveScale)) > 0.001f) {
             statGate(GATE_SCALE);
@@ -316,9 +320,11 @@ public final class GuiPanelCache {
                 // shifting whenever the cache turns on or off. Scaling the pose about the
                 // panel's own origin (its top-left) makes the blit exactly 1:1.
                 float guiScale = Math.max(1.0f, Minecraft.getInstance().getWindow().getGuiScale());
-                Matrix3x2f blitPose = new Matrix3x2f(graphics.pose()).scale(
-                        exactScale(targetWidth, panelWidth, scaleX, guiScale),
-                        exactScale(targetHeight, panelHeight, scaleY, guiScale));
+                float blitScaleX = exactScale(targetWidth, panelWidth, scaleX, guiScale);
+                float blitScaleY = exactScale(targetHeight, panelHeight, scaleY, guiScale);
+                Matrix3x2f blitPose = new Matrix3x2f(graphics.pose()).scale(blitScaleX, blitScaleY);
+                lastBlitScaleX = blitScaleX;
+                lastBlitScaleY = blitScaleY;
                 // UVs are the ones PictureInPictureRenderer uses for its own render-target
                 // texture (0, 1, 1, 0): the V axis of a render target is inverted relative
                 // to the GUI's texture convention, so the straight (0, 0, 1, 1) ordering
@@ -382,6 +388,15 @@ public final class GuiPanelCache {
     private static float exactScale(int targetSize, int panelSize, float renderScale, float guiScale) {
         float device = panelSize * renderScale * guiScale;
         return device > 0f ? targetSize / device : 1f;
+    }
+
+    /** Scale applied to the last successful cache blit; 1 when this frame drew live. */
+    public static float lastBlitScaleX() {
+        return lastBlitScaleX;
+    }
+
+    public static float lastBlitScaleY() {
+        return lastBlitScaleY;
     }
 
     /** Bakes the recorded panel into the offscreen texture; must run outside a render pass. */

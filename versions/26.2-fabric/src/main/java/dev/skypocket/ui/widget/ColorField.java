@@ -120,11 +120,14 @@ public final class ColorField extends Control {
         float popupWidth = ColorPickerPanel.CONTENT_W;
         float popupHeight = ColorPickerPanel.CONTENT_H;
         LayoutEngine.layout(popup, popupWidth, popupHeight, measurer);
-        float x = Math.max(0f, Math.min(visualX(), Math.max(0f, viewWidth - popupWidth)));
-        float below = visualY() + bounds().height() + 2f;
-        float y = below >= 0f && below + popupHeight <= viewHeight
-                ? below
-                : visualY() - popupHeight - 2f;
+        // Snap to design pixels like the page cache does; otherwise the live popup can sit 1px off
+        // the cached color row even though both use the same page origin.
+        float anchorX = Math.round(visualX());
+        float anchorY = Math.round(visualY() + bounds().height() + 2f);
+        float x = Math.max(0f, Math.min(anchorX, Math.max(0f, viewWidth - popupWidth)));
+        float y = anchorY >= 0f && anchorY + popupHeight <= viewHeight
+                ? anchorY
+                : Math.round(visualY() - popupHeight - 2f);
         // Never let a field's clip cross the page/render area; that is what made RenderPearl reject
         // the scissor while the wheel was scrolling an open popup near the bottom/top edge.
         y = Math.max(0f, Math.min(y, Math.max(0f, viewHeight - popupHeight)));
@@ -222,8 +225,7 @@ public final class ColorField extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.shadow(bounds(), palette.radius());
-        painter.surface(bounds(), palette.radius(), background(), 0);
+        paintRowBackground(painter);
         paintFocus(painter);
         painter.text(label, bounds().x() + 6f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.text());

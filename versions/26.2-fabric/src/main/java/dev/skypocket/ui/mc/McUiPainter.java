@@ -74,6 +74,40 @@ public final class McUiPainter implements UiPainter {
     }
 
     @Override
+    public void surfaceBorderedFixed(Rect rect, float radius, int fill, int border) {
+        if (border == 0) {
+            fillRounded(rect, radius, fill);
+            return;
+        }
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedBorderedRectFixed(graphics, x, y, w, h,
+                Math.max(0, Math.round(radius)), fill, border, 2);
+    }
+
+    @Override
+    public void fillRoundedCrisp(Rect rect, float radius, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.fillRoundedRectRows(graphics, x, y, w, h, Math.max(0, Math.round(radius)),
+                color);
+    }
+
+    @Override
+    public void strokeRounded(Rect rect, float radius, int color) {
+        int x = Math.round(rect.x());
+        int y = Math.round(rect.y());
+        int w = Math.max(1, Math.round(rect.width()));
+        int h = Math.max(1, Math.round(rect.height()));
+        GuiPixels.strokeRoundedRect(graphics, x, y, w, h, Math.max(0, Math.round(radius)),
+                color);
+    }
+
+    @Override
     public void surface(Rect rect, float radius, int fill, int border) {
         if (border == 0) {
             // Card language: brightness and shadow, not a permanent border ring.
@@ -109,8 +143,12 @@ public final class McUiPainter implements UiPainter {
         int w = Math.max(1, Math.round(rect.width()));
         int h = Math.max(1, Math.round(rect.height()));
         int r = Math.max(1, Math.round(radius));
-        GuiPixels.fillRoundedRect(graphics, x - 2, y + 2, w + 4, h + 2, r + 2, 0x26000000);
-        GuiPixels.fillRoundedRect(graphics, x - 1, y + 1, w + 2, h + 1, r + 1, 0x33000000);
+        // Four low-alpha rings instead of two hard layers. This is still pure fills; the page cache
+        // pays for them once per bake, not every frame.
+        GuiPixels.fillRoundedRect(graphics, x - 4, y + 4, w + 8, h + 4, r + 4, 0x0A000000);
+        GuiPixels.fillRoundedRect(graphics, x - 3, y + 3, w + 6, h + 3, r + 3, 0x0E000000);
+        GuiPixels.fillRoundedRect(graphics, x - 2, y + 2, w + 4, h + 2, r + 2, 0x12000000);
+        GuiPixels.fillRoundedRect(graphics, x - 1, y + 1, w + 2, h + 1, r + 1, 0x18000000);
     }
 
     @Override
@@ -140,6 +178,22 @@ public final class McUiPainter implements UiPainter {
     @Override
     public void text(String text, float x, float y, int color) {
         ClickGuiFonts.drawText(graphics, text, x, y, color, false);
+    }
+
+    @Override
+    public void textScaled(String text, float x, float y, int color, float scale) {
+        ClickGuiFonts.drawTextScaled(graphics, text, x, y, color, false, scale);
+    }
+
+    @Override
+    public void textWeighted(String text, float x, float y, int color, float scale,
+                             dev.skypocket.ui.TextWeight weight) {
+        dev.skypocket.render.FontLab.Weight mapped = switch (weight) {
+            case MEDIUM -> dev.skypocket.render.FontLab.Weight.MEDIUM;
+            case SEMIBOLD -> dev.skypocket.render.FontLab.Weight.SEMIBOLD;
+            default -> dev.skypocket.render.FontLab.Weight.REGULAR;
+        };
+        ClickGuiFonts.drawTextWeighted(graphics, text, x, y, color, scale, mapped);
     }
 
     @Override

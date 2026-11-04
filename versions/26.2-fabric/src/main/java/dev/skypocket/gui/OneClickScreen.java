@@ -152,7 +152,26 @@ public class OneClickScreen extends Screen {
     }
 
     private float statsPageTop() {
-        return contentTop() + 28f;
+        return contentTop() + 18f;
+    }
+
+    private float statsPageWidth() {
+        // Use the full content pane: the page's right padding reserves the scrollbar strip, while
+        // the cards keep the same visual width instead of leaving dead space at the right edge.
+        return contentWidth();
+    }
+
+    private float statsPageLeft() {
+        return SIDEBAR_W;
+    }
+
+    /** Page-cache blit origin snapped to a whole GUI-scaled unit. */
+    private float statsPageDrawLeft() {
+        return (Math.round(offX + statsPageLeft() * scaleX) - offX) / scaleX;
+    }
+
+    private float statsPageDrawTop() {
+        return (Math.round(offY + statsPageTop() * scaleY) - offY) / scaleY;
     }
 
     private void ensureStatsPage() {
@@ -163,18 +182,20 @@ public class OneClickScreen extends Screen {
         float height = Math.max(20f, contentBottom() - statsPageTop());
         if (statsPage == null || statsPageFeature != viewingFeature || statsPageHeight != height) {
             statsPage = new StatsSettingsPage(viewingFeature, Ui2Theme.palette(),
-                    Setting.WIDGET_WIDTH, height);
+                    statsPageWidth(), height);
             statsPageFeature = viewingFeature;
             statsPageHeight = height;
         }
     }
 
     private float statsLocalX(double lx) {
-        return (float) lx - contentLeft();
+        float scale = statsPage == null ? 1f : statsPage.inputScaleX();
+        return ((float) lx - statsPageDrawLeft()) / scale;
     }
 
     private float statsLocalY(double ly) {
-        return (float) ly - statsPageTop();
+        float scale = statsPage == null ? 1f : statsPage.inputScaleY();
+        return ((float) ly - statsPageDrawTop()) / scale;
     }
 
     private int canonicalKey(KeyEvent event) {
@@ -519,7 +540,7 @@ public class OneClickScreen extends Screen {
         // Row notes are hover tooltips now. Drawn after the panel and outside its transform/cache: the
         // tip follows the cursor (so it would otherwise force a re-bake every frame) and must not be
         // clipped by the content scissor.
-        if (!closing && inBody(lmx, lmy)) {
+        if (!closing && !statsPageActive() && inBody(lmx, lmy)) {
             String note = tooltipAt(lmx, lmy);
             if (note != null && !note.isEmpty()) {
                 drawTooltip(graphics, Localization.tr(note), mouseX, mouseY);
@@ -601,9 +622,9 @@ public class OneClickScreen extends Screen {
                     dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
             if (statsPage != null && statsPageFeature == feature) {
                 statsPage.layout();
-                pose.translate(contentLeft(), contentTop() - paneScroll + 28);
+                pose.translate(statsPageDrawLeft(), statsPageDrawTop() - paneScroll);
                 statsPage.draw(graphics, scaleX, scaleY, true);
-                pose.translate(-contentLeft(), -(contentTop() - paneScroll + 28));
+                pose.translate(-statsPageDrawLeft(), -(statsPageDrawTop() - paneScroll));
             } else {
                 java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rows =
                         dev.skypocket.gui.setting.SettingsView.layout(feature.settings(),
@@ -744,7 +765,7 @@ public class OneClickScreen extends Screen {
                 statsPage.layout();
                 Matrix3x2fStack pagePose = graphics.pose();
                 pagePose.pushMatrix();
-                pagePose.translate(contentLeft(), statsPageTop());
+                pagePose.translate(statsPageDrawLeft(), statsPageDrawTop());
                 statsPage.draw(graphics, scaleX, scaleY, false);
                 pagePose.popMatrix();
             } else {

@@ -193,6 +193,108 @@ public final class GuiPixels {
         popDeviceSpace(g);
     }
 
+    /** Rounded fill using per-row corner rasterization instead of the shared corner mask. */
+    public static void fillRoundedRectRows(GuiGraphicsExtractor g, int x, int y, int w, int h,
+                                           int r, int color) {
+        float step = deviceStep();
+        int dx = Math.round(x * step);
+        int dy = Math.round(y * step);
+        int dw = snapSize(x, w, step);
+        int dh = snapSize(y, h, step);
+        int rr = Math.min(Math.max(0, Math.round(r * step)), Math.max(0, Math.min(dw, dh) / 2 - 1));
+        if (dw <= 0 || dh <= 0) {
+            return;
+        }
+        pushDeviceSpace(g);
+        if (rr < 1) {
+            g.fill(dx, dy, dx + dw, dy + dh, color);
+        } else {
+            g.fill(dx + rr, dy, dx + dw - rr, dy + dh, color);
+            g.fill(dx, dy + rr, dx + rr, dy + dh - rr, color);
+            g.fill(dx + dw - rr, dy + rr, dx + dw, dy + dh - rr, color);
+            for (int row = 0; row < rr; row++) {
+                int inset = (int) Math.floor(arcInset(rr, row));
+                cornerRowLeft(g, dx + inset, dx + rr, dy + row, color);
+                cornerRowRight(g, dx + dw - rr, dx + dw - inset, dy + row, color);
+                int bottom = dy + dh - row - 1;
+                cornerRowLeft(g, dx + inset, dx + rr, bottom, color);
+                cornerRowRight(g, dx + dw - rr, dx + dw - inset, bottom, color);
+            }
+        }
+        popDeviceSpace(g);
+    }
+
+    /**
+     * Rounded fill plus a fixed-width device-space ring. The outer rect is snapped once and the
+     * inner fill is derived from that same rect, so all four border sides share one thickness.
+     */
+    public static void fillRoundedBorderedRectFixed(GuiGraphicsExtractor g, int x, int y, int w,
+                                                    int h, int r, int fill, int border,
+                                                    int thicknessDevice) {
+        float step = deviceStep();
+        int dx = Math.round(x * step);
+        int dy = Math.round(y * step);
+        int dw = snapSize(x, w, step);
+        int dh = snapSize(y, h, step);
+        int rr = Math.max(1, Math.round(r * step));
+        int inset = Math.max(1, thicknessDevice);
+        if (dw <= 2 * inset || dh <= 2 * inset) {
+            pushDeviceSpace(g);
+            fillRoundedDevice(g, dx, dy, dw, dh, rr, border, true, true);
+            popDeviceSpace(g);
+            return;
+        }
+        pushDeviceSpace(g);
+        fillRoundedDevice(g, dx, dy, dw, dh, rr, border, true, true);
+        fillRoundedDevice(g, dx + inset, dy + inset, dw - 2 * inset, dh - 2 * inset,
+                Math.max(1, rr - inset), fill, true, true);
+        popDeviceSpace(g);
+    }
+
+    /** A standalone two-device-pixel rounded outline; it does not cover the interior. */
+    public static void strokeRoundedRect(GuiGraphicsExtractor g, int x, int y, int w, int h,
+                                         int r, int color) {
+        float step = deviceStep();
+        int dx = Math.round(x * step);
+        int dy = Math.round(y * step);
+        int dw = snapSize(x, w, step);
+        int dh = snapSize(y, h, step);
+        int rr = Math.min(Math.max(0, Math.round(r * step)), Math.max(0, Math.min(dw, dh) / 2 - 2));
+        if (dw <= 0 || dh <= 0) {
+            return;
+        }
+        pushDeviceSpace(g);
+        int left = dx;
+        int top = dy;
+        int right = dx + dw;
+        int bottom = dy + dh;
+        int thickness = 2;
+        if (rr < 1) {
+            g.fill(left, top, right, top + thickness, color);
+            g.fill(left, bottom - thickness, right, bottom, color);
+            g.fill(left, top, left + thickness, bottom, color);
+            g.fill(right - thickness, top, right, bottom, color);
+        } else {
+            int topInset = (int) Math.floor(arcInset(rr, 0));
+            g.fill(left + topInset, top, right - topInset, top + thickness, color);
+            g.fill(left + topInset, bottom - thickness, right - topInset, bottom, color);
+            g.fill(left, top + rr, left + thickness, bottom - rr, color);
+            g.fill(right - thickness, top + rr, right, bottom - rr, color);
+            for (int row = 0; row < rr; row++) {
+                int inset = (int) Math.floor(arcInset(rr, row));
+                g.fill(left + inset, top + row, left + inset + thickness, top + row + 1,
+                        color);
+                g.fill(right - inset - thickness, top + row, right - inset, top + row + 1,
+                        color);
+                g.fill(left + inset, bottom - row - 1, left + inset + thickness, bottom - row,
+                        color);
+                g.fill(right - inset - thickness, bottom - row - 1, right - inset,
+                        bottom - row, color);
+            }
+        }
+        popDeviceSpace(g);
+    }
+
     /** Snaps a design-space rounded rect to the device grid and fills it. */
     private static void fillRoundedBlit(GuiGraphicsExtractor g, int x, int y, int w, int h,
                                         int r, int color, boolean roundTop, boolean roundBottom) {

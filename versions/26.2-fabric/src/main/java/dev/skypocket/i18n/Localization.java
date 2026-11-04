@@ -79,7 +79,11 @@ public final class Localization {
     EN.put("生命数值大小", "Health Readout Size");
     EN.put("法力数值大小", "Mana Readout Size");
     EN.put("原版 HUD", "Vanilla HUD");
+    EN.put("隐藏原版元素，避免和本模块重复绘制",
+            "Hide vanilla elements so they do not draw twice with this module");
     EN.put("风格", "Style");
+    EN.put("经典", "Classic");
+    EN.put("现代", "Modern");
     EN.put("经典沿用原版图标，现代改用条；切换后只显示对应风格的设置",
             "Classic keeps the vanilla icons, modern uses bars; only the matching settings show");
     EN.put("经典风格", "Classic Style");
@@ -107,6 +111,8 @@ public final class Localization {
     EN.put("现代风格的条与经典风格的数值文字共用同一套",
             "Shared by the modern bars and the classic readouts");
     EN.put("文字行", "Text Rows");
+    EN.put("仅经典风格；现代风格的条已经直接显示这些数值",
+            "Classic only; the modern bars already display these values");
     EN.put("防御 / 速度 / 活力：两套风格下都显示，位置同样在「HUD 位置调整」页里拖",
             "Defense / speed / vitality: shown in both styles, positioned in the HUD editor");
     EN.put("隐藏原版生命条", "Hide Vanilla Hearts");
