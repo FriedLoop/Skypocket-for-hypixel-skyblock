@@ -856,6 +856,6 @@ layout(location = 0) out vec4 fragColor;
 
 **页面缓存（独立宿主阶段）**：`Ui2Screen` 复用 `GuiPanelCache` 缓存页面底图；录制时 `Control.neutralPaint` 让控件以无焦点、无 pressed、无键盘高亮的稳定状态绘制。缓存 key 由布局 revision 和 `ScrollView` 滚动签名组成。命中缓存后，只遍历并实时重画当前 focused / pressed / flash 的控件，再绘制颜色弹层。这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一。
 
-**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。此路径暂时绕过整块 `GuiPanelCache`，先保证实时状态正确。
+**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。`StatsSettingsPage` 自身复用静态底图 + 动态控件层缓存，过渡动画期间禁用 blit；面板壳保持直绘。
 
-**下一步**：为统一入口补页面级缓存，并清理旧 stats 设置渲染分支。
+**下一步**：清理 stats 的旧设置渲染分支，并决定下一个迁移页面。

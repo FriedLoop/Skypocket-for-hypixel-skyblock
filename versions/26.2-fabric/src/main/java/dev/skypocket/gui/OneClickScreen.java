@@ -16,7 +16,6 @@ import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.input.Keys;
 import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PreeditEvent;
-import dev.skypocket.ui.mc.McUiPainter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -603,7 +602,7 @@ public class OneClickScreen extends Screen {
             if (statsPage != null && statsPageFeature == feature) {
                 statsPage.layout();
                 pose.translate(contentLeft(), contentTop() - paneScroll + 28);
-                statsPage.draw(new McUiPainter(graphics));
+                statsPage.draw(graphics, scaleX, scaleY, true);
                 pose.translate(-contentLeft(), -(contentTop() - paneScroll + 28));
             } else {
                 java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rows =
@@ -746,7 +745,7 @@ public class OneClickScreen extends Screen {
                 Matrix3x2fStack pagePose = graphics.pose();
                 pagePose.pushMatrix();
                 pagePose.translate(contentLeft(), statsPageTop());
-                statsPage.draw(new McUiPainter(graphics));
+                statsPage.draw(graphics, scaleX, scaleY, false);
                 pagePose.popMatrix();
             } else {
                 super.extractRenderState(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY, delta);

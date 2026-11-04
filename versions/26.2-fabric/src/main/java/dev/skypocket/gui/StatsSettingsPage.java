@@ -3,6 +3,7 @@ package dev.skypocket.gui;
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.LayoutEngine;
@@ -23,6 +24,7 @@ import dev.skypocket.ui.mc.McUiPainter;
 import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
 import dev.skypocket.ui.widget.ColorField;
+import dev.skypocket.ui.widget.Control;
 import dev.skypocket.ui.widget.Slider;
 import dev.skypocket.ui.widget.Switch;
 import dev.skypocket.ui.widget.WidgetPalette;
@@ -30,7 +32,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix3x2fStack;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Content-only player-stats settings page. It owns an element tree, its input router and its popup
@@ -45,6 +49,8 @@ public final class StatsSettingsPage {
     private Box root;
     private ScrollView scroll;
     private InputRouter input;
+    private long renderRevision;
+    private UiElement lastFocused;
 
     public StatsSettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
         this.feature = feature;
@@ -107,10 +113,25 @@ public final class StatsSettingsPage {
         }
     }
 
-    public void draw(McUiPainter painter) {
-        Matrix3x2fStack pose = painter.graphics().pose();
+    public void draw(GuiGraphicsExtractor graphics, float scaleX, float scaleY, boolean animating) {
+        UiElement focused = input.focused();
+        if (focused != lastFocused) {
+            lastFocused = focused;
+            renderRevision++;
+        }
+        McUiPainter painter = new McUiPainter(graphics);
+        Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        drawElement(painter, root);
+        boolean cached = GuiPanelCache.draw(graphics, pageCacheKey(),
+                Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
+                scaleX, scaleY, animating,
+                (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
+                0, 0, 0f);
+        if (!cached) {
+            drawElement(painter, root);
+        } else {
+            drawDynamicControls(painter);
+        }
         for (ColorField field : colorFields) {
             if (field.isOpen()) {
                 field.syncFields();
@@ -118,6 +139,81 @@ public final class StatsSettingsPage {
             }
         }
         pose.popMatrix();
+    }
+
+    private long pageCacheKey() {
+        long scrollHash = scroll == null ? 0L : Float.floatToIntBits(scroll.scrollY());
+        return renderRevision * 31_415_926_535L + scrollHash;
+    }
+
+    private void drawBase(GuiGraphicsExtractor graphics) {
+        dev.skypocket.render.ScissorTracker.reset(graphics);
+        Control.neutralPaint(true);
+        try {
+            drawElement(new McUiPainter(graphics), root);
+        } finally {
+            Control.neutralPaint(false);
+        }
+    }
+
+    private void drawDynamicControls(McUiPainter painter) {
+        Set<UiElement> dynamic = new HashSet<>();
+        collectDynamic(root, dynamic);
+        if (!dynamic.isEmpty()) {
+            drawDynamicElement(painter, root, dynamic);
+        }
+    }
+
+    private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
+        if (element instanceof Control control
+                && (control.isFocused() || control.isPressed() || control.flashActive()
+                || (control instanceof ColorField color && color.isOpen()))) {
+            dynamic.add(control);
+        }
+        for (UiElement child : element.children()) {
+            collectDynamic(child, dynamic);
+        }
+    }
+
+    private boolean drawDynamicElement(McUiPainter painter, UiElement element,
+                                       Set<UiElement> dynamic) {
+        boolean any = dynamic.contains(element);
+        for (UiElement child : element.children()) {
+            any |= containsDynamic(child, dynamic);
+        }
+        if (!any || !element.visible()) {
+            return false;
+        }
+        Matrix3x2fStack pose = painter.graphics().pose();
+        pose.pushMatrix();
+        pose.translate(element.offsetX(), element.offsetY());
+        boolean scroll = element instanceof ScrollView;
+        if (scroll) {
+            painter.pushClip(element.bounds());
+        }
+        if (dynamic.contains(element) && element instanceof Control control) {
+            control.paint(painter);
+        }
+        for (UiElement child : element.children()) {
+            drawDynamicElement(painter, child, dynamic);
+        }
+        if (scroll) {
+            painter.popClip();
+        }
+        pose.popMatrix();
+        return true;
+    }
+
+    private static boolean containsDynamic(UiElement element, Set<UiElement> dynamic) {
+        if (dynamic.contains(element)) {
+            return true;
+        }
+        for (UiElement child : element.children()) {
+            if (containsDynamic(child, dynamic)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void drawElement(McUiPainter painter, UiElement element) {
