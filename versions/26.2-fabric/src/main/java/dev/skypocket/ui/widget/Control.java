@@ -89,6 +89,11 @@ public abstract class Control extends Box implements Painted {
         return pressed;
     }
 
+    /** Controls whose live content is not represented by the neutral page base. */
+    public boolean dynamicOverlay() {
+        return false;
+    }
+
     /** Flat rows sit directly on the card surface; pressed/focused states still paint. */
     public Control flat(boolean value) {
         flat = value;

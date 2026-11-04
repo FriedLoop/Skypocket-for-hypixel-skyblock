@@ -786,6 +786,43 @@ public abstract class Setting {
         @Override public boolean matches(String q) { return false; }
     }
 
+    /** Custom layout expressed with UI v2 elements instead of legacy Minecraft widgets. */
+    public static final class V2CustomSetting extends Setting {
+        @FunctionalInterface
+        public interface Layout {
+            void layout(dev.skypocket.ui.Box parent,
+                        dev.skypocket.ui.widget.WidgetPalette palette);
+        }
+
+        private final int height;
+        private final Layout layout;
+
+        public V2CustomSetting(int height, Layout layout) {
+            super(null);
+            this.height = height;
+            this.layout = layout;
+        }
+
+        public Layout layout() {
+            return layout;
+        }
+
+        @Override
+        public int height() {
+            return height;
+        }
+
+        @Override
+        public void build(int x, int y, Consumer<AbstractWidget> add) {
+            // UI v2 owns this row; the legacy view has no equivalent widget.
+        }
+
+        @Override
+        public boolean matches(String q) {
+            return false;
+        }
+    }
+
     /** Arbitrary custom layout (e.g. the crosshair pixel grid + preview side by side). */
     public static final class CustomSetting extends Setting {
         @FunctionalInterface

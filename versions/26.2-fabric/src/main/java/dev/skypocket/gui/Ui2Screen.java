@@ -118,7 +118,8 @@ public abstract class Ui2Screen extends Screen {
 
     private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
         if (element instanceof Control control
-                && (control.isFocused() || control.isPressed() || control.flashActive()
+                && (control.dynamicOverlay() || control.isFocused() || control.isPressed()
+                || control.flashActive()
                 || (control instanceof ColorField color && color.isOpen())
                 || (control instanceof Dropdown dropdown && dropdown.isOpen()))) {
             dynamic.add(control);

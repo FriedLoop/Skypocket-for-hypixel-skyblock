@@ -228,7 +228,8 @@ public final class SettingsPage {
 
     private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
         if (element instanceof Control control
-                && (control.isFocused() || control.isPressed() || control.flashActive()
+                && (control.dynamicOverlay() || control.isFocused() || control.isPressed()
+                || control.flashActive()
                 || (control instanceof ColorField color && color.isOpen())
                 || (control instanceof Dropdown dropdown && dropdown.isOpen()))) {
             dynamic.add(control);
@@ -529,6 +530,15 @@ public final class SettingsPage {
                 action.run();
                 rebuild();
             }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
+        } else if (setting instanceof Setting.V2CustomSetting custom) {
+            Box row = new Box(Style.builder()
+                    .width(Dimension.percent(100f))
+                    .height(custom.height())
+                    .direction(Style.Direction.ROW)
+                    .gap(8f)
+                    .build());
+            custom.layout().layout(row, palette);
+            parent.add(row);
         } else if (setting instanceof Setting.ChoiceSetting choice) {
             List<String> options = new ArrayList<>();
             for (String option : choice.options()) {

@@ -3,8 +3,9 @@ package dev.skypocket.gui;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.gui.setting.Setting;
-import dev.skypocket.gui.widget.CrosshairPreviewWidget;
-import dev.skypocket.gui.widget.PixelGridWidget;
+import dev.skypocket.ui.Style;
+import dev.skypocket.ui.widget.CrosshairGrid;
+import dev.skypocket.ui.widget.CrosshairPreview;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.AntialiasingRenderer;
@@ -65,9 +66,12 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("crosshair", "自定义准星", Category.RENDER,
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
-                        new Setting.CustomSetting(140, (x, y, add) -> {
-                            add.accept(new PixelGridWidget(x, y, ModConfig.GRID, 8, cfg.crosshairGrid, cfg::getCrosshairColorARGB));
-                            add.accept(new CrosshairPreviewWidget(x + 146, y, Setting.WIDGET_WIDTH - 146, 136, cfg));
+                        new Setting.V2CustomSetting(140, (row, palette) -> {
+                            int gridSize = CrosshairGrid.preferredSize();
+                            row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
+                                    Style.builder().width(gridSize).height(gridSize).build()));
+                            row.add(new CrosshairPreview(cfg, Style.builder()
+                                    .height(gridSize).flexGrow(1f).build()));
                         }),
                         new Setting.GroupSetting("准星外观", List.of(
                                 new Setting.BooleanSetting("描边", () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),
