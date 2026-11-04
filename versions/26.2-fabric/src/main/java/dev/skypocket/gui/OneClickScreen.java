@@ -27,6 +27,7 @@ import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Set;
 
 import static dev.skypocket.gui.PanelGeometry.*;
 
@@ -147,11 +148,13 @@ public class OneClickScreen extends Screen {
         return new PanelView(settingsTab, viewingFeature, selected, scrollY, search, features);
     }
 
+    /** Modules already using the v2 settings page tree. */
+    private static final Set<String> V2_PAGE_IDS =
+            Set.of("stats_display", "clock", "day_count", "fps_tps_ping");
+
     private boolean statsPageActive() {
-        if (settingsTab || viewingFeature == null) {
-            return false;
-        }
-        return "stats_display".equals(viewingFeature.id()) || "clock".equals(viewingFeature.id());
+        return !settingsTab && viewingFeature != null
+                && V2_PAGE_IDS.contains(viewingFeature.id());
     }
 
     private float statsPageTop() {
