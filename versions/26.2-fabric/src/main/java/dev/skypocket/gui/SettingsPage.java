@@ -467,8 +467,7 @@ public final class SettingsPage {
                     .flat(true));
         } else if (setting instanceof Setting.SliderSetting slider) {
             parent.add(new Slider(Localization.tr(slider.label()), slider.min(), slider.max(),
-                    slider::value, slider::setValue,
-                    slider.max() - slider.min() > 20 ? "%.0f" : "%.2f",
+                    slider::value, slider::setValue, slider.format(), slider.step(),
                     Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
                     .flat(true));
         } else if (setting instanceof Setting.DropdownSetting dropdownSetting) {

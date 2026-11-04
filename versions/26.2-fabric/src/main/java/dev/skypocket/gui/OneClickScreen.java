@@ -151,7 +151,9 @@ public class OneClickScreen extends Screen {
     /** Modules already using the v2 settings page tree. */
     private static final Set<String> V2_PAGE_IDS =
             Set.of("stats_display", "clock", "day_count", "fps_tps_ping",
-                    "held_item_name", "post_process");
+                    "held_item_name", "post_process", "chat_compact",
+                    "damage_splash_compact", "scrollable_tooltips", "player_glow",
+                    "dragon_glow", "hitbox");
 
     private boolean statsPageActive() {
         return !settingsTab && viewingFeature != null

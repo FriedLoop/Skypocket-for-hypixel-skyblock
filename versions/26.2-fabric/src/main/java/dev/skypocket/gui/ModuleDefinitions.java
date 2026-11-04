@@ -137,16 +137,17 @@ final class ModuleDefinitions {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.BooleanSetting("合并", () -> cfg.damageSplashCompactEnabled,
                 v -> cfg.damageSplashCompactEnabled = v));
+        settings.add(new Setting.BooleanSetting("大写格式化", () -> cfg.damageSplashUppercase,
+                v -> cfg.damageSplashUppercase = v));
+        settings.add(new Setting.BooleanSetting("显示次数", () -> cfg.damageSplashShowCount,
+                v -> cfg.damageSplashShowCount = v));
         settings.add(new Setting.SliderSetting("归属半径", 0.5, 3.0,
                 () -> cfg.damageSplashRadius,
                 v -> cfg.damageSplashRadius = v, "%.1f", 0.1));
         settings.add(new Setting.SliderSetting("合并窗口(毫秒)", 200, 3000,
                 () -> cfg.damageSplashWindowMs,
                 v -> cfg.damageSplashWindowMs = (int) Math.round(v), "%.0f", 100));
-        settings.add(new Setting.BooleanSetting("大写格式化", () -> cfg.damageSplashUppercase,
-                v -> cfg.damageSplashUppercase = v));
-        settings.add(new Setting.BooleanSetting("显示次数", () -> cfg.damageSplashShowCount,
-                v -> cfg.damageSplashShowCount = v));
+        settings.add(new Setting.Header("Display"));
         settings.add(new Setting.SliderSetting("显示时长(毫秒)", 300, 5000,
                 () -> cfg.damageSplashLifetimeMs,
                 v -> cfg.damageSplashLifetimeMs = (int) Math.round(v), "%.0f", 100));

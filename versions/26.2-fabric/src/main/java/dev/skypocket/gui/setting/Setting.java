@@ -280,6 +280,10 @@ public abstract class Setting {
 
         public double max() { return max; }
 
+        public double step() { return step; }
+
+        public String format() { return format; }
+
         public double value() { return getter.getAsDouble(); }
 
         /** The row text, exactly as the widget composed it. */

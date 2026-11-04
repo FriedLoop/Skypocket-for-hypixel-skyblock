@@ -19,6 +19,7 @@ public final class Slider extends Control {
     private final DoubleSupplier value;
     private final DoubleConsumer onChange;
     private final String format;
+    private final double step;
 
     public Slider(String label, double min, double max, DoubleSupplier value,
                   DoubleConsumer onChange, String format) {
@@ -28,6 +29,12 @@ public final class Slider extends Control {
 
     public Slider(String label, double min, double max, DoubleSupplier value,
                   DoubleConsumer onChange, String format, Style style, WidgetPalette palette) {
+        this(label, min, max, value, onChange, format, Double.NaN, style, palette);
+    }
+
+    public Slider(String label, double min, double max, DoubleSupplier value,
+                  DoubleConsumer onChange, String format, double step, Style style,
+                  WidgetPalette palette) {
         super(style, palette);
         this.label = Objects.requireNonNull(label);
         this.min = min;
@@ -35,6 +42,7 @@ public final class Slider extends Control {
         this.value = Objects.requireNonNull(value);
         this.onChange = Objects.requireNonNull(onChange);
         this.format = format;
+        this.step = step;
     }
 
     @Override
@@ -66,18 +74,20 @@ public final class Slider extends Control {
 
     @Override
     public boolean onKeyDown(KeyEvent event) {
-        double step = Math.max((max - min) / 100.0, 0.01);
-        if (event.key() == Keys.LEFT) {
-            flashActivation();
-            onChange.accept(clamp(value.getAsDouble() - step));
-            return true;
+        if (event.key() != Keys.LEFT && event.key() != Keys.RIGHT) {
+            return super.onKeyDown(event);
         }
-        if (event.key() == Keys.RIGHT) {
-            flashActivation();
-            onChange.accept(clamp(value.getAsDouble() + step));
-            return true;
-        }
-        return super.onKeyDown(event);
+        double increment = step > 0 ? step : Math.max((max - min) / 100.0, 1.0e-4);
+        double current = value.getAsDouble();
+        // Move by one snapped index rather than arithmetically adding a float step; otherwise a
+        // configured coarse step (e.g. 100 ms) can round back to the current value and need a
+        // second key press before the displayed number changes.
+        long index = Math.round((current - min) / increment);
+        index += event.key() == Keys.LEFT ? -1 : 1;
+        double next = min + index * increment;
+        flashActivation();
+        onChange.accept(clamp(next));
+        return true;
     }
 
     private void updateFromPointer(float pointerX) {
