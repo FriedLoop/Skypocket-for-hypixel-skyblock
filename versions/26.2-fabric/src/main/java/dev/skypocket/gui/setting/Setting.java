@@ -669,14 +669,27 @@ public abstract class Setting {
     public static final class TextFieldSetting extends Setting {
         private final Supplier<String> getter;
         private final Consumer<String> setter;
+        private final String placeholder;
 
         public TextFieldSetting(String label, Supplier<String> getter, Consumer<String> setter) {
+            this(label, getter, setter, "");
+        }
+
+        public TextFieldSetting(String label, Supplier<String> getter, Consumer<String> setter,
+                                String placeholder) {
             super(label);
             this.getter = getter;
             this.setter = touch(setter);
+            this.placeholder = placeholder == null ? "" : placeholder;
         }
 
         @Override public int height() { return rowHeight(); }
+
+        public String value() { return getter.get(); }
+
+        public String placeholder() { return placeholder; }
+
+        public void setValue(String value) { setter.accept(value); }
 
         @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
             add.accept(new TextFieldWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label), getter.get(), setter));

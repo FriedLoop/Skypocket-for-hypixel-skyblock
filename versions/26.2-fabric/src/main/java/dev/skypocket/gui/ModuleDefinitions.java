@@ -126,7 +126,8 @@ final class ModuleDefinitions {
         settings.add(new Setting.SliderSetting("音高", 0.5, 2.0, () -> cfg.mentionAlertPitch,
                 v -> cfg.mentionAlertPitch = (float) v, "%.2f", 0.05));
         settings.add(new Setting.ActionSetting("快捷上传自定义音频", MentionSoundManager::pickAndImport));
-        settings.add(new Setting.TextFieldSetting("自定义检索文本", () -> cfg.mentionAlertCustomText, v -> cfg.mentionAlertCustomText = v));
+        settings.add(new Setting.TextFieldSetting("自定义提醒文本", () -> cfg.mentionAlertCustomText,
+                v -> cfg.mentionAlertCustomText = v, "在此输入文本"));
         settings.add(new Setting.SliderSetting("ID 检索长度", 1, 16, () -> cfg.mentionAlertNameLength,
                 v -> cfg.mentionAlertNameLength = (int) Math.round(v), "%.0f", 1));
         ModuleRegistry.register(new Module("mention_alert", "聊天提及提醒", Category.NOTIFICATION,

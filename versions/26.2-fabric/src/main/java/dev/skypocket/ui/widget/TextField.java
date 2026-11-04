@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 public final class TextField extends Control {
     private final String placeholder;
     private final String label;
+    private boolean labelOutside;
     private final StringBuilder value = new StringBuilder();
     private int cursor;
     private String preedit = "";
@@ -38,6 +39,12 @@ public final class TextField extends Control {
 
     public TextField onChange(Consumer<String> handler) {
         changeHandler = Objects.requireNonNull(handler);
+        return this;
+    }
+
+    /** Draws the label on the left and confines the editable field to the right side. */
+    public TextField labelOutside(boolean value) {
+        labelOutside = value;
         return this;
     }
 
@@ -149,27 +156,30 @@ public final class TextField extends Control {
 
     @Override
     public void paint(UiPainter painter) {
+        float outsideLabelW = labelOutside && label != null && !label.isEmpty()
+                ? painter.textWidth(label) : 0f;
+        Rect field = labelOutside ? outsideFieldBounds(outsideLabelW) : bounds();
         int border = 0;
         if (!neutralPaint()) {
             border = focused ? palette.focus() : hovered ? palette.text() : 0;
         }
         // Fill with the smooth mask, then overlay the independent 2px device-space ring.
-        painter.surface(bounds(), palette.radius(), palette.field(), 0);
+        painter.surface(field, palette.radius(), palette.field(), 0);
         if (border != 0) {
-            painter.strokeRounded(bounds(), palette.radius(), border);
+            painter.strokeRounded(field, palette.radius(), border);
         }
-        painter.pushClip(bounds());
-
         String shown = value.toString();
-        float labelWidth = 0f;
-        float textX = bounds().x() + 6f;
-        float textY = bounds().y() + (bounds().height() - painter.lineHeight()) / 2f;
-        if (label != null && !label.isEmpty()) {
+        float textY = field.y() + (field.height() - painter.lineHeight()) / 2f;
+        float textX = field.x() + 6f;
+        if (labelOutside && label != null && !label.isEmpty()) {
+            painter.text(label, bounds().x() + 6f,
+                    bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.text());
+        } else if (label != null && !label.isEmpty()) {
             painter.text(label, textX, textY, palette.muted());
-            labelWidth = painter.textWidth(label) + 3f;
-            textX += labelWidth;
+            textX += painter.textWidth(label) + 3f;
         }
-        if (shown.isEmpty() && preedit.isEmpty()) {
+        painter.pushClip(field);
+        if (shown.isEmpty() && preedit.isEmpty() && placeholder != null && !placeholder.isEmpty()) {
             painter.text(placeholder, textX, textY, palette.muted());
         } else {
             painter.text(shown, textX, textY, palette.text());
@@ -178,14 +188,22 @@ public final class TextField extends Control {
         float caretX = textX + painter.textWidth(shown.substring(0, cursor));
         if (!preedit.isEmpty()) {
             painter.text(preedit, textX + painter.textWidth(shown), textY, palette.accent());
-            painter.fill(new Rect(textX + painter.textWidth(shown), textY + painter.lineHeight(), 
+            painter.fill(new Rect(textX + painter.textWidth(shown), textY + painter.lineHeight(),
                     painter.textWidth(preedit), 1f), palette.accent());
             caretX = textX + painter.textWidth(shown) + painter.textWidth(preedit);
         }
         if (focused && !neutralPaint()) {
-            painter.fill(new Rect(caretX, bounds().y() + 4f, 1f, bounds().height() - 8f),
+            painter.fill(new Rect(caretX, field.y() + 4f, 1f, field.height() - 8f),
                     palette.text());
         }
         painter.popClip();
+    }
+
+    private Rect outsideFieldBounds(float labelWidth) {
+        float fieldH = Math.min(16f, Math.max(10f, bounds().height() - 4f));
+        float fieldX = bounds().x() + 6f + labelWidth + 8f;
+        float fieldW = Math.max(40f, bounds().right() - 6f - fieldX);
+        return new Rect(fieldX, bounds().y() + (bounds().height() - fieldH) / 2f,
+                fieldW, fieldH);
     }
 }

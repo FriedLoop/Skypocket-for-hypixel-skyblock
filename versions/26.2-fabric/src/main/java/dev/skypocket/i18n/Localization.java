@@ -294,6 +294,8 @@ public final class Localization {
         EN.put("内置提示音", "Ding");
         EN.put("快捷上传自定义音频", "Upload Custom Sound");
         EN.put("自定义检索文本", "Custom Search Text");
+    EN.put("自定义提醒文本", "Custom Alert Text");
+    EN.put("在此输入文本", "Type your text here");
         EN.put("ID 检索长度", "ID Match Length");
         EN.put("选择音频文件", "Select Audio File");
         EN.put("(留空则用游戏ID)", "(empty = game ID)");

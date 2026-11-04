@@ -31,6 +31,7 @@ import dev.skypocket.ui.widget.Scrollbar;
 import dev.skypocket.ui.widget.Segmented;
 import dev.skypocket.ui.widget.Slider;
 import dev.skypocket.ui.widget.Switch;
+import dev.skypocket.ui.widget.TextField;
 import dev.skypocket.ui.widget.WidgetPalette;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix3x2fStack;
@@ -556,9 +557,14 @@ public final class SettingsPage {
                     addSetting(parent, child);
                 }
             }
-        } else if (setting instanceof Setting.TextFieldSetting) {
-            parent.add(new Text(Localization.tr(setting.label()) + " "
-                    + Localization.tr("（待迁移）"), Style.builder().height(16f).build()));
+        } else if (setting instanceof Setting.TextFieldSetting textSetting) {
+            TextField field = new TextField(Localization.tr(textSetting.placeholder()),
+                    Localization.tr(setting.label()),
+                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                    .labelOutside(true);
+            field.text(textSetting.value());
+            field.onChange(textSetting::setValue);
+            parent.add(field);
         }
     }
 }
