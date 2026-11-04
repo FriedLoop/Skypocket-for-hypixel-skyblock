@@ -150,7 +150,8 @@ public class OneClickScreen extends Screen {
 
     /** Modules already using the v2 settings page tree. */
     private static final Set<String> V2_PAGE_IDS =
-            Set.of("stats_display", "clock", "day_count", "fps_tps_ping");
+            Set.of("stats_display", "clock", "day_count", "fps_tps_ping",
+                    "held_item_name");
 
     private boolean statsPageActive() {
         return !settingsTab && viewingFeature != null
