@@ -1,5 +1,6 @@
 package dev.skypocket.ui.widget;
 
+import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
@@ -84,8 +85,34 @@ public final class TextField extends Control {
 
     @Override
     public boolean onPointerDown(PointerEvent event) {
-        cursor = value.length();
+        // Place the caret at the closest character boundary instead of always jumping to the end.
+        float localX = (float) event.x() - ancestorOffsetX();
+        float startX = textStartX();
+        int best = 0;
+        float bestDistance = Math.abs(localX - startX);
+        for (int i = 1; i <= value.length(); i++) {
+            float x = startX + ClickGuiFonts.width(value.substring(0, i));
+            float distance = Math.abs(localX - x);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = i;
+            }
+        }
+        cursor = best;
         return true;
+    }
+
+    private float textStartX() {
+        if (!labelOutside) {
+            float x = bounds().x() + 6f;
+            if (label != null && !label.isEmpty()) {
+                x += ClickGuiFonts.width(label) + 3f;
+            }
+            return x;
+        }
+        float labelWidth = label == null || label.isEmpty()
+                ? 0f : ClickGuiFonts.width(label);
+        return outsideFieldBounds(labelWidth).x() + 6f;
     }
 
     @Override
