@@ -67,14 +67,16 @@ public final class PanelRenderer {
             // as uneven lighting next to the flat cards and rows.
             // footerRow is a DEVICE row index (the row-anchored helpers convert it);
             // handing it to a design-space fill made the body reach far below the panel.
-            graphics.fill(SIDEBAR_W, bodyY, PANEL_W, PANEL_H - FOOTER_H, bodyColor);
+            // Pin the body to the exact device row the content scissor and footer use. A
+            // design-space fill rounds independently and leaves a 1px seam at 0.6/0.9 scales.
+            fillDeviceToRow(graphics, SIDEBAR_W, bodyY, PANEL_W - SIDEBAR_W, footerRow, bodyColor);
             // The sidebar borders the panel's rounded left edge and the footer strip, so both
             // share its rows (and the same device row at the bottom).
             fillDeviceToRow(graphics, 0, TAB_BAR_H, SIDEBAR_W - 1, footerRow, alpha | ClickGuiStyle.sidebarRgb());
             fillDeviceToRow(graphics, SIDEBAR_W - 1, TAB_BAR_H, 1, footerRow,
                     alpha | ClickGuiStyle.sidebarDividerRgb());
         } else {
-            graphics.fill(0, bodyY, PANEL_W, PANEL_H - FOOTER_H, bodyColor);
+            fillDeviceToRow(graphics, 0, bodyY, PANEL_W, footerRow, bodyColor);
         }
         fillRoundedBottomToRow(graphics, 0, PANEL_W, ROUND, tabBarColor(), footerRow, PANEL_H);
     }
@@ -225,8 +227,14 @@ public final class PanelRenderer {
         // inset by one design unit" snapped each side on its own and made the ring uneven.
         // No ring: the card separates from the panel by fill and a drop shadow.
         ClickGuiStyle.shadow(graphics, cx, cy, CARD_W, CARD_H, ROUND);
+        int cardColor = hover ? ClickGuiStyle.cardHover() : ClickGuiStyle.card();
         dev.skypocket.render.GuiPixels.fillRoundedRect(graphics, cx, cy, CARD_W, CARD_H, ROUND,
-                hover ? ClickGuiStyle.cardHover() : ClickGuiStyle.card());
+                cardColor);
+        // The rounded mask's boundary pixels are partially transparent; drawing the same fill
+        // again makes that antialiased edge opaque enough that the shadow cannot bleed through
+        // as a dark 1px line at fractional GUI scales.
+        dev.skypocket.render.GuiPixels.fillRoundedRect(graphics, cx, cy, CARD_W, CARD_H, ROUND,
+                cardColor);
 
         Identifier tex = ModuleIcon.texture(m.id());
         if (!Minecraft.getInstance().getResourceManager().getResourceStack(tex).isEmpty()) {

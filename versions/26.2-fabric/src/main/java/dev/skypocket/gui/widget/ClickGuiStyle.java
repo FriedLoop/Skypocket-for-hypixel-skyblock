@@ -211,6 +211,8 @@ public final class ClickGuiStyle {
     public static void shadowSoft(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius) {
         GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1, 0x22000000);
     }
+
+
     /** A neutral or accent button in its hovered/plain state. */
     public static void button(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered,
                               boolean accent) {

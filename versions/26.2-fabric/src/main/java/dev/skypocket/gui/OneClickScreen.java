@@ -584,6 +584,8 @@ public class OneClickScreen extends Screen {
     /** Browser-style history for the card pane: "" is the grid, otherwise a module id. */
     private final java.util.ArrayDeque<String> backStack = new java.util.ArrayDeque<>();
     private final java.util.ArrayDeque<String> forwardStack = new java.util.ArrayDeque<>();
+    /** Module the settings tab was opened from, re-inserted when returning to the module grid. */
+    private String settingsReturnId = "";
 
     /** Opens a module (or the grid when {@code id} is null), remembering where we came from. */
     private void navigate(String id) {
@@ -629,6 +631,7 @@ public class OneClickScreen extends Screen {
         if (next != null && !next.hasSettings()) {
             return;
         }
+        settingsReturnId = "";
         if (statsPage != null) {
             statsPage.closePopups();
             transitionPage = statsPage;
@@ -859,10 +862,18 @@ public class OneClickScreen extends Screen {
 
 
     private void showModules() {
+        String returnId = settingsTab ? settingsReturnId : "";
         boolean changed = settingsTab || viewingFeature != null;
         settingsTab = false;
         viewingFeature = null;
+        settingsReturnId = "";
         if (changed) {
+            if (!returnId.isEmpty()) {
+                // Returning from the settings tab should keep the module page it replaced in
+                // history, so Back goes to that module rather than the empty grid.
+                backStack.push(returnId);
+                forwardStack.clear();
+            }
             scrollY = 0;
             rebuildSettingsWidgets();
         }
@@ -872,6 +883,7 @@ public class OneClickScreen extends Screen {
         if (settingsTab) {
             return;
         }
+        settingsReturnId = currentId();
         settingsTab = true;
         viewingFeature = null;
         scrollY = 0;
