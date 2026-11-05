@@ -35,16 +35,6 @@ public interface UiPainter {
         }
     }
 
-    /** Rounded fill using per-row corner rasterization; used for tiny swatches. */
-    default void fillRoundedCrisp(Rect rect, float radius, int color) {
-        fillRounded(rect, radius, color);
-    }
-
-    /** Rounded fill with a fixed device-space border ring, snapped once. */
-    default void surfaceBorderedFixed(Rect rect, float radius, int fill, int border) {
-        surface(rect, radius, fill, border);
-    }
-
     /** One-device-pixel rounded outline drawn on top of existing content. */
     default void strokeRounded(Rect rect, float radius, int color) {
         outlineRounded(rect, radius, color);

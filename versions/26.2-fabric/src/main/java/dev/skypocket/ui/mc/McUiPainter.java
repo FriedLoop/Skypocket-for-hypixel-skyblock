@@ -74,30 +74,6 @@ public final class McUiPainter implements UiPainter {
     }
 
     @Override
-    public void surfaceBorderedFixed(Rect rect, float radius, int fill, int border) {
-        if (border == 0) {
-            fillRounded(rect, radius, fill);
-            return;
-        }
-        int x = Math.round(rect.x());
-        int y = Math.round(rect.y());
-        int w = Math.max(1, Math.round(rect.width()));
-        int h = Math.max(1, Math.round(rect.height()));
-        GuiPixels.fillRoundedBorderedRectFixed(graphics, x, y, w, h,
-                Math.max(0, Math.round(radius)), fill, border, 2);
-    }
-
-    @Override
-    public void fillRoundedCrisp(Rect rect, float radius, int color) {
-        int x = Math.round(rect.x());
-        int y = Math.round(rect.y());
-        int w = Math.max(1, Math.round(rect.width()));
-        int h = Math.max(1, Math.round(rect.height()));
-        GuiPixels.fillRoundedRectRows(graphics, x, y, w, h, Math.max(0, Math.round(radius)),
-                color);
-    }
-
-    @Override
     public void strokeRounded(Rect rect, float radius, int color) {
         int x = Math.round(rect.x());
         int y = Math.round(rect.y());
