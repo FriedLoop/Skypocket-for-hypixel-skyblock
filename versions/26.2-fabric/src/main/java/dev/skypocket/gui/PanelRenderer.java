@@ -4,6 +4,8 @@ import dev.skypocket.config.ConfigManager;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.gui.widget.ClickGuiStyle;
+import dev.skypocket.ui.Rect;
+import dev.skypocket.ui.mc.McUiPainter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -221,69 +223,59 @@ public final class PanelRenderer {
 
     private static void renderCard(GuiGraphicsExtractor graphics, Feature m, int cx, int cy,
                                    int mouseX, int mouseY) {
+        McUiPainter painter = new McUiPainter(graphics);
         boolean hover = mouseX >= cx && mouseX <= cx + CARD_W && mouseY >= cy && mouseY <= cy + CARD_H;
-        // Rounded card: a full rounded rect with a border ring of uniform width. The ring is laid
-        // out in device pixels (see fillRoundedBorderedRect) - building it as "outer rect + rect
-        // inset by one design unit" snapped each side on its own and made the ring uneven.
-        // No ring: the card separates from the panel by fill and a drop shadow.
-        ClickGuiStyle.shadow(graphics, cx, cy, CARD_W, CARD_H, ROUND);
+        Rect card = new Rect(cx, cy, CARD_W, CARD_H);
         int cardColor = hover ? ClickGuiStyle.cardHover() : ClickGuiStyle.card();
-        dev.skypocket.render.GuiPixels.fillRoundedRect(graphics, cx, cy, CARD_W, CARD_H, ROUND,
-                cardColor);
-        // The rounded mask's boundary pixels are partially transparent; drawing the same fill
-        // again makes that antialiased edge opaque enough that the shadow cannot bleed through
-        // as a dark 1px line at fractional GUI scales.
-        dev.skypocket.render.GuiPixels.fillRoundedRect(graphics, cx, cy, CARD_W, CARD_H, ROUND,
-                cardColor);
+        painter.shadow(card, ROUND);
+        // Double fill closes the partially transparent mask edge, so the shadow cannot bleed
+        // through as a 1px dark line at fractional GUI scales.
+        painter.fillRounded(card, ROUND, cardColor);
+        painter.fillRounded(card, ROUND, cardColor);
 
         Identifier tex = ModuleIcon.texture(m.id());
         if (!Minecraft.getInstance().getResourceManager().getResourceStack(tex).isEmpty()) {
             graphics.blit(RenderPipelines.GUI_TEXTURED, tex, cx + CARD_PAD, cy + CARD_PAD, 0, 0,
                     ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
         } else {
-            graphics.fill(cx + CARD_PAD, cy + CARD_PAD, cx + CARD_PAD + ICON_SIZE,
-                    cy + CARD_PAD + ICON_SIZE, ClickGuiStyle.accent());
+            painter.fill(new Rect(cx + CARD_PAD, cy + CARD_PAD, ICON_SIZE, ICON_SIZE),
+                    ClickGuiStyle.accent());
             String letter = m.name().isEmpty() ? "?" : m.name().substring(0, 1);
-            ClickGuiFonts.drawText(graphics, letter,
-                    cx + CARD_PAD + (ICON_SIZE - ClickGuiFonts.width(letter)) / 2,
-                    cy + CARD_PAD + (ICON_SIZE - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.text(),
-                true);
+            painter.text(letter,
+                    cx + CARD_PAD + (ICON_SIZE - painter.textWidth(letter)) / 2,
+                    cy + CARD_PAD + (ICON_SIZE - painter.lineHeight()) / 2,
+                    ClickGuiStyle.text());
         }
 
-        // Truncate long names so they never spill past the card's right edge (where the next card
-        // would be drawn over them).
-        ClickGuiFonts.drawText(graphics, fitTitle(m.name(), CARD_TITLE_MAX_W),
-                cx + CARD_TITLE_X, cy + CARD_TITLE_Y, ClickGuiStyle.text(), true);
+        painter.text(fitTitle(m.name(), CARD_TITLE_MAX_W),
+                cx + CARD_TITLE_X, cy + CARD_TITLE_Y, ClickGuiStyle.text());
 
         int btnX = cx + CARD_BTN_X;
         int btnY = cy + CARD_BTN_Y;
         int btnW = CARD_BTN_W;
-        // A feature without settings shows a clearly disabled button, so its card is visually
-        // distinct from a configurable feature.
         boolean configurable = m.hasSettings();
         String options = Localization.tr(configurable ? "设置" : "无设置");
         if (configurable) {
             boolean btnHover = mouseX >= btnX && mouseX <= btnX + btnW
                     && mouseY >= btnY && mouseY <= btnY + CARD_BTN_H;
-            ClickGuiStyle.button(graphics, btnX, btnY, btnW, CARD_BTN_H, btnHover, false);
+            painter.surface(new Rect(btnX, btnY, btnW, CARD_BTN_H), ClickGuiStyle.RADIUS,
+                    btnHover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
         } else {
-            ClickGuiStyle.surface(graphics, btnX, btnY, btnW, CARD_BTN_H,
+            painter.surface(new Rect(btnX, btnY, btnW, CARD_BTN_H), ClickGuiStyle.RADIUS,
                     ClickGuiStyle.disabled(), 0);
         }
-        ClickGuiFonts.drawText(graphics, options,
-                btnX + (btnW - ClickGuiFonts.width(options)) / 2, btnY + 5,
-                configurable ? ClickGuiStyle.text() : ClickGuiStyle.disabledText(), false);
+        painter.text(options, btnX + (btnW - painter.textWidth(options)) / 2, btnY + 5,
+                configurable ? ClickGuiStyle.text() : ClickGuiStyle.disabledText());
 
         boolean on = m.isEnabled();
         int stX = cx + CARD_STATUS_X;
         int stY = cy + CARD_STATUS_Y;
         int stW = CARD_STATUS_W;
-        // The same accent green the toggles and tabs use, so "on" reads the same everywhere.
-        ClickGuiStyle.surface(graphics, stX, stY, stW, CARD_STATUS_H,
+        painter.surface(new Rect(stX, stY, stW, CARD_STATUS_H), ClickGuiStyle.RADIUS,
                 on ? ClickGuiStyle.accent() : ClickGuiStyle.danger(), 0);
         String status = on ? "ENABLED" : "DISABLED";
-        ClickGuiFonts.drawText(graphics, status,
-                stX + (stW - ClickGuiFonts.width(status)) / 2, stY + 4, ClickGuiStyle.text(), true);
+        painter.text(status, stX + (stW - painter.textWidth(status)) / 2, stY + 4,
+                ClickGuiStyle.text());
     }
 
     /** Ellipsizes a card title so it fits the given design-pixel width. */
