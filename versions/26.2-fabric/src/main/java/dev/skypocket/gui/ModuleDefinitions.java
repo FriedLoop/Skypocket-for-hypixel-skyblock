@@ -352,6 +352,9 @@ final class ModuleDefinitions {
                 v -> cfg.commissionsHideDone = v));
         settings.add(new Setting.BooleanSetting("未完成的置顶", () -> cfg.commissionsPendingFirst,
                 v -> cfg.commissionsPendingFirst = v));
+        settings.add(new Setting.SliderSetting("缩放", 0.25, 6.0,
+                () -> cfg.commissionsScale, v -> cfg.commissionsScale = (float) v,
+                "%.2f", ModConfig.SCALE_GRID));
         settings.add(new Setting.ColorSetting("标题颜色", () -> cfg.commissionsHeaderColor,
                 v -> cfg.commissionsHeaderColor = v));
         settings.add(new Setting.ColorSetting("未完成颜色", () -> cfg.commissionsStartColor,
