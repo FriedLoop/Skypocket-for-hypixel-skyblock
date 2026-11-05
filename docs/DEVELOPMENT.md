@@ -71,7 +71,7 @@ dev.skypocket/
 
 - 模块卡片：`hasSettings()` 为真 → 绿色「设置」按钮；为假 → 灰色「无设置」按钮。
 - `Setting` 子类：`BooleanSetting` / `SliderSetting` / `ColorSetting` / `DropdownSetting` / `TextFieldSetting` / `GroupSetting` / `ChoiceSetting` / `ActionSetting` / `V2CustomSetting` / `Header`。
-- **所有带设置的模块页面和“设置”主标签页都走 `SettingsPage`**（UI v2 元素树）。`SettingsView` 只保留给 HUD 位置编辑器的 `HudSettingsCard`；`Setting.build()` 已是 legacy no-op，不再参与 ClickGUI 页面构建。
+- **所有带设置的模块页面、“设置”主标签页和 HUD 右键设置卡都走 `SettingsPage`**（UI v2 元素树）。旧 `SettingsView` 与旧 widget 构建路径已删除；`Setting` 只保留数据模型，不再负责创建控件。
 - **卡片规则**：`Header` 开始一张新卡片；`GroupSetting` 也是独立卡片，带开关的组把开关放在标题行右侧，不再折叠或嵌入上一张卡片。`V2CustomSetting` 提供基于 v2 `Box`/`Control` 的自定义行（准星网格与预览）。
 - **设置控件**：Switch / Slider / ColorField / Dropdown / Segmented / Button / TextField。滑杆使用 `SliderSetting` 的真实 step 和 format；文本设置在绘制层自动本地化，标签在左、field 在右。
 - **`Setting#visibleWhen(BooleanSupplier)`**：条件行必须成块且收尾；模式切换后调用 `rebuildAfterSettingChange()` 重建页面。`Header`、`GroupSetting`、`ChoiceSetting` 的显示/结构变化都依赖这次重建。
@@ -82,7 +82,7 @@ dev.skypocket/
 - **日志**：一律用 `SkyPocketLog.of("area")` 取 logger，调用写法仍是 `LOGGER.info(...)`，输出带 `[SkyPocket/area]` 前缀 —— MC 的日志格式只打印 `[线程/级别]`，不加前缀就无法在共享日志里定位我们的行（改全局 pattern 会连原版日志一起改，不做）。logger 名固定 `skypocket.<area>`（**点分**，级别继承才成立；斜杠形式不继承）。级别由「调试日志」控制：开 = DEBUG 及以上，关 = **WARN 及以上**（信息静默，但警告/异常永远留证）。
 - **HUD 位置编辑器（`HudPositionEditorScreen`）的结构约定**：每个可编辑元素的 x/y/缩放读写集中在 `SPECS`（`EnumMap<Target, Spec>`，一个元素一条）；新增元素 = 枚举常量 + 表里一行 + `computeLines`/`label` 两个 switch 分支（这两个是 `switch` **表达式**，漏写编译不过）。`init()` 会自检"表项数 == Target 数"，缺项只 warn 不会静默。测量（`lines`/`bounds`）有**帧内缓存**，且缓存只在 `extractRenderState` 期间生效（鼠标处理走实时测量）。控件是**可拖动悬窗**，不再固定在屏幕底部（底部正是 HUD 元素常放的位置）；ESC 退出。**可见性**由 `visible(target, cfg)` 统一决定，规则是"功能开关已开 **且** 该风格下真的会画"：条形仅现代风格可见，生命/法力两条文字行仅经典风格可见（现代风格下这两个数由条形印出，否则两套元素重叠、没法调）；运行时条件（是否在 SkyBlock、有无数据）**不**参与——否则无法在数据出现前预先摆放。
 - **位置/缩放/启用状态的映射各自只有一份**：`StatTextHudElement.FIELDS` 与 `StatsBarHudElement.FIELDS`（`EnumMap<Kind, Fields>`，一行一个 kind），编辑器通过它们的 `x/setX/y/setY/scale/setScale` 访问器委托，不再重复字段名。新增 kind = 枚举常量 + 表里一行。`HudPositionSync` 同样表驱动：`REPAIRED`（每个元素一行，含"跑到屏幕外时回到的默认坐标"）与 `BARS`（仅用于按比例缩放；越界修复是**逐条**的：只把越界那根放回它在列里的默认位置，另五根的位置/缩放/自定义尺寸不动）。新增元素要在这张表里加一行，否则窗口尺寸变化时它不会被按比例迁移、也不会被拉回屏幕内。
-- **设置页的组织方式是"子功能 = 一组"**（`GroupSetting`）：组头是一个可折叠的行（`+`/`-` 与颜色行同一约定），右边是本组功能的动画开关。
+- **设置页的组织方式是"子功能 = 一张卡片"**（`GroupSetting`）：组标题行右侧是本功能的开关，组不再折叠。
   - **组的开关必须写真实的开关字段**（例如「瞄准目标变色」写 `crosshairEntityColorEnabled`，后处理的四个组写各自效果的 `xxxEnabled`），关掉要真的停掉功能。**只有参数簇（一组颜色、一个位置/旋转）才用不带开关的组**：它照样能折叠，只是没有东西可关 —— 装饰性开关比没有开关更糟。
   - **子设置保持整页宽度，不缩进**：组头的深色表面 + 折叠指示已经说明了归属，而缩进会迫使 `HsvPickerWidget`/预览网格这类按整宽调好的布局重算。
   - 组的高度 = 组头 + 展开时的所有子设置高度（`GroupSetting.height()` 递归求和），所以 `panelSettingsHeight()`/`isRowVisible()` 不用改；折叠时调 `relayout()`（下一 tick 重排，与 `ColorSetting`/`DropdownSetting` 同一路径）。
@@ -843,7 +843,8 @@ layout(location = 0) out vec4 fragColor;
 - 长下拉使用搜索 + 8 行虚拟窗口，滚轮翻页
 - ChoiceSetting 使用带滑动动画的 Segmented
 - 颜色弹层、文本设置、准星自定义行均走 v2
-- `SettingsView` 仅剩 HUD 位置编辑器一个宿主
+- HUD 右键设置弹窗也内嵌 `SettingsPage`
+- `SettingsView` 与旧 widget 构建路径已删除
 
 **过渡动画**：模块之间切换时保留 outgoing `SettingsPage` 快照，不再回退到旧设置渲染。
 

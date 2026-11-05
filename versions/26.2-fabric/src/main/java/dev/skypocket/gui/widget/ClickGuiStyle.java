@@ -251,7 +251,7 @@ public final class ClickGuiStyle {
         return hovered ? buttonHover() : button();
     }
 
-    /** Linear blend between two ARGB colours; used by the animated switches (see ToggleButton). */
+    /** Linear blend between two ARGB colours. */
     public static int blend(int from, int to, float t) {
         int clamped = Math.max(0, Math.min(255, Math.round(t * 255f)));
         int r = ((from >> 16) & 0xFF) + ((((to >> 16) & 0xFF) - ((from >> 16) & 0xFF)) * clamped) / 255;

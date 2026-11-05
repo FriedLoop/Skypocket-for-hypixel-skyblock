@@ -1,7 +1,6 @@
 package dev.skypocket.gui;
 
 import dev.skypocket.config.ConfigManager;
-import dev.skypocket.gui.widget.TextFieldWidget;
 import dev.skypocket.render.ClickGuiFonts;
 import net.minecraft.client.Minecraft;
 
@@ -145,7 +144,6 @@ public final class PanelCacheKey {
             long hmy = inBody(lmx, lmy) ? (dragging ? lmy : lmy / HOVER_GRID_Y) : FAR_AWAY;
             h = h * 31 + hmx * 31L + hmy;
             h = h * 31 + (dragging ? 1 : 0);
-            h = h * 31 + (TextFieldWidget.focusedField() == null ? 0 : 1);
         }
         return h;
     }

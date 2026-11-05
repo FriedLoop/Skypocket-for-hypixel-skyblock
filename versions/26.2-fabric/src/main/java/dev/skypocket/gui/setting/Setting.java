@@ -2,14 +2,9 @@ package dev.skypocket.gui.setting;
 
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.gui.OneClickScreen;
-import dev.skypocket.gui.widget.DropdownListWidget;
-import dev.skypocket.gui.widget.DropdownWidget;
-import dev.skypocket.gui.widget.TextFieldWidget;
 import dev.skypocket.gui.widget.ToggleAnimation;
-import dev.skypocket.gui.widget.ToggleButton;
 import dev.skypocket.i18n.Localization;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.AbstractWidget;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,10 +16,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/**
- * Declarative description of a single settings row in the Click GUI. UI v2 renders these directly;
- * the legacy widget builder is retained only for the HUD editor's SettingsView host.
- */
+/** Declarative description of a single settings row in the Click GUI. UI v2 renders these directly. */
 public abstract class Setting {
     /** Fixed row height: 20px widget + 5px spacing. */
     /**
@@ -36,16 +28,13 @@ public abstract class Setting {
     public static int rowHeight() {
         return dev.skypocket.gui.widget.GuiMetrics.current().rowHeight();
     }
-    /** Standard widget width inside the panel. */
-    public static final int WIDGET_WIDTH = 400;
-
     protected final String label;
 
     /**
      * True when the page draws (and handles) this row itself instead of building a widget for it.
      *
-     * <p>UI v2 rows are drawn directly by {@code SettingsPage}; the flag remains for the HUD editor's
-     * legacy {@code SettingsView} host.
+     * <p>UI v2 rows are drawn directly by {@code SettingsPage}; the legacy widget renderer has been
+     * removed.
      */
     public boolean immediate() {
         return false;
@@ -122,10 +111,6 @@ public abstract class Setting {
 
     /** Vertical space (px) this setting occupies. */
     public abstract int height();
-
-    /** Legacy widget builder; UI v2 draws settings directly. */
-    public void build(int x, int y, Consumer<AbstractWidget> add) {
-    }
 
     /**
      * Wraps a setting's write so the Click GUI panel cache notices it.
@@ -212,11 +197,6 @@ public abstract class Setting {
         }
 
         @Override public int height() { return rowHeight(); }
-
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new ToggleButton(x, y, WIDGET_WIDTH, 20, Localization.tr(label), getter, setter,
-                    animation));
-        }
     }
 
     /**
@@ -365,32 +345,14 @@ public abstract class Setting {
             this.setter = touch(setter);
         }
 
+        private static final int ITEM_H = 16;
+
         @Override public int height() {
-            return expanded ? rowHeight() * 2 + LIST_ROWS * DropdownListWidget.ITEM_H : rowHeight();
+            return expanded ? rowHeight() * 2 + LIST_ROWS * ITEM_H : rowHeight();
         }
 
         /** Drawn and handled by the page - see {@link #immediate()}. */
         @Override public boolean immediate() { return true; }
-
-        /**
-         * Widget version, for custom layouts. The settings page draws the row and the list itself (so they
-         * clip and can be rendered into the studio's preview); this stays for anything that builds rows by
-         * hand, and only the search field is ever needed on the page path.
-         */
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new DropdownWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label), getter,
-                    this::toggle));
-            if (!expanded) {
-                return;
-            }
-            add.accept(new DropdownListWidget(x, y + rowHeight() * 2, WIDGET_WIDTH,
-                    LIST_ROWS * DropdownListWidget.ITEM_H, options, getter, () -> filter,
-                    v -> {
-                        setter.accept(v);
-                        toggle();
-                    }));
-        }
-
 
         /**
          * Filter text, with a cache invalidation.
@@ -421,9 +383,9 @@ public abstract class Setting {
             toggle();
         }
 
-        public static int itemHeight() { return DropdownListWidget.ITEM_H; }
+        public static int itemHeight() { return ITEM_H; }
 
-        public static int listHeight() { return LIST_ROWS * DropdownListWidget.ITEM_H; }
+        public static int listHeight() { return LIST_ROWS * ITEM_H; }
 
         public int scrollIndex() { return scrollIndex; }
 
@@ -614,10 +576,6 @@ public abstract class Setting {
         public String placeholder() { return placeholder; }
 
         public void setValue(String value) { setter.accept(value); }
-
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new TextFieldWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label), getter.get(), setter));
-        }
     }
 
     /** A mutually exclusive choice rendered as a segmented control in UI v2. */
@@ -722,11 +680,6 @@ public abstract class Setting {
         @Override
         public int height() {
             return height;
-        }
-
-        @Override
-        public void build(int x, int y, Consumer<AbstractWidget> add) {
-            // UI v2 owns this row; the legacy view has no equivalent widget.
         }
 
         @Override
