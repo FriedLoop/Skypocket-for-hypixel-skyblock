@@ -91,11 +91,18 @@ public final class PanelRenderer {
 
     /** Search box above the card grid (modules tab only). */
     public static void drawSearch(GuiGraphicsExtractor graphics, PanelView view, int mouseX, int mouseY) {
-        ClickGuiStyle.field(graphics, SEARCH_X, SEARCH_Y, SEARCH_W, SEARCH_H,
-                insideSearchBox(mouseX, mouseY), false);
-        String shown = view.search().isEmpty() ? Localization.tr("搜索...") : view.search();
-        ClickGuiFonts.drawText(graphics, shown, SEARCH_X + 6, SEARCH_Y + 5,
-                view.search().isEmpty() ? ClickGuiStyle.textMuted() : ClickGuiStyle.text(), false);
+        McUiPainter painter = new McUiPainter(graphics);
+        boolean hovered = insideSearchBox(mouseX, mouseY);
+        painter.surface(new Rect(SEARCH_X, SEARCH_Y, SEARCH_W, SEARCH_H),
+                ClickGuiStyle.RADIUS, hovered ? ClickGuiStyle.fieldHover() : ClickGuiStyle.field(), 0);
+        if (view.search().isEmpty()) {
+            painter.text(Localization.tr("搜索..."), SEARCH_X + 6, SEARCH_Y + 5,
+                    ClickGuiStyle.textMuted());
+        } else {
+            // Search text is user data; do not pass it through the draw-time translator.
+            ClickGuiFonts.drawText(graphics, view.search(), SEARCH_X + 6, SEARCH_Y + 5,
+                    ClickGuiStyle.text(), false);
+        }
     }
 
     /**
@@ -141,17 +148,18 @@ public final class PanelRenderer {
         }
         // The selection highlight is one bar whose y slides between rows; its position is advanced
         // once per frame by the screen (it is part of the cache key).
+        McUiPainter painter = new McUiPainter(graphics);
         int hy = Math.round(highlightY);
-        graphics.fill(0, hy, SIDEBAR_W, hy + SIDEBAR_ITEM_H, ClickGuiStyle.sidebarSelected());
-        graphics.fill(0, hy, 2, hy + SIDEBAR_ITEM_H, ClickGuiStyle.tabSelected());
+        painter.fill(new Rect(0, hy, SIDEBAR_W, SIDEBAR_ITEM_H), ClickGuiStyle.sidebarSelected());
+        painter.fill(new Rect(0, hy, 2, SIDEBAR_ITEM_H), ClickGuiStyle.tabSelected());
 
         int y = SIDEBAR_TOP;
-        y = drawSidebarItem(graphics, view, null, 0, y, mouseX, mouseY); // All
+        y = drawSidebarItem(painter, view, null, 0, y, mouseX, mouseY); // All
         for (Category c : Category.topLevel()) {
-            y = drawSidebarItem(graphics, view, c, 0, y, mouseX, mouseY);
+            y = drawSidebarItem(painter, view, c, 0, y, mouseX, mouseY);
             if (c.isContainer() && view.selected() != null && c.contains(view.selected())) {
                 for (Category child : c.children()) {
-                    y = drawSidebarItem(graphics, view, child, SIDEBAR_CHILD_INDENT, y, mouseX, mouseY);
+                    y = drawSidebarItem(painter, view, child, SIDEBAR_CHILD_INDENT, y, mouseX, mouseY);
                 }
             }
         }
@@ -159,12 +167,15 @@ public final class PanelRenderer {
 
     /** Bottom footer strip with the unified HUD position editor entry button. */
     public static void drawFooter(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        McUiPainter painter = new McUiPainter(graphics);
         int btnY = footerBtnY();
         boolean hover = mouseX >= FOOTER_BTN_X && mouseX <= FOOTER_BTN_X + FOOTER_BTN_W
                 && mouseY >= btnY && mouseY <= btnY + FOOTER_BTN_H;
-        ClickGuiStyle.button(graphics, FOOTER_BTN_X, btnY, FOOTER_BTN_W, FOOTER_BTN_H, hover, false);
-        ClickGuiFonts.drawText(graphics, Localization.tr("HUD 位置调整"),
-                FOOTER_BTN_X + 8, btnY + 5, ClickGuiStyle.text(), false);
+        painter.surface(new Rect(FOOTER_BTN_X, btnY, FOOTER_BTN_W, FOOTER_BTN_H),
+                ClickGuiStyle.RADIUS,
+                hover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
+        painter.text(Localization.tr("HUD 位置调整"),
+                FOOTER_BTN_X + 8, btnY + 5, ClickGuiStyle.text());
     }
 
     // ---- internals -------------------------------------------------------------------------
@@ -178,16 +189,16 @@ public final class PanelRenderer {
 
     private static void drawMainTab(GuiGraphicsExtractor graphics, int x, int y, String label,
                                     boolean selected, int mouseX, int mouseY) {
+        McUiPainter painter = new McUiPainter(graphics);
         boolean hover = !selected && mouseX >= x && mouseX <= x + TAB_W && mouseY >= y && mouseY <= y + TAB_H;
         int bg = selected ? ClickGuiStyle.tabSelected() : (hover ? ClickGuiStyle.tabHover() : ClickGuiStyle.tab());
-        fillRoundedRect(graphics, x, y, TAB_W, TAB_H, ClickGuiStyle.RADIUS, bg);
-        ClickGuiFonts.drawText(graphics, label,
-                x + (TAB_W - ClickGuiFonts.width(label)) / 2,
-                y + (TAB_H - ClickGuiFonts.lineHeight()) / 2,
-                selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim(), true);
+        painter.surface(new Rect(x, y, TAB_W, TAB_H), ClickGuiStyle.RADIUS, bg, 0);
+        painter.text(label, x + (TAB_W - painter.textWidth(label)) / 2,
+                y + (TAB_H - painter.lineHeight()) / 2,
+                selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
     }
 
-    private static int drawSidebarItem(GuiGraphicsExtractor graphics, PanelView view, Category cat,
+    private static int drawSidebarItem(McUiPainter painter, PanelView view, Category cat,
                                        int indent, int y, int mouseX, int mouseY) {
         boolean isAll = cat == null;
         boolean container = !isAll && cat.isContainer();
@@ -205,18 +216,17 @@ public final class PanelRenderer {
         // The selected highlight is the single animated bar drawn in drawSidebar;
         // here only the hover background for non-selected rows is drawn.
         if (!highlight && hover) {
-            graphics.fill(0, y, SIDEBAR_W, y + SIDEBAR_ITEM_H, ClickGuiStyle.sidebarHover());
+            painter.fill(new Rect(0, y, SIDEBAR_W, SIDEBAR_ITEM_H), ClickGuiStyle.sidebarHover());
         }
 
-        int textY = y + (SIDEBAR_ITEM_H - ClickGuiFonts.lineHeight()) / 2;
+        float textY = y + (SIDEBAR_ITEM_H - painter.lineHeight()) / 2f;
         int textColor = highlight ? ClickGuiStyle.text() : ClickGuiStyle.textDim();
         String label = isAll ? Localization.tr("全部") : Localization.tr(cat.label());
-        ClickGuiFonts.drawText(graphics, label, indent + 12, textY, textColor, true);
+        painter.text(label, indent + 12, textY, textColor);
         if (container) {
             // Expand indicator sits at the row's right edge, beside the label.
             String arrow = expanded ? "▼" : "►";
-            ClickGuiFonts.drawText(graphics, arrow, SIDEBAR_W - 10 - ClickGuiFonts.width(arrow),
-                    textY, textColor, true);
+            painter.text(arrow, SIDEBAR_W - 10 - painter.textWidth(arrow), textY, textColor);
         }
         return y + SIDEBAR_ITEM_H;
     }

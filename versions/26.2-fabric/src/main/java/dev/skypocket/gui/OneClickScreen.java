@@ -660,12 +660,17 @@ public class OneClickScreen extends Screen {
         int y = PanelGeometry.SEARCH_Y;
         int size = PanelGeometry.NAV_SIZE;
         boolean hovered = enabled && lmx >= x && lmx < x + size && lmy >= y && lmy < y + size;
-        dev.skypocket.gui.widget.ClickGuiStyle.button(graphics, x, y, size, size, hovered, false);
+        dev.skypocket.ui.mc.McUiPainter painter =
+                new dev.skypocket.ui.mc.McUiPainter(graphics);
+        painter.surface(new dev.skypocket.ui.Rect(x, y, size, size),
+                dev.skypocket.gui.widget.ClickGuiStyle.RADIUS,
+                hovered ? dev.skypocket.gui.widget.ClickGuiStyle.buttonHover()
+                        : dev.skypocket.gui.widget.ClickGuiStyle.button(), 0);
         String glyph = index == 0 ? "←" : "→";
-        ClickGuiFonts.drawText(graphics, glyph, x + (size - ClickGuiFonts.width(glyph)) / 2,
-                y + (size - ClickGuiFonts.lineHeight()) / 2,
+        painter.text(glyph, x + (size - painter.textWidth(glyph)) / 2,
+                y + (size - painter.lineHeight()) / 2,
                 enabled ? dev.skypocket.gui.widget.ClickGuiStyle.text()
-                        : dev.skypocket.gui.widget.ClickGuiStyle.textMuted(), true);
+                        : dev.skypocket.gui.widget.ClickGuiStyle.textMuted());
     }
 
     private boolean inNav(double lx, double ly, int index) {
