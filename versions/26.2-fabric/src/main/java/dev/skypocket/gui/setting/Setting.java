@@ -30,16 +30,6 @@ public abstract class Setting {
     }
     protected final String label;
 
-    /**
-     * True when the page draws (and handles) this row itself instead of building a widget for it.
-     *
-     * <p>UI v2 rows are drawn directly by {@code SettingsPage}; the legacy widget renderer has been
-     * removed.
-     */
-    public boolean immediate() {
-        return false;
-    }
-
     /** The untranslated label; the page draws immediate rows itself and needs it. */
     public String label() {
         return label;
@@ -76,11 +66,6 @@ public abstract class Setting {
      * no setting subclass has to know about it.
      */
     private String hint;
-
-    /** Height the note needs below the row: none, since notes are hover tooltips now. */
-    public int hintHeight() {
-        return 0;
-    }
 
     /**
      * The row's full height - identical to {@link #height()} now that notes are tooltips.
@@ -178,7 +163,6 @@ public abstract class Setting {
          * Drawn and handled by the page instead of a widget - see {@code OneClickScreen}. Rows that are
          * immediate can be clipped and scrolled, which is what the theme studio's preview needs.
          */
-        @Override public boolean immediate() { return true; }
 
         public boolean value() { return getter.getAsBoolean(); }
 
@@ -229,9 +213,6 @@ public abstract class Setting {
         }
 
         @Override public int height() { return rowHeight(); }
-
-        /** Drawn and handled by the page - see {@link #immediate()} on the base class. */
-        @Override public boolean immediate() { return true; }
 
         public double min() { return min; }
 
@@ -302,7 +283,6 @@ public abstract class Setting {
         }
 
         /** The row is drawn by the page; only the picker below it needs to be a widget. */
-        @Override public boolean immediate() { return true; }
 
         public int value() { return getter.getAsInt(); }
 
@@ -350,9 +330,6 @@ public abstract class Setting {
         @Override public int height() {
             return expanded ? rowHeight() * 2 + LIST_ROWS * ITEM_H : rowHeight();
         }
-
-        /** Drawn and handled by the page - see {@link #immediate()}. */
-        @Override public boolean immediate() { return true; }
 
         /**
          * Filter text, with a cache invalidation.
@@ -511,7 +488,6 @@ public abstract class Setting {
         public List<Setting> children() { return children; }
 
         /** The header is a row like any other, so the page draws it instead of a widget. */
-        @Override public boolean immediate() { return true; }
 
         public void toggleExpanded() { toggle(); }
 
@@ -646,7 +622,6 @@ public abstract class Setting {
         @Override public int height() { return rowHeight(); }
 
         /** A button is pure drawing plus a callback, so the page draws it like any other row. */
-        @Override public boolean immediate() { return true; }
 
         /** The already-translated caption. */
         public String text() { return display.get(); }
@@ -700,7 +675,6 @@ public abstract class Setting {
         private final String subtitle;
 
         /** A heading is pure text, so the page draws it (and never builds a widget for it). */
-        @Override public boolean immediate() { return true; }
 
         public String subtitle() { return subtitle; }
 

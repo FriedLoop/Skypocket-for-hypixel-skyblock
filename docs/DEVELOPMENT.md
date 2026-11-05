@@ -45,7 +45,7 @@ dev.skypocket/
 ### 3.2 设置一律内联 ClickGUI
 - 所有功能（含子功能）的设置都写在 ClickGUI 里。
 - **唯一例外**：统一的 HUD 位置调整页 `HudPositionEditorScreen`（从 ClickGUI 底栏左下角入口按钮打开）可以新开 `Screen`。
-- 颜色编辑用 `ColorSetting`（内联、可折叠，展开后是 `HsvPickerWidget`：SV 方块 + 色相条 + 透明度条 + 两列预设色卡，右侧 `#RRGGBB` 与 R/G/B/A 输入框），**不要再开颜色选择 Screen**。
+- 颜色编辑用 `ColorSetting`，v2 `ColorField` 打开内联 `ColorPickerPanel`：SV 方块 + 色相条 + 透明度条 + 两列预设色卡，右侧 HEX/RGBA 输入框，**不要再开颜色选择 Screen**。
 
 ### 3.3 语言与文案
 - UI 文案用中文字面量当 key，调用 `Localization.tr()`；英文翻译集中写在 `Localization.EN` 静态 Map。
@@ -114,7 +114,7 @@ dev.skypocket/
     - 同步规则（`resolve`，三条缺一不可）：① **拖动中记忆值说了算**（颜色是它的取整结果，此时反同步会让光标在静止鼠标下抖动）；② **颜色与记忆值渲染出来的差 ≤1 个 8bit 台阶就什么都不做**（拖拽刚结束、只改透明度都走这里；记忆存的是光标的精确比例，颜色是它的取整结果，不留这 1 个台阶的话松手那一帧光标会被推一下）；③ **只在颜色"表达得出"该分量时才采纳**（色相要求 s>0 且 v>0，饱和度要求 v>0）。
   - **预设色卡用满饱和"本色"**：每个彩色预设必有一个通道是 255（红 `#FF0000`、黄 `#FFFF00`、橙 `#FF8000`…），点"红"就该得到纯红。点击**只改 RGB、保留当前 α**，并把 h/s/v 一起写进记忆（否则拾色器不跟着走）。
   - **成组输入框的标签列宽必须取齐**（`TextFieldWidget.MIN_LABEL_W = 10`）：值框起点是 `6 + max(标签宽, MIN_LABEL_W) + 8`，所以 `#` / `R` / `G` / `B` / `A` 这些单字符标签的值框能严格对齐；用**实际标签宽**会让每行的值框各自跟着标签走，一列看起来参差不齐（实测：颜色代码框比 R/G/B/A 的值框更靠左更宽）。
-  - 拖动**必须靠 `AbstractWidget.onDrag`**（MC 只把拖拽派发给捕获点击的那个控件，所以拖出控件范围/拖出面板都还能继续调节），并且在 `onRelease` 里清掉当前区域 —— 不要在 `onDrag` 里重新做区域命中。
+  - 拖动必须靠 v2 输入层的指针捕获（`Control.onPointerMove` / `onPointerUp`）；拖出控件范围或页面后仍要继续调节，不要在拖动中重新做区域命中。
 - **圆角必须走 `render/GuiPixels` 的 `fillRoundedRect/TopRect/BottomRect`**（设备像素原语统一放在 `GuiPixels`：widget 也要用它，若留在面板类里会让 `gui.widget` 反向依赖 Screen）：默认走 **`GuiCornerTextures` 预烘焙抗锯齿掩码 + 九宫格**（4 次 1:1 `blit` + 3 次直线填充，全部设备像素对齐、互不重叠），只有掩码建不出来时才回退到逐行 AA。掩码是白色 + 覆盖率 alpha（四象限一张图、按设备半径缓存），颜色由 blit 的 tint 给，所以面板透明度滑条拖动时不会反复重烘焙。
   - **为什么不能把"逐行 AA"当默认**：它每次填充都是一次独立的 GUI 元素，成本 ∝ 设备半径（`r × deviceStep`，通常 8→16~24 行）× 4 角 × 2 次填充 ≈ 200 次/圆角矩形。屏幕上几十个卡片（每个还画"外框 + 内填充"两层）就是几千个元素，比字体几何量还大——实测就是这个性能回退。质量上也更差：逐行是行近似，掩码是精确 2D 覆盖率。
   - **不要在"设计单位"里做抗锯齿**：1 设计单位 = `renderScale × guiScale` 个设备像素（通常 ≈1.75-3），那样软化带宽会宽 2-3 倍（看着糊），而台阶仍是设计单位那么大（看着仍有锯齿）——实测过这个失败。设备像素空间的约定见 `pushDeviceSpace()`。
@@ -758,10 +758,10 @@ layout(location = 0) out vec4 fragColor;
 
 - 不支持 wrap、Grid、绝对定位、baseline、CSS 层叠/选择器。
 - 文本不支持自动换行；由 `TextMeasurer` 决定测量结果。
-- 尚未接入渲染器、输入层、焦点、滚动或现有 ClickGUI。
+- 已接入渲染器、输入层、焦点、滚动和完整 ClickGUI。
 - 根节点 auto 宽高会填满宿主；显式宽高按样式执行。
 
-**下一步**：实现输入、焦点、拖拽捕获、滚动和 IME，再做一个独立测试页面；之后才把现有 ClickGUI 页面按垂直切片迁移。
+**现状**：布局内核、输入内核和控件库均已完成，并作为 `SettingsPage` 与 HUD 设置弹窗的底层。
 
 ## 12. UI v2 输入内核（第一阶段）
 
@@ -781,11 +781,11 @@ layout(location = 0) out vec4 fragColor;
 - Tab 在 focusable 元素间循环
 - 滚轮从命中元素向祖先冒泡
 
-**尚未完成**：
+**已完成**：
 
-- 真正的 ScrollView 控件与滚动偏移渲染
+- ScrollView 控件与滚动偏移渲染
 - MC 输入适配层（26.2/26.3 鼠标键、键盘、IME）
-- 控件库（Button、Switch、Slider、TextField）
+- 控件库（Button、Switch、Slider、TextField、Dropdown、ColorField、Segmented）
 
 **测试页**：`/skypocket uitest` 打开 `Ui2TestScreen`，覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和 Enter/Space 激活。测试页与正式 ClickGUI 完全隔离。26.2 / 26.3 已实机通过：滚动方向、裁剪、拖出后释放、点击计数、Tab/Shift+Tab、Enter/Space 激活和 Esc 退出均正常。
 
@@ -825,9 +825,9 @@ layout(location = 0) out vec4 fragColor;
 - 控件表面不带常驻边框环，使用明度、按下色和轻微阴影建立层次；焦点是背景填充加 accent 圆角描边，不覆盖内容。
 - `TextField`：已接入 `preeditUpdated`，支持 IME 预编辑显示；提交仍通过 `charTyped`。
 
-**尚未完成**：MC 平台 Painter 的独立封装、TextField 点击定位光标、Dropdown 外部点击关闭、滚动条悬停反馈。
+**已完成**：MC 平台 Painter 封装、TextField 点击定位光标、Dropdown 外部点击关闭、长下拉虚拟列表与滚动位置指示。
 
-**下一步**：补滚动条和主题映射，然后迁移一个真实设置页；测试页继续作为回归入口。
+**可选后续**：滚动条 hover 反馈（会触发页面缓存重烘，暂不默认开启）。
 
 ## 13. 统一 UI v2 设置页
 
@@ -848,4 +848,6 @@ layout(location = 0) out vec4 fragColor;
 
 **过渡动画**：模块之间切换时保留 outgoing `SettingsPage` 快照，不再回退到旧设置渲染。
 
-**下一步**：文档与旧控件清理后的全量回归。
+**P0/P1 已完成**：旧渲染器与旧控件已删除，文本光标定位、长下拉性能、滚动指示、HUD v2 弹窗和小窗口适配均已落地。
+
+**剩余可选项**：页面壳级缓存、颜色弹层静态缓存、真正的 Inter Regular 400、是否保留 `Ui2TestScreen`。
