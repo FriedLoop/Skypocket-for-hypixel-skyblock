@@ -246,6 +246,8 @@ public final class Dropdown extends Control {
                     .width(Dimension.percent(100f))
                     .height(MAX_VISIBLE_ROWS * ROW_H)
                     .direction(Style.Direction.COLUMN)
+                    // Leave a narrow strip for the page indicator; option buttons stay inside it.
+                    .padding(new dev.skypocket.ui.Insets(0f, 5f, 0f, 0f))
                     .build(), popupPalette);
         }
 
@@ -277,6 +279,17 @@ public final class Dropdown extends Control {
         @Override
         public void paint(UiPainter painter) {
             // The popup Card supplies the surface; option buttons paint their own rows.
+            if (matches.size() <= MAX_VISIBLE_ROWS) {
+                return;
+            }
+            float x = bounds().right() - 3f;
+            float top = bounds().y() + 2f;
+            float height = bounds().height() - 4f;
+            painter.fill(new dev.skypocket.ui.Rect(x, top, 2f, height), palette.outline());
+            int maxStart = Math.max(1, matches.size() - MAX_VISIBLE_ROWS);
+            float thumbH = Math.max(12f, height * MAX_VISIBLE_ROWS / matches.size());
+            float thumbY = top + (height - thumbH) * Math.min(scrollRow, maxStart) / maxStart;
+            painter.fill(new dev.skypocket.ui.Rect(x, thumbY, 2f, thumbH), palette.text());
         }
     }
 }
