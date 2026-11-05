@@ -122,6 +122,12 @@ public class OneClickScreen extends Screen {
         ModConfig cfg = ConfigManager.get();
         float guiScale = minecraft.getWindow().getGuiScale();
         float target = cfg.clickGuiScale * ClickGuiFonts.SCALE_BASE / guiScale;
+        // The panel is a fixed 700x420 design surface. In a small window it must shrink to fit,
+        // otherwise its right/bottom edge (and the content scissor derived from it) can leave the
+        // drawable area. Keep the configured scale as the upper bound.
+        float fitX = Math.max(0.05f, (width - 8f) / PANEL_W);
+        float fitY = Math.max(0.05f, (height - 8f) / PANEL_H);
+        target = Math.max(0.05f, Math.min(target, Math.min(fitX, fitY)));
         // Snap the panel's on-screen size to whole device pixels. GuiPanelCache bakes the
         // panel into an integer-sized texture and blits it 1:1, so a fractional device size
         // makes the texture's pixel grid drift from the screen's: the cached panel shifts by
@@ -775,7 +781,7 @@ public class OneClickScreen extends Screen {
         double lx = localX(event.x());
         double ly = localY(event.y());
 
-        if (event.button() != 0) {
+        if (!dev.skypocket.gui.widget.MouseButtons.isLeft(event.button())) {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
         }
 
@@ -1124,7 +1130,13 @@ public class OneClickScreen extends Screen {
         // Top/left/right round outwards (never cut into the content); the bottom is pinned to the
         // row the footer strip is drawn on. All four are whole gui-scaled units, because
         // transformAxisAligned floors the rect's size as well as its position.
-        g.enableScissor(scissorFloor(x0), scissorFloor(y0), scissorFloor(x1), contentBottomRow());
+        int left = scissorFloor(x0);
+        int top = scissorFloor(y0);
+        int right = scissorFloor(x1);
+        int bottom = contentBottomRow();
+        if (right > left && bottom > top) {
+            g.enableScissor(left, top, right, bottom);
+        }
         popDeviceSpace(g);
     }
 
