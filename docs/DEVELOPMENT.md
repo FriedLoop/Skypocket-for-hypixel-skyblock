@@ -70,15 +70,12 @@ dev.skypocket/
 ## 5. ClickGUI / 设置系统速查
 
 - 模块卡片：`hasSettings()` 为真 → 绿色「设置」按钮；为假 → 灰色「无设置」按钮。
-- `Setting` 子类：`BooleanSetting` / `SliderSetting` / `ColorSetting` / `DropdownSetting` / `TextFieldSetting` / `GroupSetting` / `ActionSetting` / `CustomSetting`。
-- **`Setting#visibleWhen(BooleanSupplier)`**：让一行只在某个模式下出现（例：玩家数值显示里两套风格的专属设置各自只在该风格下显示）。接线只有两处：`OneClickScreen` 的构建循环跳过不可见的行、`Feature#settingsHeight()` 同样跳过（卡片高度要跟着变）。⚠️ **行是构建一次、不是每帧重建**，所以模式切换后必须自己触发重排：`mc.schedule(() -> screen.rebuildAfterSettingChange())`（内部 `contentRevision++` 会同时让面板缓存失效）——只改配置字段不会让面板重排。
-- **`Setting#hint("…")`**：给一行加一句说明，画在行下方（`LabelWidget`，小灰字）。它是**面板补的一个独立控件**、不是行自身的绘制 —— 所以 8 个设置子类都不需要知道它存在；`buildWithHint()` 是唯一入口（页面与 `GroupSetting` 都调它，否则分组内的行拿不到说明）。⚠️ **布局必须用 `totalHeight()`**（= `height()` + `HINT_HEIGHT`），用 `height()` 会让下一行压到说明上：`OneClickScreen`、`Feature#settingsHeight()`、`GroupSetting` 的 `height()/build()` 四处都已改成 `totalHeight()`。
-- **`Setting.Header("标题"[, "副标题"])`**：分区标题行（不可交互、主色小一号字、无背景）。它**不是** `GroupSetting`：分组带开关与折叠状态，"同一模式的一组设置"用标题（不折叠也能读），"一个子功能"才用分组。
-- **`GroupSetting(label, children, false)`**：默认折叠的分组，用来收低频项（重置类操作、极少改的参数）—— 页面上不再需要为它们留常驻行。
-- **界面颜色只有一个来源：`GuiTheme`**（`gui/widget/GuiTheme.java`，`GuiTheme.current()`）。任何"界面本身"的颜色都通过 `ClickGuiStyle` 的访问器取（`ClickGuiStyle.text()` / `card()` / `accent()` …），**不要**再写字面量。旧的 `ClickGuiStyle.BUTTON` 之类**常量已改为方法**——这样换主题下一帧就生效（常量在类加载时求值，换主题必须重启）。**用户可配置的功能颜色不在此列**（准星、血量条等，见 `ColorDefaults` + config）；条形的无贴图回退色（`FRAME`/`TRACK`）也**不**进主题（已确认）。
-- **设置行：优先"即时绘制"，控件仅用于必须聚焦的输入**。`Setting.immediate()` 为 true 的行由 `OneClickScreen.drawImmediateRows()` 在内容裁剪区内绘制、由 `immediateRowAt()` 命中——这样行才能被裁剪/滚动，也才能被 HUD 设置卡片与主题抽屉复用（`SettingsView` 是唯一渲染器）。已转换：节标题、开关、滑块、下拉（行+列表）、色块（行）；**仍是控件**：文本框（光标/选区/输入法）、下拉的搜索框、色块展开后的拾色器与十六进制/通道输入框。**拾色器与输入框也是自绘**（`ImmediateColorPicker` / `ImmediateTextField`）：控件在上、页面自绘在下，任何"后画的盒子"都会盖住自己的控件。自绘带来三个好处——能进悬浮卡片、能按需缩放、能与周围同层。代价：没有 IME 预编辑（只用于 HEX/搜索等 ASCII 输入，**不要用它做中文输入**）。颜色解析**不要用负数当错误码**：不透明色 ARGB 恒为负，`-1` 还是合法的白色；一律返回可空类型。
-- **`Setting.build()` 必须保持可用**：`CustomSetting`（自定义布局，例如准星的像素网格）会自己调用 `build()` 摆行，不走页面的统一遍历。所以即时绘制只发生在页面这条路径（页面跳过 `immediate()` 行），`build()` 里仍要能建出原控件。曾把 `ColorSetting.build()` 清空，导致准星整块颜色调节器消失。
-- **组内子项由页面展开绘制**：`GroupSetting` 的子项不再由组构建控件（除搜索框/拾色器），页面用 `activeRowList()` 把展开的组递归摊平成 (setting, y) 列表，绘制与命中共用这份列表 —— 否则组内行既画不出来也点不到。
+- `Setting` 子类：`BooleanSetting` / `SliderSetting` / `ColorSetting` / `DropdownSetting` / `TextFieldSetting` / `GroupSetting` / `ChoiceSetting` / `ActionSetting` / `V2CustomSetting` / `Header`。
+- **所有带设置的模块页面和“设置”主标签页都走 `SettingsPage`**（UI v2 元素树）。`SettingsView` 只保留给 HUD 位置编辑器的 `HudSettingsCard`；`Setting.build()` 已是 legacy no-op，不再参与 ClickGUI 页面构建。
+- **卡片规则**：`Header` 开始一张新卡片；`GroupSetting` 也是独立卡片，带开关的组把开关放在标题行右侧，不再折叠或嵌入上一张卡片。`V2CustomSetting` 提供基于 v2 `Box`/`Control` 的自定义行（准星网格与预览）。
+- **设置控件**：Switch / Slider / ColorField / Dropdown / Segmented / Button / TextField。滑杆使用 `SliderSetting` 的真实 step 和 format；文本设置在绘制层自动本地化，标签在左、field 在右。
+- **`Setting#visibleWhen(BooleanSupplier)`**：条件行必须成块且收尾；模式切换后调用 `rebuildAfterSettingChange()` 重建页面。`Header`、`GroupSetting`、`ChoiceSetting` 的显示/结构变化都依赖这次重建。
+- **hint tooltip 已移除**：说明文字写在 Header 副标题里；`GroupSetting` 不再生成折叠状态，页面只按功能拆卡。
 - **条件行（`visibleWhen`）必须成块且收尾**：一个 `List.of(...)` 里，无条件行在前，条件块在后；**不允许**"条件行 → 无条件行 → 条件行"的交替。否则切换开关时，夹在后面的无条件行会整体位移（"中途塌陷"）。控制这些条件行的那一行（如风格切换按钮）要放在它们**之前**。参考 `registerStatsDisplay`：风格 → 切换 → 原版 HUD → 颜色 → 文字行 → 经典块 → 现代块。
 - **主题编辑是"实时抽屉"，不是"预览屏幕"**：`DevDrawer` 挂在 Click GUI 上，编辑直接写入实时调色板，打开时记一份快照，关闭未保存则整体还原；只有「保存」写文件。不要再为它做"第二份面板"（旧的 `ThemeStudioScreen` 就是这么坏的：手工拼壳 + 页 + 行过滤，随真实面板演进持续漂移，已删除）。抽屉里的拾色器按 0.75 绘制（pose 缩放 + 命中反变换），设置页与卡片仍是 1:1。抽屉顶部的主题行是唯一的主题入口：`‹ ›` 切换（从磁盘载入，未保存改动丢弃）、`+` 另存为新主题、`-` 删除当前主题（**内置 Dark/Light 不可删**，删除即时写盘，并回落到 Dark）。\n- **层次靠明度 + 阴影，不靠描边**：所有控件、行、模块卡片、抽屉、浮窗与 tooltip 都不画描边（`border` / `cardBorder` / `switchBorder` 三个令牌已删除，Studio 里不再有它们）。深度由三件事给出：比背景略深/略浅的填充、`ClickGuiStyle.shadow(...)`（两层半透明叠加，此层没有模糊）、以及组内子行统一画在一张卡片上（`RowAt.inCard`）。新增面板类元素时**先想明度差**，不要再引入 1px 边框。\n- **配置结构变更必须走版本迁移**：`ModConfig.configVersion` + `ConfigManager.CURRENT_VERSION` + `MIGRATIONS`（第 i 步把 v{i} 升到 v{i+1}）。新增/改名/改类型字段时：改字段 → `CURRENT_VERSION++` → 在 `MIGRATIONS` 末尾加一步。**不要**依赖"解析失败回落到默认值"——那会静默丢掉玩家设置，并在下一次保存时覆盖原文件（已发生过一次）。配套保护：读取失败写 `skypocket.json.unreadable` + ERROR 日志；保存前复制 `skypocket.json.bak`；写入用临时文件 + 原子替换。
 - **所有诊断/调试开关统一放进「调试」分组**（`buildPanelSettings` 末尾的 `GroupSetting("调试", …, false)`），不要再散落在主列表里：这些行只写日志、对玩家无用，放在一起既不打眼，也给下一个开关一个显然的落点。目前里面有：调试日志（信息日志总开关）、面板缓存统计（每 5 秒一行缓存命中/烘焙/停在哪个门）。
@@ -832,30 +829,22 @@ layout(location = 0) out vec4 fragColor;
 
 **下一步**：补滚动条和主题映射，然后迁移一个真实设置页；测试页继续作为回归入口。
 
-## 13. 玩家数值设置页
+## 13. 统一 UI v2 设置页
 
-**入口**：统一 ClickGUI 中打开「玩家数值显示」详情页。`/skypocket statsui` 和独立 `StatsSettingsV2Screen` 已删除。
+**入口**：统一 ClickGUI 的模块详情页和主“设置”标签页。
 
-**宿主**：`OneClickScreen` 提供面板壳、导航和标题；`StatsSettingsPage` 只负责把 `ModuleRegistry.byId("stats_display").settings()` 映射成元素树，并持有自己的 `InputRouter`、滚动和颜色弹层。独立调试阶段使用的 `Ui2Screen` 宿主代码仍保留，供后续其他页面复用。
+**宿主**：`OneClickScreen` 提供面板壳、导航和标题；`SettingsPage` 负责设置元素树、`InputRouter`、滚动、颜色/下拉弹层和页面级缓存。主设置标签页通过 synthetic feature 复用同一个 `SettingsPage`。
 
-**已迁移**：
+**当前状态**：
 
-- 风格 Header + 切换经典/现代 Action
-- 原版 HUD 分组的 5 个 Boolean
-- 文字行 3 个 Boolean + 3 个 Slider
-- 经典/现代条件区（依赖 `Setting.isVisible()`，切换风格后重建）
-- 现代条宽度/高度/数值开关及 6 组条开关/大小
-- 高级分组的重置位置/恢复颜色 Action
-- 8 个 `ColorSetting`，通过 v2 `ColorField` + 完整 ColorPicker 编辑
-- 模块启用开关、滚动和关闭
-- 标题、Header/Group、Switch/Slider、按钮和提示均已接入 `Localization`
+- 所有带设置的模块都使用 v2 页面；无设置模块不可打开
+- 设置主标签页使用自己的全宽几何和可变卡片列
+- 页面缓存为“静态底图 + 动态控件层”，作用范围是页面而非整个面板
+- 长下拉使用搜索 + 8 行虚拟窗口，滚轮翻页
+- ChoiceSetting 使用带滑动动画的 Segmented
+- 颜色弹层、文本设置、准星自定义行均走 v2
+- `SettingsView` 仅剩 HUD 位置编辑器一个宿主
 
-**v2 ColorField / ColorPicker**：色块行显示 ARGB，点击打开独立 layer；弹层按旧版 `ImmediateColorPicker` 复刻，包含 2D SV 方块、Hue/Alpha 条、14 个预设色块，以及 HEX/RGBA TextField 编辑。它不依赖旧 `ImmediateColorPicker` 渲染路径；颜色字段焦点离开行/弹层时自动关闭。
+**过渡动画**：模块之间切换时保留 outgoing `SettingsPage` 快照，不再回退到旧设置渲染。
 
-**暂未完成**：Group 折叠、hint tooltip；统一入口当前暂时绕过整块面板缓存。
-
-**页面缓存（独立宿主阶段）**：`Ui2Screen` 复用 `GuiPanelCache` 缓存页面底图；录制时 `Control.neutralPaint` 让控件以无焦点、无 pressed、无键盘高亮的稳定状态绘制。缓存 key 由布局 revision 和 `ScrollView` 滚动签名组成。命中缓存后，只遍历并实时重画当前 focused / pressed / flash 的控件，再绘制颜色弹层。这个方案避免“整页缓存导致控件状态不实时”和“整页直绘帧率低”的二选一。
-
-**统一入口**：`OneClickScreen` 打开 `stats_display` 详情时改用 `StatsSettingsPage`，不再走旧 `SettingsView`。页面内容、颜色弹层和输入都由 v2 元素树/`InputRouter` 接管；面板壳、导航和标题仍由 `OneClickScreen` 提供。`StatsSettingsPage` 自身复用静态底图 + 动态控件层缓存，过渡动画期间禁用 blit；面板壳保持直绘。
-
-**下一步**：清理 stats 的旧设置渲染分支，并决定下一个迁移页面。
+**下一步**：文档与旧控件清理后的全量回归。

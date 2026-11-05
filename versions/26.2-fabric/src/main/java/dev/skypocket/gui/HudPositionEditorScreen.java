@@ -13,6 +13,7 @@ import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.gui.widget.ClickGuiStyle;
+import dev.skypocket.gui.widget.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.GuiPixels;
 import dev.skypocket.render.HudText;
@@ -714,7 +715,7 @@ public class HudPositionEditorScreen extends Screen {
             return true;
         }
         // A left click anywhere else dismisses it, like any other popup.
-        if (event.button() == 0 && settingsCard.isOpen()) {
+        if (MouseButtons.isLeft(event.button()) && settingsCard.isOpen()) {
             settingsCard.close();
         }
         // The floating card is on top of the canvas: a click on it must never reach the element behind it,
@@ -755,7 +756,7 @@ public class HudPositionEditorScreen extends Screen {
                 best = t;
             }
         }
-        if (event.button() == 1) {
+        if (MouseButtons.isRight(event.button())) {
             // Right click: select the element and show its settings; away from any element, close.
             if (best != null && bestDistance <= GRAB_SLACK) {
                 selected = best;
@@ -980,7 +981,7 @@ public class HudPositionEditorScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (settingsCard.mouseReleased()) {
+        if (settingsCard.mouseReleased(event)) {
             return true;
         }
         if (panelDragging) {

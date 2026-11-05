@@ -3,9 +3,9 @@ package dev.skypocket.gui.widget;
 /**
  * Mouse button numbers.
  *
- * <p>26.2 numbers them like GLFW (left 0, right 1); 26.3 renumbered the click event, where a left click
- * arrives as 1. Comparing against a literal {@code 0} therefore silently stopped every left click from
- * reaching the panel - hovering still worked because it uses coordinates, not buttons.
+ * <p>26.2 numbers them like GLFW (left 0, right 1); 26.3 renumbered the click event to
+ * left 1, middle 2, right 3. Comparing against a literal 0 or 1 therefore silently stopped the
+ * corresponding click from reaching the panel.
  */
 public final class MouseButtons {
 
@@ -24,7 +24,7 @@ public final class MouseButtons {
     /** True when this is a right click. */
     public static boolean isRight(int button) {
 //#if MC>=260300
-        return button == 2;
+        return button == 3;
 //#else
         return button == 1;
 //#endif

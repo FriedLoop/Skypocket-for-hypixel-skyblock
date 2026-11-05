@@ -92,7 +92,7 @@ public final class SettingsPage {
                 .direction(Style.Direction.COLUMN)
                 .build());
         if (feature == null) {
-            page.add(new Text(Localization.tr("找不到 stats_display 模块"),
+            page.add(new Text(Localization.tr("找不到设置模块"),
                     Style.builder().height(18f).build()));
         } else {
             Box content = new Box(Style.builder()
@@ -201,6 +201,11 @@ public final class SettingsPage {
 
     public float inputScaleY() {
         return renderScaleY;
+    }
+
+    /** Height of the laid-out scroll content, used when a host wants a content-sized popup. */
+    public float contentHeight() {
+        return scroll == null ? 0f : scroll.content().bounds().height();
     }
 
     private long pageCacheKey() {

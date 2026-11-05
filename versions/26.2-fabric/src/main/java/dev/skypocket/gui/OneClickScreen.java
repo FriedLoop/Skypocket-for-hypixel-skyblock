@@ -5,9 +5,6 @@ import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.gui.widget.ToggleAnimation;
-import dev.skypocket.gui.widget.ActionButton;
-import dev.skypocket.gui.widget.DropdownListWidget;
-import dev.skypocket.gui.widget.TextFieldWidget;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiBlur;
 import dev.skypocket.render.ClickGuiFonts;
@@ -27,7 +24,6 @@ import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
-import java.util.Set;
 
 import static dev.skypocket.gui.PanelGeometry.*;
 
@@ -83,6 +79,8 @@ public class OneClickScreen extends Screen {
     private final Feature panelFeature;
     private SettingsPage statsPage;
     private Feature statsPageFeature;
+    private SettingsPage transitionPage;
+    private Feature transitionPageFeature;
     private float statsPageHeight = -1f;
 
     public OneClickScreen() {
@@ -158,19 +156,9 @@ public class OneClickScreen extends Screen {
         return new PanelView(settingsTab, viewingFeature, selected, scrollY, search, features);
     }
 
-    /** Modules already using the v2 settings page tree. */
-    private static final Set<String> V2_PAGE_IDS =
-            Set.of("stats_display", "clock", "day_count", "fps_tps_ping",
-                    "held_item_name", "post_process", "chat_compact",
-                    "damage_splash_compact", "scrollable_tooltips", "player_glow",
-                    "dragon_glow", "hitbox", "block_outline", "hide_players",
-                    "hand_item", "fishing_hotspot_overlay", "commissions",
-                    "mining_ability_reminder", "mining_break_predict", "mention_alert",
-                    "crosshair");
-
     private boolean statsPageActive() {
-        return settingsTab || (viewingFeature != null
-                && V2_PAGE_IDS.contains(viewingFeature.id()));
+        // Every module with settings now uses the v2 page; empty modules cannot be opened.
+        return settingsTab || (viewingFeature != null && viewingFeature.hasSettings());
     }
 
     private float statsPageTop() {
@@ -268,20 +256,6 @@ public class OneClickScreen extends Screen {
             bits |= Modifiers.ALT;
         }
         return bits;
-    }
-
-    /**
-     * Left edge of a settings row.
-     *
-     * <p>The settings tab owns the whole width, but a module's settings sit in the card area: the sidebar
-     * keeps its place beside them, which is why the rows are centred inside that pane instead of the panel.
-     */
-    private int contentLeft() {
-        if (settingsTab) {
-            return (PANEL_W - Setting.WIDGET_WIDTH) / 2;
-        }
-        int paneW = PANEL_W - PanelGeometry.SIDEBAR_W;
-        return PanelGeometry.SIDEBAR_W + (paneW - Setting.WIDGET_WIDTH) / 2;
     }
 
     private int contentTop() {
@@ -460,59 +434,9 @@ public class OneClickScreen extends Screen {
         );
     }
 
-    /** True when a setting row at {@code y} (height {@code h}) intersects the view. */
-    private boolean isRowVisible(int y, int h) {
-        return y + h >= contentTop() && y <= contentBottom();
-    }
-
     private void rebuildSettingsWidgets() {
         clearWidgets();
-        TextFieldWidget.clearFocus();
-        if (statsPageActive()) {
-            ensureStatsPage();
-            return;
-        }
-        int left = contentLeft();
-        int top = contentTop() - scrollY;
-        if (settingsTab) {
-            int y = top;
-            for (Setting s : panelSettings) {
-                int h = s.height();
-                // Skip rows scrolled out of view: MC still meshes every widget's text,
-                // so building off-screen rows costs real frame time.
-                if (isRowVisible(y, h)) {
-                    if (s instanceof Setting.GroupSetting group) {
-                        // The header draws itself; the children that still need widgets are built here.
-                        group.buildChildren(left, y, this::addRenderableWidget);
-                    } else if (!s.immediate()) {
-                        s.build(left, y, this::addRenderableWidget);
-                    }
-                }
-                y += h;
-            }
-            return;
-        }
-        if (viewingFeature == null) {
-            return;
-        }
-        int y = top + 28;
-        for (Setting s : viewingFeature.settings()) {
-            if (!s.isVisible()) {
-                // A row that does not apply to the current mode still has to keep its widget out of
-                // the panel entirely, or it would draw (and respond to the mouse) where nothing is.
-                continue;
-            }
-            int h = s.totalHeight();
-            if (isRowVisible(y, h)) {
-                if (s instanceof Setting.GroupSetting group) {
-                    group.buildChildren(left, y, this::addRenderableWidget);
-                } else if (!s.immediate()) {
-                    // buildWithHint, not build: the note is a widget of its own, built by the page.
-                    s.buildWithHint(left, y, this::addRenderableWidget);
-                }
-            }
-            y += h;
-        }
+        ensureStatsPage();
     }
 
     @Override
@@ -576,36 +500,11 @@ public class OneClickScreen extends Screen {
         }
         pose.popMatrix();
 
-        // Row notes are hover tooltips now. Drawn after the panel and outside its transform/cache: the
-        // tip follows the cursor (so it would otherwise force a re-bake every frame) and must not be
-        // clipped by the content scissor.
-        if (!closing && !statsPageActive() && inBody(lmx, lmy)) {
-            String note = tooltipAt(lmx, lmy);
-            if (note != null && !note.isEmpty()) {
-                drawTooltip(graphics, Localization.tr(note), mouseX, mouseY);
-            }
-        }
         // The theme drawer is drawn last, in screen space: it floats above the panel and is never part
         // of the panel's cached image.
         devDrawer.draw(graphics, mouseX, mouseY, width, height);
     }
 
-    /** The note attached to the row under a panel-local point, or null. */
-    private String tooltipAt(double lx, double ly) {
-        return dev.skypocket.gui.setting.SettingsView.tooltipAt(rowsWithY(), lx, ly);
-    }
-
-    /** A one-line tip next to the cursor, kept inside the window. */
-    private void drawTooltip(GuiGraphicsExtractor graphics, String text, int mouseX, int mouseY) {
-        int w = ClickGuiFonts.width(text) + 10;
-        int h = ClickGuiFonts.lineHeight() + 6;
-        int x = Math.max(4, Math.min(mouseX + 12, width - w - 4));
-        int y = Math.max(4, Math.min(mouseY + 12, height - h - 4));
-        dev.skypocket.gui.widget.ClickGuiStyle.shadow(graphics, x, y, w, h, 3);
-        dev.skypocket.render.GuiPixels.fillRoundedRect(graphics, x, y, w, h, 3, 0xF0101010);
-        ClickGuiFonts.drawText(graphics, text, x + 5, y + 3,
-                dev.skypocket.gui.widget.ClickGuiStyle.textDim(), true);
-    }
 
     /**
      * Everything the panel draws, in panel-local coordinates: the translucent shell, the
@@ -659,17 +558,14 @@ public class OneClickScreen extends Screen {
             ClickGuiFonts.drawText(graphics, feature.name(), SIDEBAR_W + 20,
                     contentTop() - paneScroll + 2,
                     dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
-            if (statsPage != null && statsPageFeature == feature) {
-                statsPage.layout();
+            SettingsPage page = feature == transitionPageFeature && transitionPage != null
+                    ? transitionPage
+                    : statsPageFeature == feature ? statsPage : null;
+            if (page != null) {
+                page.layout();
                 pose.translate(statsPageDrawLeft(), statsPageDrawTop() - paneScroll);
-                statsPage.draw(graphics, scaleX, scaleY, true);
+                page.draw(graphics, scaleX, scaleY, true);
                 pose.translate(-statsPageDrawLeft(), -(statsPageDrawTop() - paneScroll));
-            } else {
-                java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rows =
-                        dev.skypocket.gui.setting.SettingsView.layout(feature.settings(),
-                                contentTop() - paneScroll + 28);
-                dev.skypocket.gui.setting.SettingsView.draw(viewState, graphics, rows, contentLeft(),
-                        Setting.WIDGET_WIDTH, lmx - dx, lmy, contentTop(), contentBottom());
             }
         }
         pose.popMatrix();
@@ -729,6 +625,8 @@ public class OneClickScreen extends Screen {
         }
         if (statsPage != null) {
             statsPage.closePopups();
+            transitionPage = statsPage;
+            transitionPageFeature = statsPageFeature;
         }
         transitionFrom = viewingFeature;
         transitionFromScroll = scrollY;
@@ -808,23 +706,13 @@ public class OneClickScreen extends Screen {
                         top - scrollY + 2,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
             }
-            // Masked like the card hover: widgets scrolled below the footer (or above the tab
-            // bar) are clipped away by the scissor, so they must not report a hover either.
-            boolean body = inBody(lmx, lmy);
-            if (statsPageActive()) {
-                ensureStatsPage();
-                statsPage.layout();
-                Matrix3x2fStack pagePose = graphics.pose();
-                pagePose.pushMatrix();
-                pagePose.translate(statsPageDrawLeft(), statsPageDrawTop());
-                statsPage.draw(graphics, scaleX, scaleY, false);
-                pagePose.popMatrix();
-            } else {
-                super.extractRenderState(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY, delta);
-                // Rows that converted away from widgets draw here: inside the same scissor, after the widget
-                // layer, so they clip and scroll exactly like the rest of the page.
-                drawImmediateRows(graphics, body ? lmx : FAR_AWAY, body ? lmy : FAR_AWAY);
-            }
+            ensureStatsPage();
+            statsPage.layout();
+            Matrix3x2fStack pagePose = graphics.pose();
+            pagePose.pushMatrix();
+            pagePose.translate(statsPageDrawLeft(), statsPageDrawTop());
+            statsPage.draw(graphics, scaleX, scaleY, false);
+            pagePose.popMatrix();
             graphics.disableScissor();
         }
 
@@ -848,16 +736,6 @@ public class OneClickScreen extends Screen {
         } else {
             devDrawer.open();
         }
-    }
-
-    /** Drag state for the rows the page draws itself (see {@link SettingsView}). */
-    private final dev.skypocket.gui.setting.SettingsView.State viewState =
-            new dev.skypocket.gui.setting.SettingsView.State();
-
-    /** Rows of the current page with their y - the shared renderer's input. */
-    private java.util.List<dev.skypocket.gui.setting.SettingsView.RowAt> rowsWithY() {
-        int startY = contentTop() - scrollY + (settingsTab ? 0 : 28);
-        return dev.skypocket.gui.setting.SettingsView.layout(activeRows(), startY);
     }
 
     /** Bumped whenever the panel's content is rebuilt from scratch (language, layout). */
@@ -896,12 +774,6 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
-
-        // Unfocus the text field when clicking outside it.
-        TextFieldWidget field = TextFieldWidget.focusedField();
-        if (field != null && !field.contains(lx, ly)) {
-            TextFieldWidget.clearFocus();
-        }
 
         if (event.button() != 0) {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
@@ -975,55 +847,10 @@ public class OneClickScreen extends Screen {
                     Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
-        // Rows without widgets are handled by the shared renderer: it knows the row types, the open
-        // dropdown lists and the slider drag, and the settings card in the HUD editor uses the same code.
-        int rowLeft = contentLeft();
-        if (dev.skypocket.gui.setting.SettingsView.click(viewState, rowsWithY(), rowLeft,
-                Setting.WIDGET_WIDTH, lx, ly, this::rebuildSettingsWidgets)) {
-            return true;
-        }
         return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
     }
 
 
-
-    private java.util.List<Setting> activeRows() {
-        if (settingsTab) {
-            return panelSettings;
-        }
-        return viewingFeature == null ? java.util.List.of() : viewingFeature.settings();
-    }
-
-    /**
-     * Draws the rows that no longer have a widget: section headings and on/off switches.
-     *
-     * <p>Drawn with the same primitives the widgets used ({@code ClickGuiStyle.button} +
-     * {@code ToggleButton.drawSwitch}), so the page looks identical - the difference is that these can be
-     * clipped by the content scissor and scaled into the theme studio's preview.
-     */
-    private void drawImmediateRows(GuiGraphicsExtractor graphics, int mx, int my) {
-        dev.skypocket.gui.setting.SettingsView.draw(viewState, graphics, rowsWithY(),
-                contentLeft(), Setting.WIDGET_WIDTH, mx, my,
-                contentTop(), contentBottom());
-    }
-
-
-    /** The expanded option list under a dropdown row. */
-
-    /**
-     * Handles a click inside an open dropdown's list.
-     *
-     * <p>The list is drawn by the page now, so it is no longer a widget that can answer for itself; this
-     * walks the rows to find the expanded one and maps the point to an option.
-     */
-
-    /** Wheel over an open dropdown's list; returns true when it scrolled. */
-    private boolean scrollDropdownList(double lx, double ly, double amount) {
-        return dev.skypocket.gui.setting.SettingsView.scrollDropdownList(rowsWithY(),
-                contentLeft(), Setting.WIDGET_WIDTH, lx, ly, amount);
-    }
-
-    /** Writes a slider's value from a panel-local x, the way clicking the track used to. */
 
     private void showModules() {
         boolean changed = settingsTab || viewingFeature != null;
@@ -1060,10 +887,6 @@ public class OneClickScreen extends Screen {
             statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly), shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
-        if (dev.skypocket.gui.setting.SettingsView.drag(viewState, rowsWithY(),
-                contentLeft(), Setting.WIDGET_WIDTH, lx, ly)) {
-            return true;
-        }
         float anim = animScale();
         return super.mouseDragged(new MouseButtonEvent(lx, ly, event.buttonInfo()),
                 deltaX / (scaleX * anim), deltaY / (scaleY * anim));
@@ -1080,9 +903,6 @@ public class OneClickScreen extends Screen {
             statsPage.layout();
             statsPage.pointerUp(statsLocalX(lx), statsLocalY(ly),
                     Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (dev.skypocket.gui.setting.SettingsView.release(viewState)) {
             return true;
         }
         return super.mouseReleased(new MouseButtonEvent(lx, ly, event.buttonInfo()));
@@ -1107,11 +927,6 @@ public class OneClickScreen extends Screen {
             statsPage.layout();
             statsPage.wheel(statsLocalX(lx), statsLocalY(ly), (float) verticalAmount,
                     shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        // An open dropdown's list owns the wheel while the cursor is over it (it is drawn by the page
-        // now, so it answers through the setting rather than as a widget).
-        if (scrollDropdownList(lx, ly, verticalAmount)) {
             return true;
         }
         scrollY -= (int) (verticalAmount * 20);
@@ -1203,23 +1018,6 @@ public class OneClickScreen extends Screen {
                     pageModifiers(event), true));
             return true;
         }
-        // A focused field inside an open colour picker owns the keys (the picker draws its own fields).
-        if (dev.skypocket.gui.setting.SettingsView.keyPressed(viewState, rowsWithY(), key, shiftDown,
-                ctrlDown)) {
-            return true;
-        }
-        TextFieldWidget field = TextFieldWidget.focusedField();
-        if (field != null) {
-            if (key == GLFW.GLFW_KEY_BACKSPACE) {
-                field.backspace();
-                return true;
-            }
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
-                TextFieldWidget.clearFocus();
-                return true;
-            }
-            return false;
-        }
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             onClose();
             return true;
@@ -1250,17 +1048,6 @@ public class OneClickScreen extends Screen {
                 statsPage.textInput(typed);
                 return true;
             }
-            if (!typed.isEmpty()
-                    && dev.skypocket.gui.setting.SettingsView.charTyped(viewState, rowsWithY(), typed.charAt(0))) {
-                return true;
-            }
-        }
-        TextFieldWidget field = TextFieldWidget.focusedField();
-        if (field != null) {
-            if (event.isAllowedChatCharacter()) {
-                field.append(event.codepointAsString());
-            }
-            return true;
         }
         if (!event.isAllowedChatCharacter()) {
             return false;
@@ -1287,7 +1074,6 @@ public class OneClickScreen extends Screen {
         if (closing) {
             return;
         }
-        TextFieldWidget.clearFocus();
         ConfigManager.save();
         minecraft.onTextInputFocusChange(this, false);
         // Play the close animation, then actually leave the screen.

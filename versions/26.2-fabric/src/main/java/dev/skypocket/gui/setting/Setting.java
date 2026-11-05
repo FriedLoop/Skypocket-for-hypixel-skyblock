@@ -2,14 +2,8 @@ package dev.skypocket.gui.setting;
 
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.gui.OneClickScreen;
-import dev.skypocket.gui.widget.ActionButton;
-import dev.skypocket.gui.widget.ColorToggleWidget;
 import dev.skypocket.gui.widget.DropdownListWidget;
 import dev.skypocket.gui.widget.DropdownWidget;
-import dev.skypocket.gui.widget.GroupHeaderWidget;
-import dev.skypocket.gui.widget.ClickGuiStyle;
-import dev.skypocket.gui.widget.LabelWidget;
-import dev.skypocket.gui.widget.SliderWidget;
 import dev.skypocket.gui.widget.TextFieldWidget;
 import dev.skypocket.gui.widget.ToggleAnimation;
 import dev.skypocket.gui.widget.ToggleButton;
@@ -28,9 +22,8 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /**
- * Declarative description of a single settings row in the Click GUI. Each concrete
- * type builds one (or, for {@link CustomSetting}, several) widgets at a given
- * position, reports its occupied height, and can match a search query.
+ * Declarative description of a single settings row in the Click GUI. UI v2 renders these directly;
+ * the legacy widget builder is retained only for the HUD editor's SettingsView host.
  */
 public abstract class Setting {
     /** Fixed row height: 20px widget + 5px spacing. */
@@ -51,9 +44,8 @@ public abstract class Setting {
     /**
      * True when the page draws (and handles) this row itself instead of building a widget for it.
      *
-     * <p>Widgets are drawn by the screen and cannot be clipped or scaled, which blocks two things: the
-     * settings page's own scrolling/preview, and the theme studio's miniature ClickGUI. Rows convert one
-     * at a time - see {@code OneClickScreen.drawImmediateRows}.
+     * <p>UI v2 rows are drawn directly by {@code SettingsPage}; the flag remains for the HUD editor's
+     * legacy {@code SettingsView} host.
      */
     public boolean immediate() {
         return false;
@@ -122,17 +114,6 @@ public abstract class Setting {
         return hint;
     }
 
-    /**
-     * Builds this row together with its note (if any). Both the page and {@code GroupSetting} call
-     * this rather than {@link #build}, so a note works the same wherever the row lives - a group's
-     * children are built by the group, not by the page.
-     */
-    public final void buildWithHint(int x, int y, Consumer<AbstractWidget> add) {
-        // The note is drawn by the page as a hover tooltip (see OneClickScreen), so only the row itself
-        // is built here.
-        build(x, y, add);
-    }
-
     /** Fixed height of the widget part of a row, matching what the subclasses build. */
     /** Height of the control a row draws, from the theme's measurements. */
     public static int controlHeight() {
@@ -142,8 +123,9 @@ public abstract class Setting {
     /** Vertical space (px) this setting occupies. */
     public abstract int height();
 
-    /** Builds the widget(s) for this setting, passing each to {@code add}. */
-    public abstract void build(int x, int y, Consumer<AbstractWidget> add);
+    /** Legacy widget builder; UI v2 draws settings directly. */
+    public void build(int x, int y, Consumer<AbstractWidget> add) {
+    }
 
     /**
      * Wraps a setting's write so the Click GUI panel cache notices it.
@@ -271,11 +253,6 @@ public abstract class Setting {
         /** Drawn and handled by the page - see {@link #immediate()} on the base class. */
         @Override public boolean immediate() { return true; }
 
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new SliderWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label), min, max,
-                    getter.getAsDouble(), format, setter, step));
-        }
-
         public double min() { return min; }
 
         public double max() { return max; }
@@ -291,7 +268,7 @@ public abstract class Setting {
             return Localization.tr(label) + ": " + String.format(format, value());
         }
 
-        /** Clamps, snaps to the step and writes - the arithmetic {@code SliderWidget} used. */
+        /** Clamps, snaps to the step and writes. */
         public void setValue(double v) {
             double clamped = Math.max(min, Math.min(max, v));
             if (step > 0) {
@@ -346,16 +323,6 @@ public abstract class Setting {
 
         /** The row is drawn by the page; only the picker below it needs to be a widget. */
         @Override public boolean immediate() { return true; }
-
-        /**
-         * Widget version, for layouts that place rows themselves ({@code CustomSetting} - the crosshair's
-         * grid, for instance). The settings page skips immediate rows and draws them instead; emptying
-         * this method made those custom layouts lose their colour rows entirely.
-         */
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new ColorToggleWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label), getter,
-                    () -> expanded, this::toggle));
-        }
 
         public int value() { return getter.getAsInt(); }
 
@@ -576,27 +543,6 @@ public abstract class Setting {
             return h;
         }
 
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new GroupHeaderWidget(x, y, WIDGET_WIDTH, 20, Localization.tr(label),
-                    getter, setter, animation, () -> expanded, this::toggle));
-            if (!expanded) {
-                return;
-            }
-            int childY = y + rowHeight();
-            for (Setting child : children) {
-                if (!child.isVisible()) {
-                    continue;
-                }
-                // Rows that converted to page drawing build nothing here - the page walks the children
-                // (see OneClickScreen.activeRowList) and draws them inside the same scissor. Their
-                // half-widget parts (a dropdown's search field, a colour's picker) still need building.
-                if (!child.immediate()) {
-                    child.buildWithHint(x, childY, add);
-                }
-                childY += child.totalHeight();
-            }
-        }
-
         /** Folded or not. The header row stays visible either way (the page draws it). */
         public boolean isExpanded() { return expanded; }
 
@@ -621,28 +567,6 @@ public abstract class Setting {
         public float switchProgress() {
             animation.to(switchValue());
             return animation.progress();
-        }
-
-        /**
-         * Builds only the children that still need widgets (a text field, a picker).
-         *
-         * <p>The page skips immediate rows when building, so a group that became immediate would
-         * otherwise stop building its children's widgets entirely.
-         */
-        public void buildChildren(int x, int y, Consumer<AbstractWidget> add) {
-            if (!expanded) {
-                return;
-            }
-            int childY = y + rowHeight();
-            for (Setting child : children) {
-                if (!child.isVisible()) {
-                    continue;
-                }
-                if (!child.immediate()) {
-                    child.buildWithHint(x, childY, add);
-                }
-                childY += child.totalHeight();
-            }
         }
 
         /** A group matches when its own label or any child does, so search still reaches children. */
@@ -741,14 +665,6 @@ public abstract class Setting {
         }
 
         @Override
-        public void build(int x, int y, Consumer<AbstractWidget> add) {
-            // Legacy SettingsView fallback: UI v2 renders this as a Segmented control.
-            add.accept(new LabelWidget(x, y, WIDGET_WIDTH, height(),
-                    Localization.tr(label) + ": " + Localization.tr(options.get(selected())),
-                    ClickGuiStyle.text(), false));
-        }
-
-        @Override
         public boolean matches(String q) {
             return false;
         }
@@ -778,10 +694,6 @@ public abstract class Setting {
         public String text() { return display.get(); }
 
         public void run() { action.run(); }
-
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new ActionButton(x, y, WIDGET_WIDTH, 20, display, action));
-        }
 
         @Override public boolean matches(String q) { return false; }
     }
@@ -823,31 +735,6 @@ public abstract class Setting {
         }
     }
 
-    /** Arbitrary custom layout (e.g. the crosshair pixel grid + preview side by side). */
-    public static final class CustomSetting extends Setting {
-        @FunctionalInterface
-        public interface Layout {
-            void layout(int x, int y, Consumer<AbstractWidget> add);
-        }
-
-        private final int h;
-        private final Layout layout;
-
-        public CustomSetting(int height, Layout layout) {
-            super(null);
-            this.h = height;
-            this.layout = layout;
-        }
-
-        @Override public int height() { return h; }
-
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            layout.layout(x, y, add);
-        }
-
-        @Override public boolean matches(String q) { return false; }
-    }
-
     /**
      * A section heading: a small title with an optional second line, drawn as one of the settings rows
      * so a long page can be read in blocks without folding anything.
@@ -880,11 +767,6 @@ public abstract class Setting {
         @Override public int height() {
             return dev.skypocket.gui.widget.GuiMetrics.current().sectionGap()
                     + dev.skypocket.gui.widget.GuiMetrics.current().sectionTitleHeight();
-        }
-
-        @Override public void build(int x, int y, Consumer<AbstractWidget> add) {
-            add.accept(new LabelWidget(x, y, WIDGET_WIDTH, controlHeight(), Localization.tr(label),
-                    ClickGuiStyle.accent(), true));
         }
 
         /** A heading is not a setting: it never matches a search by itself. */

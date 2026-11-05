@@ -11,7 +11,7 @@ import java.util.List;
  *
  * <p>Whether a feature {@link #hasSettings()} drives how the panel renders its card:
  * a feature without settings shows a disabled "no settings" button and is only
- * togglable, while a feature with settings additionally opens an inline settings view.
+ * togglable, while a feature with settings opens the shared UI v2 settings page.
  *
  * <p>This interface is the feature template: a new feature is added by providing these
  * members (typically via {@link Module}) and registering an instance in

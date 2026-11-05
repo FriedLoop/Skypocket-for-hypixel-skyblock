@@ -68,9 +68,7 @@ public final class Localization {
     EN.put("玩家数值显示", "Player Stats");
     EN.put("关闭", "Close");
     EN.put("启用", "Enabled");
-    EN.put("找不到 stats_display 模块", "stats_display module not found");
-    EN.put("颜色编辑暂未迁移到 UI v2", "Color editing is not available in this UI v2 page yet");
-    EN.put("（待迁移）", "(pending migration)");
+    EN.put("找不到设置模块", "Settings module not found");
     EN.put("切换到现代风格", "Switch to Modern Style");
     EN.put("切换到经典风格", "Switch to Classic Style");
     EN.put("法力不足时闪烁", "Blink When Mana Low");
@@ -201,6 +199,8 @@ public final class Localization {
         EN.put("可用!", "available!");
         EN.put("技能名颜色", "Ability Name Color");
         EN.put("可用颜色", "Available Color");
+        EN.put("冷却缩放", "Cooldown Scale");
+        EN.put("提醒缩放", "Reminder Scale");
         EN.put("提醒音效", "Alert Sound");
         EN.put("音量", "Volume");
         EN.put("音高", "Pitch");
@@ -499,13 +499,4 @@ public final class Localization {
         };
     }
 
-    /** Cycles language: system -> zh_cn -> en_us -> system. */
-    public static void cycleLanguage() {
-        ModConfig cfg = ConfigManager.get();
-        cfg.language = switch (cfg.language == null ? "system" : cfg.language) {
-            case "zh_cn" -> "en_us";
-            case "en_us" -> "system";
-            default -> "zh_cn";
-        };
-    }
 }

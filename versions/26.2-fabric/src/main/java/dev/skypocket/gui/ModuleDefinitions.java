@@ -184,6 +184,12 @@ final class ModuleDefinitions {
                 v -> cfg.miningAbilityNameColor = v));
         settings.add(new Setting.ColorSetting("可用颜色", () -> cfg.miningAbilityAvailableColor,
                 v -> cfg.miningAbilityAvailableColor = v));
+        settings.add(new Setting.SliderSetting("冷却缩放", 0.25, 6.0,
+                () -> cfg.miningAbilityScale, v -> cfg.miningAbilityScale = (float) v,
+                "%.2f", ModConfig.SCALE_GRID));
+        settings.add(new Setting.SliderSetting("提醒缩放", 0.25, 6.0,
+                () -> cfg.miningAbilitySubtitleScale,
+                v -> cfg.miningAbilitySubtitleScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
         settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
                 () -> cfg.miningAbilityReminderSound, v -> cfg.miningAbilityReminderSound = v));
         settings.add(new Setting.SliderSetting("音量", 0, 200, () -> cfg.miningAbilityReminderVolume * 100,
