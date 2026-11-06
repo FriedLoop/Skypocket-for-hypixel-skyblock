@@ -846,6 +846,17 @@ layout(location = 0) out vec4 fragColor;
 - 首页布局、命中、输入路由和整面板缓存仍复用原有 `PanelGeometry` / `PanelInput`
 - `SettingsView` 与旧 widget 构建路径已删除
 
+**设置卡片规范（强制）**：
+
+- 每张设置卡片必须有 header（标题）。
+- Header 下方必须有解释文字，说明该卡片控制的子功能。
+- 卡片结构以现有 Player Stats 设置页为参考。
+- 字重层级：
+  - 卡片标题 / header：`SemiBold`
+  - 正文、行标签、控件文字：`Medium`
+  - Header 下的解释文字：`Regular`
+- 新增或修改设置页时必须满足以上结构；现有页面逐步补齐，不允许新增无 header 或无解释的卡片。
+
 **过渡动画**：模块之间切换时保留 outgoing `SettingsPage` 快照，不再回退到旧设置渲染。
 
 **P0/P1 已完成**：旧渲染器与旧控件已删除，文本光标定位、长下拉性能、滚动指示、HUD v2 弹窗和小窗口适配均已落地。
