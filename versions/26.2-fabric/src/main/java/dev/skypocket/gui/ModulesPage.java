@@ -454,6 +454,15 @@ final class ModulesPage {
         return true;
     }
 
+    /** Releases hover, focus and pointer capture before the page is hidden or re-shown. */
+    void clearHover() {
+        if (input != null) {
+            // pointerMove is not enough: a card click can navigate away before pointerUp, so the
+            // router may still be captured and would ignore the synthetic out-of-bounds move.
+            input.clear();
+        }
+    }
+
     boolean pointerUp(float x, float y, int modifiers) {
         input.pointerUp(new PointerEvent(x, y, 0, modifiers));
         return true;

@@ -153,13 +153,15 @@ public final class McUiPainter implements UiPainter {
 
     @Override
     public void text(String text, float x, float y, int color) {
-        ClickGuiFonts.drawText(graphics, dev.skypocket.i18n.Localization.auto(text),
-                x, y, color, false);
+        // UI v2 body copy is Medium; headers and explanations use textWeighted.
+        ClickGuiFonts.drawTextWeighted(graphics, dev.skypocket.i18n.Localization.auto(text),
+                x, y, color, 1f, dev.skypocket.render.FontLab.Weight.MEDIUM);
     }
 
     @Override
     public void textRaw(String text, float x, float y, int color) {
-        ClickGuiFonts.drawText(graphics, text, x, y, color, false);
+        ClickGuiFonts.drawTextWeighted(graphics, text, x, y, color, 1f,
+                dev.skypocket.render.FontLab.Weight.MEDIUM);
     }
 
     @Override

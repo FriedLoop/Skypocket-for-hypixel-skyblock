@@ -93,7 +93,7 @@ final class HudSettingsCard {
             if (setting instanceof Setting.GroupSetting group) {
                 List<Setting> children = filter(group.children(), element);
                 if (!children.isEmpty()) {
-                    out.add(new Setting.Header(group.label()));
+                    out.add(new Setting.Header(group.label(), group.subtitle()));
                     out.addAll(children);
                 }
             } else if (setting instanceof Setting.Header) {

@@ -475,6 +475,8 @@ public class OneClickScreen extends Screen {
                 // are of no use to a player. Giving the next debug switch an obvious home beats
                 // sprinkling them through the panel's settings.
                 new Setting.GroupSetting("调试", List.of(
+                        // Developer-only switching lives under an explicit card description below.
+
                         // Live token editor: gallery on the left, tokens in the middle, editor on the right.
                         new Setting.ActionSetting("主题工作室", this::toggleDevDrawer),
                         // Master switch for the mod's information logs; warnings and errors always print.
@@ -487,7 +489,7 @@ public class OneClickScreen extends Screen {
                                 v -> cfg.panelCacheStats = v),
                         // UI v2 font comparison. These knobs are intentionally not persisted config:
                         // they are temporary experiment controls and disappear when a policy is chosen.
-                        new Setting.Header("字体实验"),
+                        new Setting.Header("字体实验", "字体栅格、字重与渲染实验"),
                         new Setting.BooleanSetting("实验：整数 advance", FontLab::integerAdvance,
                                 FontLab::setIntegerAdvance),
                         new Setting.DropdownSetting("实验：原点定位", FontLab::originIds,
@@ -516,7 +518,7 @@ public class OneClickScreen extends Screen {
                             FontLab.applyCrispPreset();
                             ConfigManager.touch();
                         })
-                ), false)
+                ), false).subtitle("字体与渲染调试选项")
         );
     }
 
@@ -669,6 +671,9 @@ public class OneClickScreen extends Screen {
         Feature next = id == null || id.isEmpty() ? null : ModuleRegistry.byId(id);
         if (next != null && !next.hasSettings()) {
             return;
+        }
+        if (modulesPage != null) {
+            modulesPage.clearHover();
         }
         settingsReturnId = "";
         if (statsPage != null) {
@@ -861,6 +866,9 @@ public class OneClickScreen extends Screen {
     private void showModules() {
         String returnId = settingsTab ? settingsReturnId : "";
         boolean changed = settingsTab || viewingFeature != null;
+        if (modulesPage != null) {
+            modulesPage.clearHover();
+        }
         settingsTab = false;
         viewingFeature = null;
         settingsReturnId = "";
@@ -879,6 +887,9 @@ public class OneClickScreen extends Screen {
     private void showSettings() {
         if (settingsTab) {
             return;
+        }
+        if (modulesPage != null) {
+            modulesPage.clearHover();
         }
         settingsReturnId = currentId();
         settingsTab = true;

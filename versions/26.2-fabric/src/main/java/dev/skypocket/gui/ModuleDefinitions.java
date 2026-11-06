@@ -83,7 +83,8 @@ final class ModuleDefinitions {
                                     cfg.crosshairAlpha = ColorUtil.alpha(v);
                                 }, true),
                                 new Setting.SliderSetting("像素大小", 1, 8, () -> cfg.crosshairPixelSize, v -> cfg.crosshairPixelSize = (float) v, "%.0f", 1),
-                                new Setting.SliderSetting("缩放", 0.25, 4.0, () -> cfg.crosshairScale, v -> cfg.crosshairScale = (float) v, "%.2f", ModConfig.SCALE_GRID))),
+                                new Setting.SliderSetting("缩放", 0.25, 4.0, () -> cfg.crosshairScale, v -> cfg.crosshairScale = (float) v, "%.2f", ModConfig.SCALE_GRID)))
+                        .subtitle("调整准星线条、颜色、像素大小与缩放"),
                         // The switch is the feature's own flag: it was a row of its own before, and
                         // turning it off really does stop the tint (the renderer reads this field).
                         new Setting.GroupSetting("瞄准目标变色", () -> cfg.crosshairEntityColorEnabled,
@@ -92,6 +93,7 @@ final class ModuleDefinitions {
                                 new Setting.ColorSetting("中立颜色", () -> cfg.crosshairNeutralColor, v -> cfg.crosshairNeutralColor = v),
                                 new Setting.ColorSetting("敌对颜色", () -> cfg.crosshairHostileColor, v -> cfg.crosshairHostileColor = v),
                                 new Setting.ColorSetting("箱子颜色", () -> cfg.crosshairContainerColor, v -> cfg.crosshairContainerColor = v)))
+                        .subtitle("按目标类型切换准星颜色")
                 )));
     }
 
@@ -152,7 +154,7 @@ final class ModuleDefinitions {
         settings.add(new Setting.SliderSetting("合并窗口(毫秒)", 200, 3000,
                 () -> cfg.damageSplashWindowMs,
                 v -> cfg.damageSplashWindowMs = (int) Math.round(v), "%.0f", 100));
-        settings.add(new Setting.Header("Display"));
+        settings.add(new Setting.Header("Display", "控制伤害飘字的显示时长、淡出与排版"));
         settings.add(new Setting.SliderSetting("显示时长(毫秒)", 300, 5000,
                 () -> cfg.damageSplashLifetimeMs,
                 v -> cfg.damageSplashLifetimeMs = (int) Math.round(v), "%.0f", 100));
@@ -215,13 +217,17 @@ final class ModuleDefinitions {
     private static void registerPostProcess(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.GroupSetting("抗锯齿", () -> cfg.antialiasingEnabled,
-                v -> cfg.antialiasingEnabled = v, antialiasingSettings(cfg)));
+                v -> cfg.antialiasingEnabled = v, antialiasingSettings(cfg))
+                .subtitle("平滑边缘，并按强度调整锐化"));
         settings.add(new Setting.GroupSetting("动态模糊", () -> cfg.motionBlurEnabled,
-                v -> cfg.motionBlurEnabled = v, motionBlurSettings(cfg)));
+                v -> cfg.motionBlurEnabled = v, motionBlurSettings(cfg))
+                .subtitle("移动视角时加入方向性模糊"));
         settings.add(new Setting.GroupSetting("画面调色", () -> cfg.colorGradeEnabled,
-                v -> cfg.colorGradeEnabled = v, colorGradeSettings(cfg)));
+                v -> cfg.colorGradeEnabled = v, colorGradeSettings(cfg))
+                .subtitle("调整画面亮度、对比度、饱和度与色调"));
         settings.add(new Setting.GroupSetting("泛光", () -> cfg.bloomEnabled,
-                v -> cfg.bloomEnabled = v, bloomSettings(cfg)));
+                v -> cfg.bloomEnabled = v, bloomSettings(cfg))
+                .subtitle("让高亮区域产生柔和光晕"));
         ModuleRegistry.register(new Module("post_process", "后处理", Category.RENDER,
                 () -> cfg.postProcessEnabled, v -> cfg.postProcessEnabled = v, settings));
     }
@@ -410,7 +416,8 @@ final class ModuleDefinitions {
                 v -> cfg.miningMinBreakTicks = (int) Math.round(v), "%.0f", 1));
         advanced.add(new Setting.BooleanSetting("调试信息", () -> cfg.miningBreakDebugHud,
                 v -> cfg.miningBreakDebugHud = v));
-        settings.add(new Setting.GroupSetting("高级", advanced));
+        settings.add(new Setting.GroupSetting("高级", advanced)
+                .subtitle("调试信息与高级显示选项"));
         ModuleRegistry.register(new Module("mining_break_predict", "挖矿破坏预测", Category.SKYBLOCK_MINING,
                 () -> cfg.miningBreakPredictEnabled, v -> cfg.miningBreakPredictEnabled = v, settings));
     }

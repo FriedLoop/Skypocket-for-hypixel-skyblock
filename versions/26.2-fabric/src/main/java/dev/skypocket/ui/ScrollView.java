@@ -59,7 +59,10 @@ public final class ScrollView extends Box {
 
     public void scrollTo(float value) {
         float max = maxScroll();
-        scrollY = Math.max(0f, Math.min(max, value));
+        // Whole-pixel scroll positions keep the cached page bitmap and the live layout on the
+        // same pixel grid; fractional offsets made text/controls shift by one pixel at some
+        // wheel positions.
+        scrollY = Math.round(Math.max(0f, Math.min(max, value)));
         content.offset(0f, -scrollY);
     }
 

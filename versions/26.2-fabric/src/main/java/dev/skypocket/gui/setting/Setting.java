@@ -442,6 +442,7 @@ public abstract class Setting {
         private final Consumer<Boolean> setter;
         private final List<Setting> children;
         private final ToggleAnimation animation = new ToggleAnimation();
+        private String subtitle = "";
         private boolean expanded;
 
         /** A foldable section without a switch. */
@@ -468,6 +469,14 @@ public abstract class Setting {
             this.children = List.copyOf(children);
             this.expanded = defaultExpanded;
         }
+
+        /** Explanation rendered under the card header. */
+        public GroupSetting subtitle(String text) {
+            this.subtitle = text == null ? "" : text;
+            return this;
+        }
+
+        public String subtitle() { return subtitle; }
 
         @Override public int height() {
             int h = rowHeight();

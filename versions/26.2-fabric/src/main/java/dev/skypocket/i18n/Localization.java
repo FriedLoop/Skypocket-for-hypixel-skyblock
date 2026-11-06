@@ -418,6 +418,18 @@ public final class Localization {
         EN.put("切换到横向排版", "Switch to Horizontal");
         EN.put("切换到竖向排版", "Switch to Vertical");
         EN.put("不限距离", "Unlimited Range");
+        EN.put("调整此卡片的选项", "Adjust the options on this card");
+        EN.put("调整本模块的主要选项", "Adjust the module's main options");
+        EN.put("调整准星线条、颜色、像素大小与缩放", "Tune crosshair lines, colors, pixel size and scale");
+        EN.put("按目标类型切换准星颜色", "Tint the crosshair by target type");
+        EN.put("平滑边缘，并按强度调整锐化", "Smooth edges and sharpen by strength");
+        EN.put("移动视角时加入方向性模糊", "Add directional blur when moving the camera");
+        EN.put("调整画面亮度、对比度、饱和度与色调", "Adjust brightness, contrast, saturation and tint");
+        EN.put("让高亮区域产生柔和光晕", "Add a soft glow around bright areas");
+        EN.put("调试信息与高级显示选项", "Debug information and advanced display options");
+        EN.put("字体与渲染调试选项", "Font and rendering debug options");
+        EN.put("字体栅格、字重与渲染实验", "Font raster, weight and rendering experiments");
+        EN.put("控制伤害飘字的显示时长、淡出与排版", "Control damage popup lifetime, fade and layout");
     }
 
     private Localization() {

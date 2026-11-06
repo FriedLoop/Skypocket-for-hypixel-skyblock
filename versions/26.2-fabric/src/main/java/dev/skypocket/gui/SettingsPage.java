@@ -317,12 +317,10 @@ public final class SettingsPage {
         if (element instanceof Painted painted) {
             painted.paint(painter);
         } else if (element instanceof Text text) {
-            if (text.fontScale() == 1f && text.weight() == TextWeight.REGULAR) {
-                painter.text(text.value(), text.bounds().x(), text.bounds().y(), text.color());
-            } else {
-                painter.textWeighted(text.value(), text.bounds().x(), text.bounds().y(),
-                        text.color(), text.fontScale(), text.weight());
-            }
+            // Preserve explicit weights: headers are SemiBold and descriptions Regular even
+            // though ordinary control text defaults to Medium.
+            painter.textWeighted(text.value(), text.bounds().x(), text.bounds().y(),
+                    text.color(), text.fontScale(), text.weight());
         }
         for (UiElement child : element.children()) {
             drawElement(painter, child, nextViewport);
@@ -434,14 +432,10 @@ public final class SettingsPage {
                 if (card != null) {
                     content.add(card);
                 }
-                card = newCard();
-                card.add(new Text(Localization.tr(header.label()),
-                        Style.builder().height(16f).build(), 1f, TextWeight.SEMIBOLD));
-                if (header.subtitle() != null && !header.subtitle().isEmpty()) {
-                    card.add(new Text(Localization.tr(header.subtitle()),
-                            Style.builder().height(12f).build(), 0.82f, TextWeight.REGULAR)
-                            .color(0xFFC5CDD9));
-                }
+                card = newCard(Localization.tr(header.label()),
+                        header.subtitle() == null || header.subtitle().isEmpty()
+                                ? Localization.tr("调整此卡片的选项")
+                                : Localization.tr(header.subtitle()));
                 continue;
             }
             if (setting instanceof Setting.GroupSetting group) {
@@ -451,26 +445,19 @@ public final class SettingsPage {
                     content.add(card);
                     card = null;
                 }
+                String description = group.subtitle() == null || group.subtitle().isEmpty()
+                        ? Localization.tr("调整此卡片的选项") : Localization.tr(group.subtitle());
                 Card groupCard = newCard();
+                Switch groupSwitch = null;
                 if (group.hasSwitch()) {
-                    Box titleRow = new Box(Style.builder()
-                            .width(Dimension.percent(100f))
-                            .height(20f)
-                            .direction(Style.Direction.ROW)
-                            .build());
-                    titleRow.add(new Text(Localization.tr(group.label()),
-                            Style.builder().height(16f).flexGrow(1f).build(), 1f,
-                            TextWeight.SEMIBOLD));
-                    titleRow.add(new Switch("", group::switchValue, value -> {
+                    groupSwitch = new Switch("", group::switchValue, value -> {
                         if (value != group.switchValue()) {
                             group.toggleSwitch();
                         }
-                    }, Style.builder().width(42f).height(20f).build(), palette).flat(true));
-                    groupCard.add(titleRow);
-                } else {
-                    groupCard.add(new Text(Localization.tr(group.label()),
-                            Style.builder().height(16f).build(), 1f, TextWeight.SEMIBOLD));
+                    }, Style.builder().width(42f).height(20f).build(), palette);
+                    groupSwitch.flat(true);
                 }
+                groupCard.add(headerBlock(Localization.tr(group.label()), description, groupSwitch));
                 for (Setting child : group.children()) {
                     if (child.isVisible()) {
                         addSetting(groupCard, child);
@@ -480,13 +467,27 @@ public final class SettingsPage {
                 continue;
             }
             if (card == null) {
-                card = newCard();
+                String title = feature == null ? Localization.tr("设置") : feature.name();
+                card = newCard(title, Localization.tr("调整本模块的主要选项"));
             }
             addSetting(card, setting);
         }
         if (card != null) {
             content.add(card);
         }
+    }
+
+    /** Keeps the accent hue, raises saturation and slightly lifts value for header text. */
+    private static int headerColor(int argb) {
+        int a = (argb >>> 24) & 0xFF;
+        int r = (argb >> 16) & 0xFF;
+        int g = (argb >> 8) & 0xFF;
+        int b = argb & 0xFF;
+        float[] hsb = java.awt.Color.RGBtoHSB(r, g, b, null);
+        hsb[1] = Math.min(1f, hsb[1] * 1.45f + 0.03f);
+        hsb[2] = Math.min(1f, hsb[2] * 1.10f + 0.06f);
+        int rgb = java.awt.Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]) & 0xFFFFFF;
+        return (a << 24) | rgb;
     }
 
     private Card newCard() {
@@ -496,6 +497,43 @@ public final class SettingsPage {
                 .gap(2f)
                 .direction(Style.Direction.COLUMN)
                 .build(), palette);
+    }
+
+    private Card newCard(String title, String description) {
+        Card card = newCard();
+        card.add(headerBlock(title, description, null));
+        return card;
+    }
+
+    /**
+     * Header and explanation share one tightly packed block. The explanation starts directly
+     * below the title line, while card children are separated by the card's 2px gap.
+     */
+    private Box headerBlock(String title, String description, Switch toggle) {
+        float line = Math.max(9f, ClickGuiFonts.lineHeight());
+        float descHeight = Math.max(9f, Math.round(line * 0.82f));
+        float gap = 1f;
+        float right = toggle == null ? 0f : 50f;
+        Box header = new Box(Style.builder()
+                .width(Dimension.percent(100f))
+                .height(Math.max(toggle == null ? 0f : 20f, line + gap + descHeight))
+                .build());
+        header.add(new Text(title, Style.builder()
+                .position(Style.Position.ABSOLUTE)
+                .left(0f).right(right).top(0f).height(line).build(),
+                1f, TextWeight.SEMIBOLD).color(headerColor(palette.accent())));
+        header.add(new Text(description, Style.builder()
+                .position(Style.Position.ABSOLUTE)
+                .left(0f).right(right).top(line + gap).height(descHeight).build(),
+                0.82f, TextWeight.REGULAR).color(0xFF8F9AAA));
+        if (toggle != null) {
+            toggle.style(Style.builder()
+                    .position(Style.Position.ABSOLUTE)
+                    .right(0f).top(0f)
+                    .width(42f).height(20f).build());
+            header.add(toggle);
+        }
+        return header;
     }
 
     private void addSetting(Box parent, Setting setting) {
