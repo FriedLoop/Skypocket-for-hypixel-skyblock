@@ -66,6 +66,11 @@ public interface UiPainter {
 
     void text(String text, float x, float y, int color);
 
+    /** Text that must not go through the draw-time translator (user input, IDs). */
+    default void textRaw(String text, float x, float y, int color) {
+        text(text, x, y, color);
+    }
+
     /** Text at a fraction of the design font size; used for secondary copy. */
     default void textScaled(String text, float x, float y, int color, float scale) {
         text(text, x, y, color);

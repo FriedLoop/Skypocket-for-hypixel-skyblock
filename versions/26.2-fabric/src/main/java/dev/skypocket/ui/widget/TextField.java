@@ -186,10 +186,11 @@ public final class TextField extends Control {
         float outsideLabelW = labelOutside && label != null && !label.isEmpty()
                 ? painter.textWidth(label) : 0f;
         Rect field = labelOutside ? outsideFieldBounds(outsideLabelW) : bounds();
-        int border = 0;
-        if (!neutralPaint()) {
-            border = focused ? palette.focus() : hovered ? palette.text() : 0;
-        }
+        // Hover belongs to the page cache's base image; only focus/caret are dynamic. Suppressing
+        // hover under neutralPaint made it flash once on the frame that recorded the page and then
+        // disappear from the baked texture.
+        int border = focused && !neutralPaint() ? palette.focus()
+                : hovered ? palette.text() : 0;
         // Fill with the smooth mask, then overlay the independent 2px device-space ring.
         painter.surface(field, palette.radius(), palette.field(), 0);
         if (border != 0) {
@@ -209,12 +210,13 @@ public final class TextField extends Control {
         if (shown.isEmpty() && preedit.isEmpty() && placeholder != null && !placeholder.isEmpty()) {
             painter.text(placeholder, textX, textY, palette.muted());
         } else {
-            painter.text(shown, textX, textY, palette.text());
+            // User-entered text must never be treated as a translation key.
+            painter.textRaw(shown, textX, textY, palette.text());
         }
 
         float caretX = textX + painter.textWidth(shown.substring(0, cursor));
         if (!preedit.isEmpty()) {
-            painter.text(preedit, textX + painter.textWidth(shown), textY, palette.accent());
+            painter.textRaw(preedit, textX + painter.textWidth(shown), textY, palette.accent());
             painter.fill(new Rect(textX + painter.textWidth(shown), textY + painter.lineHeight(),
                     painter.textWidth(preedit), 1f), palette.accent());
             caretX = textX + painter.textWidth(shown) + painter.textWidth(preedit);

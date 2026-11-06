@@ -89,6 +89,10 @@ public abstract class Control extends Box implements Painted {
         return pressed;
     }
 
+    public boolean isHovered() {
+        return hovered;
+    }
+
     /** Controls whose live content is not represented by the neutral page base. */
     public boolean dynamicOverlay() {
         return false;

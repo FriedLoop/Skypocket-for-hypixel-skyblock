@@ -77,6 +77,8 @@ public class OneClickScreen extends Screen {
     private final List<Feature> features;
     private final List<Setting> panelSettings;
     private final Feature panelFeature;
+    private ModulesPage modulesPage;
+    private float modulesPageHeight = -1f;
     private SettingsPage statsPage;
     private Feature statsPageFeature;
     private SettingsPage transitionPage;
@@ -165,6 +167,55 @@ public class OneClickScreen extends Screen {
     private boolean statsPageActive() {
         // Every module with settings now uses the v2 page; empty modules cannot be opened.
         return settingsTab || (viewingFeature != null && viewingFeature.hasSettings());
+    }
+
+    private boolean modulesPageActive() {
+        return !settingsTab && viewingFeature == null;
+    }
+
+    private final ModulesPage.Host modulesHost = new ModulesPage.Host() {
+        @Override public String search() { return search; }
+        @Override public void setSearch(String value) { search = value; scrollY = 0; }
+        @Override public Category selected() { return selected; }
+        @Override public void setSelected(Category category) {
+            selected = category;
+            scrollY = 0;
+            if (modulesPage != null) {
+                modulesPage.rebuild();
+            }
+        }
+        @Override public boolean canGoBack() { return !backStack.isEmpty(); }
+        @Override public boolean canGoForward() { return !forwardStack.isEmpty(); }
+        @Override public void goBack() { OneClickScreen.this.goBack(); }
+        @Override public void goForward() { OneClickScreen.this.goForward(); }
+        @Override public void open(Feature feature) { navigate(feature.id()); }
+        @Override public void toggle(Feature feature) {
+            feature.setEnabled(!feature.isEnabled());
+        }
+    };
+
+    private void ensureModulesPage() {
+        if (!modulesPageActive()) {
+            return;
+        }
+        float pageHeight = Math.max(20f, contentBottom() - TAB_BAR_H);
+        if (modulesPage == null || modulesPageHeight != pageHeight) {
+            modulesPage = new ModulesPage(modulesHost, Ui2Theme.palette(), PANEL_W, pageHeight);
+            modulesPageHeight = pageHeight;
+        }
+    }
+
+    private void drawModulesPage(GuiGraphicsExtractor graphics) {
+        ensureModulesPage();
+        if (modulesPage == null) {
+            return;
+        }
+        modulesPage.layout();
+        Matrix3x2fStack pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(0f, TAB_BAR_H);
+        modulesPage.draw(graphics, scaleX, scaleY, false);
+        pose.popMatrix();
     }
 
     private float statsPageTop() {
@@ -500,7 +551,8 @@ public class OneClickScreen extends Screen {
                 ToggleAnimation.signature(), animFinished());
         // The v2 stats page owns live controls and its own popup layers; baking the whole panel would
         // freeze its focused/pressed states. Draw the shell and page live while it is open.
-        if (statsPageActive() || !GuiPanelCache.draw(graphics, cacheKey, PANEL_W, PANEL_H, scaleX,
+        if (statsPageActive() || modulesPageActive()
+                || !GuiPanelCache.draw(graphics, cacheKey, PANEL_W, PANEL_H, scaleX,
                 scaleY, animating || moving, this::drawPanel, lmx, lmy, delta)) {
             drawPanel(graphics, lmx, lmy, delta);
         }
@@ -557,10 +609,14 @@ public class OneClickScreen extends Screen {
                           int lmx, int lmy) {
         org.joml.Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(dx, 0);
         if (feature == null) {
-            PanelRenderer.drawCards(graphics, viewWith(null, paneScroll), lmx - dx, lmy);
+            ensureModulesPage();
+            if (modulesPage != null) {
+                modulesPage.layout();
+                modulesPage.drawTransition(graphics, dx);
+            }
         } else {
+            pose.translate(dx, 0);
             ClickGuiFonts.drawText(graphics, feature.name(), SIDEBAR_W + 20,
                     contentTop() - paneScroll + 2,
                     dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
@@ -686,30 +742,24 @@ public class OneClickScreen extends Screen {
         PanelRenderer.drawTabs(graphics, view(), lmx, lmy);
 
         int top = contentTop();
-        if (!settingsTab) {
-            // Fixed row above the scroll area: these never move, whatever the content does.
+        if (!settingsTab && viewingFeature != null && transitionProgress() >= 1f) {
+            // Feature pages keep the fixed search row; the homepage owns its search field.
             PanelRenderer.drawSearch(graphics, view(), lmx, lmy);
             drawNavButtons(graphics, lmx, lmy);
         }
         if (transitionProgress() < 1f) {
-            // Card pane transition: the outgoing view slides left, the incoming one in from the right.
-            scissorContentArea(graphics, SIDEBAR_W, top, PANEL_W);
+            // The outgoing/incoming panes slide; the homepage page carries its own sidebar.
+            scissorContentArea(graphics, 0, TAB_BAR_H, PANEL_W);
             int paneW = PANEL_W - PanelGeometry.SIDEBAR_W;
             float p = transitionProgress();
-            // Opening a module: settings slide in from the right, the grid leaves to the left. Closing:
-            // the grid slides back in from the left and the settings leave to the right.
             drawPane(graphics, transitionFrom, transitionFromScroll,
                     -Math.round(paneW * p) * transitionDir, lmx, lmy);
             drawPane(graphics, viewingFeature, scrollY,
                     Math.round(paneW * (1 - p)) * transitionDir, lmx, lmy);
             graphics.disableScissor();
-        } else if (!settingsTab && viewingFeature == null) {
-            // Modules list: scrollable card grid on the right. Scissor takes panel-local
-            // coordinates (NOT screen coords); the helper snaps them to whole device pixels (and
-            // pins the bottom to a row a scissor can reach) so the live and cached frames clip
-            // identically and the mask meets the footer strip.
-            scissorContentArea(graphics, SIDEBAR_W, top, PANEL_W);
-            PanelRenderer.drawCards(graphics, view(), lmx, lmy);
+        } else if (modulesPageActive()) {
+            scissorContentArea(graphics, 0, TAB_BAR_H, PANEL_W);
+            drawModulesPage(graphics);
             graphics.disableScissor();
         } else {
             // Settings tab spans the panel; a module's settings stay inside the card pane.
@@ -735,7 +785,7 @@ public class OneClickScreen extends Screen {
         // below the footer cannot hover.
         ClickGuiFonts.drawTextScaled(graphics, "SkyPocket", 16, 13,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true, ClickGuiFonts.HEADING_SCALE);
-        if (!settingsTab) {
+        if (!settingsTab && viewingFeature != null && transitionProgress() >= 1f) {
             PanelRenderer.drawSidebar(graphics, view(), sidebarHighlightY, lmx, lmy);
         }
     }
@@ -791,6 +841,15 @@ public class OneClickScreen extends Screen {
 
         if (!dev.skypocket.gui.widget.MouseButtons.isLeft(event.button())) {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
+        }
+
+        // The homepage owns everything between the tab bar and the footer.
+        if (modulesPageActive() && ly >= TAB_BAR_H && ly < contentBottom()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            modulesPage.pointerDown((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
         }
 
         // Back/forward live in the fixed row above the content, so they are hit-tested first.
@@ -904,6 +963,13 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            modulesPage.pointerMove((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.layout();
@@ -921,6 +987,13 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            modulesPage.pointerUp((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.layout();
@@ -944,6 +1017,13 @@ public class OneClickScreen extends Screen {
             // The wheel must not scroll anything while the cursor is outside the panel body
             // (outside the GUI, over the tab strip, or over the footer).
             return false;
+        }
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            modulesPage.wheel((float) lx, (float) ly - TAB_BAR_H, (float) verticalAmount,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
         }
         if (statsPageActive()) {
             ensureStatsPage();
@@ -971,11 +1051,16 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        if (statsPageActive()) {
+        if (modulesPageActive() || statsPageActive()) {
             layout();
             double lx = localX(mouseX);
             double ly = localY(mouseY);
-            if (inBody(lx, ly)) {
+            if (modulesPageActive()) {
+                ensureModulesPage();
+                modulesPage.layout();
+                modulesPage.pointerMove((float) lx, (float) ly - TAB_BAR_H,
+                        shiftDown ? Modifiers.SHIFT : 0);
+            } else if (inBody(lx, ly)) {
                 ensureStatsPage();
                 statsPage.layout();
                 statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
@@ -992,6 +1077,12 @@ public class OneClickScreen extends Screen {
         }
         if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
             ctrlDown = false;
+        }
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), false));
+            return true;
         }
         if (statsPageActive()) {
             ensureStatsPage();
@@ -1025,6 +1116,23 @@ public class OneClickScreen extends Screen {
         if (devDrawer.isOpen() && key == GLFW.GLFW_KEY_ESCAPE) {
             devDrawer.close();
             return true;
+        }
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            if (event.isEscape()) {
+                if (modulesPage.hasFocus()) {
+                    modulesPage.clearFocus();
+                } else {
+                    onClose();
+                }
+                return true;
+            }
+            if (modulesPage.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), true))) {
+                return true;
+            }
+            return super.keyPressed(event);
         }
         if (statsPageActive()) {
             ensureStatsPage();
@@ -1065,6 +1173,15 @@ public class OneClickScreen extends Screen {
             if (!typed.isEmpty() && devDrawer.charTyped(typed.charAt(0))) {
                 return true;
             }
+            if (modulesPageActive()) {
+                ensureModulesPage();
+                if (modulesPage.hasFocus()) {
+                    modulesPage.layout();
+                    modulesPage.textInput(typed);
+                    return true;
+                }
+                return false;
+            }
             if (statsPageActive()) {
                 ensureStatsPage();
                 statsPage.layout();
@@ -1083,6 +1200,13 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
+        if (modulesPageActive()) {
+            ensureModulesPage();
+            modulesPage.layout();
+            modulesPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
+                    event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
@@ -1111,6 +1235,8 @@ public class OneClickScreen extends Screen {
     /** Rebuilds widgets after a config change (e.g. language switch) so labels update. */
     public void rebuildAfterLanguageChange() {
         contentRevision++;
+        modulesPage = null;
+        modulesPageHeight = -1f;
         if (statsPage != null) {
             statsPage.rebuild();
         }

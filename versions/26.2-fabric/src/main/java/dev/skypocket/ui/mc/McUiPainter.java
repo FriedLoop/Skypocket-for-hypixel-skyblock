@@ -158,6 +158,11 @@ public final class McUiPainter implements UiPainter {
     }
 
     @Override
+    public void textRaw(String text, float x, float y, int color) {
+        ClickGuiFonts.drawText(graphics, text, x, y, color, false);
+    }
+
+    @Override
     public void textScaled(String text, float x, float y, int color, float scale) {
         ClickGuiFonts.drawTextScaled(graphics, dev.skypocket.i18n.Localization.auto(text),
                 x, y, color, false, scale);

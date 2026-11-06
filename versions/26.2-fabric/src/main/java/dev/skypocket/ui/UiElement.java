@@ -57,6 +57,14 @@ public abstract class UiElement {
         return this;
     }
 
+    /** Detaches every child, for lists that are rebuilt in place. */
+    public final void clearChildren() {
+        for (UiElement child : children) {
+            child.parent = null;
+        }
+        children.clear();
+    }
+
     public final UiElement remove(UiElement child) {
         if (child != null && children.remove(child)) {
             child.parent = null;
