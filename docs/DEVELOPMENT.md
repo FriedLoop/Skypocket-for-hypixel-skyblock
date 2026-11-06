@@ -850,4 +850,4 @@ layout(location = 0) out vec4 fragColor;
 
 **P0/P1 已完成**：旧渲染器与旧控件已删除，文本光标定位、长下拉性能、滚动指示、HUD v2 弹窗和小窗口适配均已落地。
 
-**剩余可选项**：页面壳级缓存、颜色弹层静态缓存。真正的 Inter Regular 400 已接入；`Ui2TestScreen` 已删除。
+**已完成**：`GuiPanelCache` 多缓存槽、tabs/footer 壳缓存、颜色弹层静态层缓存、真正的 Inter Regular 400；`Ui2TestScreen` 已删除。

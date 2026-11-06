@@ -22,8 +22,11 @@ import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import org.joml.Matrix3x2f;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Offscreen page cache. Each caller owns a {@link Slot}, so a frame can blit a chrome slot, a page
@@ -33,7 +36,8 @@ public final class GuiPanelCache {
     private static final dev.skypocket.SkyPocketLog LOGGER =
             dev.skypocket.SkyPocketLog.of("panelCache");
     private static final int MAX_CACHED_FRAMES = 36_000;
-    private static final List<Slot> SLOTS = new ArrayList<>();
+    private static final Set<Slot> SLOTS =
+            Collections.newSetFromMap(new WeakHashMap<>());
     private static int nextSlotId;
 
     /** Draws the page's content in its own local coordinates; the caller sets the pose. */

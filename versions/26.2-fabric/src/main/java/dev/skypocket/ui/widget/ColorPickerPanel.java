@@ -1,9 +1,12 @@
 package dev.skypocket.ui.widget;
 
+import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.PointerEvent;
+import dev.skypocket.ui.mc.McUiPainter;
+import net.minecraft.client.Minecraft;
 
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
@@ -49,6 +52,7 @@ public final class ColorPickerPanel extends Control {
 
     private final IntSupplier getter;
     private final IntConsumer setter;
+    private final GuiPanelCache.Slot staticCache = new GuiPanelCache.Slot();
     private Zone drag = Zone.NONE;
     private int lastEmitted = Integer.MIN_VALUE;
     private float hue;
@@ -236,12 +240,36 @@ public final class ColorPickerPanel extends Control {
         float bx = bounds().x();
         float by = bounds().y();
 
-        // Saturation/value square: hue base, white gradient along x, black gradient along y.
-        Rect square = new Rect(bx + PAD, by + PAD, SQUARE, SQUARE);
-        painter.fill(square, hsvToArgb(hue, 1f, 1f, 255));
-        painter.fillHorizontalGradient(square, 0xFFFFFFFF, 0x00FFFFFF);
-        painter.fillGradient(square, 0x00000000, 0xFF000000);
+        if (painter instanceof McUiPainter mc) {
+            // Static layer: hue ramp, checkerboard and preset fills. It gets its own stratum so
+            // the cached blit can never land above the dynamic SV/alpha/marker layer.
+            mc.graphics().nextStratum();
+            float poseScaleX = Math.max(0.01f, mc.graphics().pose().m00());
+            float poseScaleY = Math.max(0.01f, mc.graphics().pose().m11());
+            boolean cached = staticCache.draw(mc.graphics(), staticCacheKey(poseScaleX, poseScaleY),
+                    CONTENT_W, CONTENT_H, poseScaleX, poseScaleY, false,
+                    (graphics, mx, my, delta) ->
+                            paintStatic(new McUiPainter(graphics), bx, by),
+                    0, 0, 0f);
+            if (!cached) {
+                paintStatic(painter, bx, by);
+            }
+            mc.graphics().nextStratum();
+        } else {
+            paintStatic(painter, bx, by);
+        }
+        paintDynamic(painter, bx, by, argb);
+    }
 
+    private long staticCacheKey(float scaleX, float scaleY) {
+        long key = System.identityHashCode(this);
+        key = key * 31 + Math.round(Minecraft.getInstance().getWindow().getGuiScale() * 1000f);
+        key = key * 31 + Math.round(scaleX * 1000f);
+        key = key * 31 + Math.round(scaleY * 1000f);
+        return key;
+    }
+
+    private void paintStatic(UiPainter painter, float bx, float by) {
         // Hue bar.
         float hx = bx + hueX();
         for (int i = 0; i < HUE_STOPS.length - 1; i++) {
@@ -251,7 +279,7 @@ public final class ColorPickerPanel extends Control {
                     HUE_STOPS[i], HUE_STOPS[i + 1]);
         }
 
-        // Alpha bar: checkerboard beneath the alpha ramp.
+        // Alpha bar checkerboard.
         float ax = bx + alphaX();
         for (int cy = 0; cy < SQUARE; cy += 8) {
             for (int cx = 0; cx < BAR_W; cx += 8) {
@@ -261,10 +289,26 @@ public final class ColorPickerPanel extends Control {
                         light ? 0xFFB0B0B0 : 0xFF6E6E6E);
             }
         }
+
+        // Preset fills; selection/hover rings stay dynamic.
+        for (int i = 0; i < PRESETS.length; i++) {
+            painter.fillRounded(new Rect(bx + presetX(i), by + presetY(i),
+                    PRESET_W, PRESET_H), PRESET_RADIUS, 0xFF000000 | PRESETS[i]);
+        }
+    }
+
+    private void paintDynamic(UiPainter painter, float bx, float by, int argb) {
+        // Saturation/value square: hue base, white gradient along x, black gradient along y.
+        Rect square = new Rect(bx + PAD, by + PAD, SQUARE, SQUARE);
+        painter.fill(square, hsvToArgb(hue, 1f, 1f, 255));
+        painter.fillHorizontalGradient(square, 0xFFFFFFFF, 0x00FFFFFF);
+        painter.fillGradient(square, 0x00000000, 0xFF000000);
+
+        float hx = bx + hueX();
+        float ax = bx + alphaX();
         painter.fillGradient(new Rect(ax, by + PAD, BAR_W, SQUARE),
                 argb & 0x00FFFFFF, (argb & 0x00FFFFFF) | 0xFF000000);
 
-        // Markers.
         float ringX = bx + PAD + Math.min(SQUARE - 1, saturation * SQUARE);
         float ringY = by + PAD + Math.min(SQUARE - 1, (1f - value) * SQUARE);
         ring(painter, ringX, ringY);
@@ -272,22 +316,15 @@ public final class ColorPickerPanel extends Control {
         barMarker(painter, ax, by + PAD + Math.min(SQUARE - 1,
                 ((argb >>> 24) & 0xFF) / 255f * SQUARE));
 
-        // Presets.
         int current = argb & 0xFFFFFF;
         for (int i = 0; i < PRESETS.length; i++) {
-            float px = bx + presetX(i);
-            float py = by + presetY(i);
             boolean selected = PRESETS[i] == current;
             boolean hovered = mouseX >= presetX(i) && mouseX < presetX(i) + PRESET_W
                     && mouseY >= presetY(i) && mouseY < presetY(i) + PRESET_H;
-            // Selection owns the border; hover only applies to unselected swatches. Otherwise a
-            // quick click leaves a white hover ring that looks like a stale selection.
             int border = selected ? palette.accent() : hovered ? 0xFFFFFFFF : 0;
-            Rect swatch = new Rect(px, py, PRESET_W, PRESET_H);
-            // Smooth mask fill plus the independent 2px device-space ring.
-            painter.fillRounded(swatch, PRESET_RADIUS, 0xFF000000 | PRESETS[i]);
             if (border != 0) {
-                painter.strokeRounded(swatch, PRESET_RADIUS, border);
+                painter.strokeRounded(new Rect(bx + presetX(i), by + presetY(i),
+                        PRESET_W, PRESET_H), PRESET_RADIUS, border);
             }
         }
     }
