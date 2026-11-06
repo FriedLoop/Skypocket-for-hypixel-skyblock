@@ -79,6 +79,8 @@ public class OneClickScreen extends Screen {
     private final Feature panelFeature;
     private ModulesPage modulesPage;
     private float modulesPageHeight = -1f;
+    private ModulesPage moduleChrome;
+    private float moduleChromeHeight = -1f;
     private SettingsPage statsPage;
     private Feature statsPageFeature;
     private SettingsPage transitionPage;
@@ -173,15 +175,25 @@ public class OneClickScreen extends Screen {
         return !settingsTab && viewingFeature == null;
     }
 
+    private boolean moduleChromeActive() {
+        return !settingsTab && viewingFeature != null && transitionProgress() >= 1f;
+    }
+
     private final ModulesPage.Host modulesHost = new ModulesPage.Host() {
         @Override public String search() { return search; }
         @Override public void setSearch(String value) { search = value; scrollY = 0; }
         @Override public Category selected() { return selected; }
         @Override public void setSelected(Category category) {
+            if (viewingFeature != null) {
+                navigate(null);
+            }
             selected = category;
             scrollY = 0;
             if (modulesPage != null) {
                 modulesPage.rebuild();
+            }
+            if (moduleChrome != null) {
+                moduleChrome.rebuild();
             }
         }
         @Override public boolean canGoBack() { return !backStack.isEmpty(); }
@@ -215,6 +227,35 @@ public class OneClickScreen extends Screen {
         pose.pushMatrix();
         pose.translate(0f, TAB_BAR_H);
         modulesPage.draw(graphics, scaleX, scaleY, false);
+        pose.popMatrix();
+    }
+
+    private boolean inModuleChrome(double lx, double ly) {
+        return moduleChromeActive() && ly >= TAB_BAR_H && ly < contentBottom()
+                && (lx < SIDEBAR_W || ly < statsPageTop());
+    }
+
+    private void ensureModuleChrome() {
+        if (!moduleChromeActive()) {
+            return;
+        }
+        float pageHeight = Math.max(20f, contentBottom() - TAB_BAR_H);
+        if (moduleChrome == null || moduleChromeHeight != pageHeight) {
+            moduleChrome = new ModulesPage(modulesHost, Ui2Theme.palette(), PANEL_W, pageHeight, false);
+            moduleChromeHeight = pageHeight;
+        }
+    }
+
+    private void drawModuleChrome(GuiGraphicsExtractor graphics) {
+        ensureModuleChrome();
+        if (moduleChrome == null) {
+            return;
+        }
+        moduleChrome.layout();
+        Matrix3x2fStack pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(0f, TAB_BAR_H);
+        moduleChrome.draw(graphics, scaleX, scaleY, false);
         pose.popMatrix();
     }
 
@@ -742,11 +783,6 @@ public class OneClickScreen extends Screen {
         PanelRenderer.drawTabs(graphics, view(), lmx, lmy);
 
         int top = contentTop();
-        if (!settingsTab && viewingFeature != null && transitionProgress() >= 1f) {
-            // Feature pages keep the fixed search row; the homepage owns its search field.
-            PanelRenderer.drawSearch(graphics, view(), lmx, lmy);
-            drawNavButtons(graphics, lmx, lmy);
-        }
         if (transitionProgress() < 1f) {
             // The outgoing/incoming panes slide; the homepage page carries its own sidebar.
             scissorContentArea(graphics, 0, TAB_BAR_H, PANEL_W);
@@ -762,6 +798,10 @@ public class OneClickScreen extends Screen {
             drawModulesPage(graphics);
             graphics.disableScissor();
         } else {
+            if (moduleChromeActive()) {
+                // The module page's sidebar/search/navigation are the same v2 chrome as the homepage.
+                drawModuleChrome(graphics);
+            }
             // Settings tab spans the panel; a module's settings stay inside the card pane.
             scissorContentArea(graphics, settingsTab ? 0 : SIDEBAR_W, top, PANEL_W);
             if (!settingsTab) {
@@ -785,9 +825,6 @@ public class OneClickScreen extends Screen {
         // below the footer cannot hover.
         ClickGuiFonts.drawTextScaled(graphics, "SkyPocket", 16, 13,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true, ClickGuiFonts.HEADING_SCALE);
-        if (!settingsTab && viewingFeature != null && transitionProgress() >= 1f) {
-            PanelRenderer.drawSidebar(graphics, view(), sidebarHighlightY, lmx, lmy);
-        }
     }
 
     /** The theme editor drawer (replaces the old studio screen; see {@link DevDrawer}). */
@@ -848,6 +885,14 @@ public class OneClickScreen extends Screen {
             ensureModulesPage();
             modulesPage.layout();
             modulesPage.pointerDown((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
+
+        if (inModuleChrome(lx, ly)) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            moduleChrome.pointerDown((float) lx, (float) ly - TAB_BAR_H,
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
@@ -970,6 +1015,13 @@ public class OneClickScreen extends Screen {
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
+        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasPointerCapture()) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            moduleChrome.pointerMove((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.layout();
@@ -991,6 +1043,13 @@ public class OneClickScreen extends Screen {
             ensureModulesPage();
             modulesPage.layout();
             modulesPage.pointerUp((float) lx, (float) ly - TAB_BAR_H,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
+        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasPointerCapture()) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            moduleChrome.pointerUp((float) lx, (float) ly - TAB_BAR_H,
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
@@ -1025,6 +1084,13 @@ public class OneClickScreen extends Screen {
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
+        if (moduleChromeActive() && inModuleChrome(lx, ly)) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            moduleChrome.wheel((float) lx, (float) ly - TAB_BAR_H, (float) verticalAmount,
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.layout();
@@ -1051,7 +1117,7 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        if (modulesPageActive() || statsPageActive()) {
+        if (modulesPageActive() || moduleChromeActive() || statsPageActive()) {
             layout();
             double lx = localX(mouseX);
             double ly = localY(mouseY);
@@ -1060,6 +1126,17 @@ public class OneClickScreen extends Screen {
                 modulesPage.layout();
                 modulesPage.pointerMove((float) lx, (float) ly - TAB_BAR_H,
                         shiftDown ? Modifiers.SHIFT : 0);
+            } else if (moduleChromeActive()) {
+                ensureModuleChrome();
+                moduleChrome.layout();
+                moduleChrome.pointerMove((float) lx, (float) ly - TAB_BAR_H,
+                        shiftDown ? Modifiers.SHIFT : 0);
+                if (!inModuleChrome(lx, ly)) {
+                    ensureStatsPage();
+                    statsPage.layout();
+                    statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
+                            shiftDown ? Modifiers.SHIFT : 0);
+                }
             } else if (inBody(lx, ly)) {
                 ensureStatsPage();
                 statsPage.layout();
@@ -1081,6 +1158,12 @@ public class OneClickScreen extends Screen {
         if (modulesPageActive()) {
             ensureModulesPage();
             modulesPage.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), false));
+            return true;
+        }
+        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
+            ensureModuleChrome();
+            moduleChrome.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
                     pageModifiers(event), false));
             return true;
         }
@@ -1134,6 +1217,17 @@ public class OneClickScreen extends Screen {
             }
             return super.keyPressed(event);
         }
+        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            if (event.isEscape()) {
+                moduleChrome.clearFocus();
+                return true;
+            }
+            moduleChrome.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), true));
+            return true;
+        }
         if (statsPageActive()) {
             ensureStatsPage();
             if (event.isEscape()) {
@@ -1182,6 +1276,12 @@ public class OneClickScreen extends Screen {
                 }
                 return false;
             }
+            if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
+                ensureModuleChrome();
+                moduleChrome.layout();
+                moduleChrome.textInput(typed);
+                return true;
+            }
             if (statsPageActive()) {
                 ensureStatsPage();
                 statsPage.layout();
@@ -1204,6 +1304,13 @@ public class OneClickScreen extends Screen {
             ensureModulesPage();
             modulesPage.layout();
             modulesPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
+                    event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
+            return true;
+        }
+        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
+            ensureModuleChrome();
+            moduleChrome.layout();
+            moduleChrome.preedit(new dev.skypocket.ui.input.PreeditEvent(
                     event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
             return true;
         }

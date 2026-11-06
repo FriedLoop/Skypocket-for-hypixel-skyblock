@@ -66,6 +66,7 @@ final class ModulesPage {
     private final WidgetPalette palette;
     private final float width;
     private final float height;
+    private final boolean withCards;
     private final List<ModuleCard> cards = new ArrayList<>();
     private final List<SidebarRow> rows = new ArrayList<>();
     private final List<NavButton> navButtons = new ArrayList<>();
@@ -80,10 +81,15 @@ final class ModulesPage {
     private float renderScaleY = 1f;
 
     ModulesPage(Host host, WidgetPalette palette, float width, float height) {
+        this(host, palette, width, height, true);
+    }
+
+    ModulesPage(Host host, WidgetPalette palette, float width, float height, boolean withCards) {
         this.host = host;
         this.palette = palette;
         this.width = width;
         this.height = height;
+        this.withCards = withCards;
         rebuild();
     }
 
@@ -136,14 +142,19 @@ final class ModulesPage {
         page.add(back);
         page.add(forward);
 
-        grid = new Box(Style.builder().width(PanelGeometry.contentWidth())
-                .height(Math.max(1f, cardContentHeight())).build());
-        scroll = new ScrollView(Style.builder()
-                .position(Style.Position.ABSOLUTE)
-                .left(PanelGeometry.SIDEBAR_W).top(CARDS_TOP)
-                .width(PanelGeometry.contentWidth()).height(height - CARDS_TOP)
-                .build(), grid, 24f, true);
-        page.add(scroll);
+        if (withCards) {
+            grid = new Box(Style.builder().width(PanelGeometry.contentWidth())
+                    .height(Math.max(1f, cardContentHeight())).build());
+            scroll = new ScrollView(Style.builder()
+                    .position(Style.Position.ABSOLUTE)
+                    .left(PanelGeometry.SIDEBAR_W).top(CARDS_TOP)
+                    .width(PanelGeometry.contentWidth()).height(height - CARDS_TOP)
+                    .build(), grid, 24f, true);
+            page.add(scroll);
+        } else {
+            grid = null;
+            scroll = null;
+        }
         root = page;
         input = new InputRouter(root);
         refreshCards();
@@ -167,7 +178,7 @@ final class ModulesPage {
 
     /** Rebuilds only the card children, keeping the search field and its focus intact. */
     void refreshCards() {
-        if (grid == null) {
+        if (!withCards || grid == null) {
             return;
         }
         grid.clearChildren();
@@ -249,6 +260,15 @@ final class ModulesPage {
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
+        if (!withCards) {
+            // The module page already draws SettingsPage through the same global page cache.
+            // Caching this chrome as a second page in one frame makes the two textures compete
+            // for the cache target, which showed up as the sidebar/search blitted into the
+            // settings pane. Chrome is small enough to draw live.
+            drawElement(painter, root);
+            pose.popMatrix();
+            return;
+        }
         boolean cached = GuiPanelCache.draw(graphics, pageCacheKey(),
                 Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
                 scaleX, scaleY, animating,
@@ -390,6 +410,10 @@ final class ModulesPage {
 
     boolean hasFocus() {
         return input.focused() != null;
+    }
+
+    boolean hasPointerCapture() {
+        return input.captured() != null;
     }
 
     boolean textInput(String value) {
