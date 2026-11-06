@@ -751,8 +751,9 @@ public class OneClickScreen extends Screen {
         }
 
         // Title sits above the cached shell; the footer is part of the shell slot.
-        ClickGuiFonts.drawTextScaled(graphics, "SkyPocket", 16, 13,
-                dev.skypocket.gui.widget.ClickGuiStyle.text(), true, ClickGuiFonts.HEADING_SCALE);
+        ClickGuiFonts.drawTextWeighted(graphics, "SkyPocket", 16, 13,
+                dev.skypocket.gui.widget.ClickGuiStyle.text(), true,
+                ClickGuiFonts.HEADING_SCALE, dev.skypocket.render.FontLab.Weight.SEMIBOLD);
     }
 
     private long shellCacheKey(int lmx, int lmy, float scaleX, float scaleY) {

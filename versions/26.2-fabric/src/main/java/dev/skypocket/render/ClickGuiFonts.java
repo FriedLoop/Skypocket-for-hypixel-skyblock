@@ -364,12 +364,19 @@ public final class ClickGuiFonts {
      * current global weight until per-weight vector caches are added. */
     public static void drawTextWeighted(GuiGraphicsExtractor graphics, String text, float x, float y,
                                         int color, float scale, FontLab.Weight weight) {
+        drawTextWeighted(graphics, text, x, y, color, false, scale, weight);
+    }
+
+    /** Weighted text with an explicit shadow flag. */
+    public static void drawTextWeighted(GuiGraphicsExtractor graphics, String text, float x, float y,
+                                        int color, boolean shadow, float scale,
+                                        FontLab.Weight weight) {
         if (FontLab.atlasText()) {
-            AtlasText.draw(graphics, text, x, y, color, false, scale, deviceFactor(),
+            AtlasText.draw(graphics, text, x, y, color, shadow, scale, deviceFactor(),
                     atlasPixelSize(scale), FontLab.oversample(), weight);
             return;
         }
-        drawTextScaled(graphics, text, x, y, color, false, scale);
+        drawTextScaled(graphics, text, x, y, color, shadow, scale);
     }
 
     public static int widthWeighted(String text, FontLab.Weight weight) {
