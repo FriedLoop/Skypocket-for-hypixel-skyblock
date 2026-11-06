@@ -236,49 +236,6 @@ public final class PanelGeometry {
         return result;
     }
 
-    /** 0 = none, 1 = modules tab, 2 = settings tab. */
-    public static int hoveredTabKey(int lmx, int lmy) {
-        if (lmy < TAB_Y || lmy > TAB_Y + TAB_H || !inPanel(lmx, lmy)) {
-            return 0;
-        }
-        if (lmx >= tabX() && lmx <= tabX() + TAB_W) {
-            return 1;
-        }
-        if (lmx >= tab2X() && lmx <= tab2X() + TAB_W) {
-            return 2;
-        }
-        return 0;
-    }
-
-    public static boolean hoveredFooterButton(int lmx, int lmy) {
-        int btnY = footerBtnY();
-        return inPanel(lmx, lmy) && lmx >= FOOTER_BTN_X && lmx <= FOOTER_BTN_X + FOOTER_BTN_W
-                && lmy >= btnY && lmy <= btnY + FOOTER_BTN_H;
-    }
-
-    public static boolean insideSearchBox(int lmx, int lmy) {
-        return inBody(lmx, lmy) && lmx >= SEARCH_X && lmx <= SEARCH_X + SEARCH_W
-                && lmy >= SEARCH_Y && lmy <= SEARCH_Y + SEARCH_H;
-    }
-
-    /**
-     * Sentinel for "the cursor is not on the panel at all".
-     *
-     * <p>Anything the content scissor clips away has to stay non-interactive, and the drawing code
-     * is handed the same coordinates that were hit-tested. Pushing those out of range makes every
-     * bounds test in the widget layer fail without adding a check to each widget (see
-     * {@code OneClickScreen#drawPanel} and {@link PanelCacheKey}).
-     */
-    public static final int FAR_AWAY = Integer.MIN_VALUE / 2;
-
-    /** Row index of the hovered sidebar entry, or -1. */
-    public static int hoveredSidebarKey(PanelView view, int lmx, int lmy) {
-        if (lmx > SIDEBAR_W) {
-            return -1;
-        }
-        return inBody(lmx, lmy) ? sidebarRowAt(view, lmy) : -1;
-    }
-
     /**
      * Sidebar row index at panel-local {@code ly}, or -1. Rows are laid out back to back and follow
      * {@link #sidebarRowHit}, so a point on a boundary belongs to exactly one row.
@@ -388,36 +345,4 @@ public final class PanelGeometry {
         return CardPart.BODY;
     }
 
-    /** Hovered card index (doubled, +1 when its settings button is hovered), or -1. */
-    public static int hoveredCardKey(PanelView view, int lmx, int lmy) {
-        CardHit hit = cardAt(view, lmx, lmy);
-        if (hit == null) {
-            return -1;
-        }
-        return hit.index() * 2 + (hit.part() == CardPart.SETTINGS_BUTTON ? 1 : 0);
-    }
-
-    /** Top y of the selected sidebar row (the animated highlight's target). */
-    public static int sidebarTargetY(PanelView view) {
-        int y = SIDEBAR_TOP;
-        if (view.selected() == null) {
-            return y; // "All"
-        }
-        y += SIDEBAR_ITEM_H;
-        for (Category c : Category.topLevel()) {
-            if (view.selected() == c) {
-                return y;
-            }
-            y += SIDEBAR_ITEM_H;
-            if (c.isContainer() && c.contains(view.selected())) {
-                for (Category child : c.children()) {
-                    if (view.selected() == child) {
-                        return y;
-                    }
-                    y += SIDEBAR_ITEM_H;
-                }
-            }
-        }
-        return y;
-    }
 }

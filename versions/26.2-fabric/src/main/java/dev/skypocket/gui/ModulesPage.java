@@ -317,6 +317,11 @@ final class ModulesPage {
             if (button.isHovered()) {
                 hash = hash * 31 + System.identityHashCode(button);
             }
+            if (button.isPressed()) {
+                // Pressed is visual state too; without it the cached page keeps the unpressed
+                // surface while the button is held down.
+                hash = hash * 31 + 17L * System.identityHashCode(button);
+            }
         }
         if (search != null && search.isHovered()) {
             hash = hash * 31 + System.identityHashCode(search);

@@ -4,7 +4,6 @@ import dev.skypocket.SkyPocketMod;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.gui.setting.Setting;
-import dev.skypocket.gui.widget.ToggleAnimation;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiBlur;
 import dev.skypocket.render.ClickGuiFonts;
@@ -60,14 +59,6 @@ public class OneClickScreen extends Screen {
     /** True while the close animation plays; the screen closes when it finishes. */
     private boolean closing;
     private long animStartMs;
-
-    /** Sidebar highlight bar: its y slides between rows when the selection changes. */
-    private static final int SIDEBAR_HIGHLIGHT_MS = 160;
-
-    private float sidebarHighlightY = Float.NaN;
-    private float sidebarFromY;
-    private float sidebarToY;
-    private long sidebarAnimStartMs;
 
     private int scrollY;
     private boolean settingsTab;
@@ -372,10 +363,6 @@ public class OneClickScreen extends Screen {
         }
     }
 
-    private int sidebarTargetY() {
-        return PanelGeometry.sidebarTargetY(view());
-    }
-
     /** Extra scale factor from the open/close animation, eased (1 = fully open). */
     private float animScale() {
         int duration = ConfigManager.get().clickGuiAnimDuration;
@@ -549,16 +536,10 @@ public class OneClickScreen extends Screen {
             return;
         }
         layout();
-        // Advance the sidebar highlight before the cache key is taken: the panel's drawing
-        // must be a pure function of the frame's state, and the highlight animates over
-        // several frames (updating it inside drawSidebar would step it twice on the frame
-        // that records the panel, and make the recorded frame differ from the live one).
-        updateSidebarHighlight();
         int lmx = (int) Math.round(localX(mouseX));
         int lmy = (int) Math.round(localY(mouseY));
 
         float anim = animScale();
-        boolean animating = !animFinished();
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         // Scale the whole panel about the screen centre for the open/close animation.
@@ -566,37 +547,10 @@ public class OneClickScreen extends Screen {
         pose.scale(anim, anim);
         pose.translate(-width / 2f, -height / 2f);
         // offX/offY and scaleX/scaleY are already snapped to the device pixel grid (see
-        // layout), so the panel's origin and size are whole device pixels: the cached blit
-        // then lands exactly on the same pixels the live drawing does.
+        // layout). The shell and page chrome draw live; each v2 page owns its own cache.
         pose.translate(offX, offY);
         pose.scale(scaleX, scaleY);
-        // Everything above is the live transform (animation, drag, scale). The translucent
-        // shell is drawn live (6 fills), then the opaque content either comes from the
-        // cache as a single blit or is drawn live. The blit goes through this same pose,
-        // so it animates and drags exactly like the live drawing does.
-        // The whole panel is cached as a single image: with the premultiplied blit the
-        // composite is exact for every pixel (translucent shell, antialiased text, corner
-        // arcs, hover states), so nothing needs to be drawn live except while the cache is
-        // cold or the panel is animating.
-        boolean moving = transitionProgress() < 1f;
-        if (moving) {
-            // Keep the key moving so the cache never records a mid-slide frame.
-            //
-            // Passing animating=true only suppresses the *blit*; the recorder still bakes once the key
-            // repeats, and here it repeats every frame (same view, same scroll) - so the texture would
-            // hold a half-slid panel. After the animation the key matched that bake and the stale frame
-            // was blitted until the mouse moved and changed the hover cell.
-            contentRevision++;
-        }
-        long cacheKey = PanelCacheKey.of(view(), lmx, lmy, sidebarHighlightY, contentRevision,
-                ToggleAnimation.signature(), animFinished());
-        // The v2 stats page owns live controls and its own popup layers; baking the whole panel would
-        // freeze its focused/pressed states. Draw the shell and page live while it is open.
-        if (statsPageActive() || modulesPageActive()
-                || !GuiPanelCache.draw(graphics, cacheKey, PANEL_W, PANEL_H, scaleX,
-                scaleY, animating || moving, this::drawPanel, lmx, lmy, delta)) {
-            drawPanel(graphics, lmx, lmy, delta);
-        }
+        drawPanel(graphics, lmx, lmy, delta);
         pose.popMatrix();
 
         // The theme drawer is drawn last, in screen space: it floats above the panel and is never part
@@ -605,21 +559,8 @@ public class OneClickScreen extends Screen {
     }
 
 
-    /**
-     * Everything the panel draws, in panel-local coordinates: the translucent shell, the
-     * opaque content (including the settings widgets) and the overlay, in that order.
-     * {@link GuiPanelCache} records this as one image, so nothing here may be drawn
-     * separately by the caller.
-     */
-    /**
-     * Draws the whole panel in panel-local coordinates: the shell, then the content, then the
-     * pieces that sit on the translucent shell (title, sidebar).
-     *
-     * <p>Called either with the live graphics (every frame) or by the cache's recorder (once per
-     * re-bake), so it must depend on nothing but the panel state covered by
-     * {@link #panelCacheKey}. Painting itself lives in {@link PanelRenderer}. The widget pages are
-     * drawn here, inside the content scissor, because their widgets belong to this screen.
-     */
+    /** Draws the shell, v2 chrome and page content in panel-local coordinates. */
+
     /** Duration of the card-pane slide, ms. */
     private static final int TRANSITION_MS = 180;
 
@@ -745,36 +686,6 @@ public class OneClickScreen extends Screen {
         ensureStatsPage();
     }
 
-    /** Back/forward buttons, to the left of the search box; they never scroll with the content. */
-    private void drawNavButtons(GuiGraphicsExtractor graphics, int lmx, int lmy) {
-        drawNavButton(graphics, 0, lmx, lmy, !backStack.isEmpty());
-        drawNavButton(graphics, 1, lmx, lmy, !forwardStack.isEmpty());
-    }
-
-    private void drawNavButton(GuiGraphicsExtractor graphics, int index, int lmx, int lmy,
-                               boolean enabled) {
-        int x = PanelGeometry.NAV_X + index * (PanelGeometry.NAV_SIZE + PanelGeometry.NAV_GAP);
-        int y = PanelGeometry.SEARCH_Y;
-        int size = PanelGeometry.NAV_SIZE;
-        boolean hovered = enabled && lmx >= x && lmx < x + size && lmy >= y && lmy < y + size;
-        dev.skypocket.ui.mc.McUiPainter painter =
-                new dev.skypocket.ui.mc.McUiPainter(graphics);
-        painter.surface(new dev.skypocket.ui.Rect(x, y, size, size),
-                dev.skypocket.gui.widget.ClickGuiStyle.RADIUS,
-                hovered ? dev.skypocket.gui.widget.ClickGuiStyle.buttonHover()
-                        : dev.skypocket.gui.widget.ClickGuiStyle.button(), 0);
-        String glyph = index == 0 ? "←" : "→";
-        painter.text(glyph, x + (size - painter.textWidth(glyph)) / 2,
-                y + (size - painter.lineHeight()) / 2,
-                enabled ? dev.skypocket.gui.widget.ClickGuiStyle.text()
-                        : dev.skypocket.gui.widget.ClickGuiStyle.textMuted());
-    }
-
-    private boolean inNav(double lx, double ly, int index) {
-        int x = PanelGeometry.NAV_X + index * (PanelGeometry.NAV_SIZE + PanelGeometry.NAV_GAP);
-        return lx >= x && lx < x + PanelGeometry.NAV_SIZE && ly >= PanelGeometry.SEARCH_Y
-                && ly < PanelGeometry.SEARCH_Y + PanelGeometry.NAV_SIZE;
-    }
     private void drawPanel(GuiGraphicsExtractor graphics, int lmx, int lmy, float delta) {
         // The cache records drawPanel with its own extractor. Start that recording with an empty
         // scissor tracker so custom text states capture the scissor that belongs to this pass.
@@ -839,30 +750,6 @@ public class OneClickScreen extends Screen {
         }
     }
 
-    /** Bumped whenever the panel's content is rebuilt from scratch (language, layout). */
-    private int contentRevision;
-
-    /** Animates the highlight bar's y toward the selected row (ease-out). */
-    private void updateSidebarHighlight() {
-        int target = sidebarTargetY();
-        long now = System.currentTimeMillis();
-        if (Float.isNaN(sidebarHighlightY)) {
-            sidebarHighlightY = target;
-            sidebarFromY = target;
-            sidebarToY = target;
-            sidebarAnimStartMs = now;
-            return;
-        }
-        if (target != sidebarToY) {
-            sidebarFromY = sidebarHighlightY;
-            sidebarToY = target;
-            sidebarAnimStartMs = now;
-        }
-        float t = (now - sidebarAnimStartMs) / (float) SIDEBAR_HIGHLIGHT_MS;
-        t = Math.max(0f, Math.min(1f, t));
-        sidebarHighlightY = sidebarFromY + (sidebarToY - sidebarFromY) * Easing.EASE_OUT.apply(t);
-    }
-
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         if (closing) {
@@ -895,18 +782,6 @@ public class OneClickScreen extends Screen {
             moduleChrome.pointerDown((float) lx, (float) ly - TAB_BAR_H,
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
-        }
-
-        // Back/forward live in the fixed row above the content, so they are hit-tested first.
-        if (!settingsTab) {
-            if (inNav(lx, ly, 0)) {
-                goBack();
-                return true;
-            }
-            if (inNav(lx, ly, 1)) {
-                goForward();
-                return true;
-            }
         }
 
         // Panel chrome: PanelInput answers *what* was hit (tabs, footer, sidebar, cards - see its
@@ -1341,7 +1216,6 @@ public class OneClickScreen extends Screen {
 
     /** Rebuilds widgets after a config change (e.g. language switch) so labels update. */
     public void rebuildAfterLanguageChange() {
-        contentRevision++;
         modulesPage = null;
         modulesPageHeight = -1f;
         if (statsPage != null) {
@@ -1353,7 +1227,6 @@ public class OneClickScreen extends Screen {
 
     /** Re-lays out and rebuilds widgets after an inline setting changed the layout (e.g. color editor expanded). */
     public void rebuildAfterSettingChange() {
-        contentRevision++;
         layout();
         rebuildSettingsWidgets();
     }
