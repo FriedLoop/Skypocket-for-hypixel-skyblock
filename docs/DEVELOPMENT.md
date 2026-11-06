@@ -844,6 +844,8 @@ layout(location = 0) out vec4 fragColor;
 - ChoiceSetting 使用带滑动动画的 Segmented
 - 颜色弹层、文本设置、准星自定义行均走 v2
 - HUD 右键设置弹窗也内嵌 `SettingsPage`
+- 首页卡片、侧栏、搜索框、导航按钮、主 tabs 和 footer 按钮均已改用 v2 painter 绘制
+- 首页布局、命中、输入路由和整面板缓存仍复用原有 `PanelGeometry` / `PanelInput`
 - `SettingsView` 与旧 widget 构建路径已删除
 
 **过渡动画**：模块之间切换时保留 outgoing `SettingsPage` 快照，不再回退到旧设置渲染。
