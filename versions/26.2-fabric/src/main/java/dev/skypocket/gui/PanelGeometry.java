@@ -129,11 +129,6 @@ public final class PanelGeometry {
         return SIDEBAR_W + (contentWidth() - rowW) / 2;
     }
 
-    /** Top edge of card row {@code row} (0-based) for the current scroll offset. */
-    public static int cardRowTop(PanelView view, int row) {
-        return contentTop(view) - view.scrollY() + row * (CARD_H + CARD_GAP);
-    }
-
     // ---- content area ----------------------------------------------------------------------
 
     /** Top of the content area: below the search box, or right under the tab bar. */
@@ -198,30 +193,6 @@ public final class PanelGeometry {
         return inPanel(lx, ly) && ly >= TAB_BAR_H && ly < contentBottom();
     }
 
-    /**
-     * Panel-local point inside the card grid's clip rectangle, i.e. what the content scissor
-     * actually shows.
-     *
-     * <p>Cards are laid out past both ends of the clip - rows scrolled out of view are only
-     * clipped, never moved - so the hit tests and the hover must use this rectangle. Otherwise
-     * cards that are not even visible respond to the mouse: those under the bottom tab strip,
-     * those scrolled under the search bar, and (because nothing checks the panel's own bounds)
-     * any point outside the GUI at all.
-     */
-    public static boolean inCardArea(PanelView view, double lx, double ly) {
-        return inBody(lx, ly) && lx >= SIDEBAR_W && ly >= contentTop(view);
-    }
-
-    /**
-     * Row hit test, half-open on the far edge: the rows are laid out back to back, so a point on
-     * the shared boundary must belong to exactly one of them. With the far edge inclusive it
-     * matched both - the row ending there and the one starting there - which drew the hover
-     * highlight over two categories at once.
-     */
-    public static boolean sidebarRowHit(double y, int rowY) {
-        return y >= rowY && y < rowY + SIDEBAR_ITEM_H;
-    }
-
     /** Features matching the selected category and the search text. */
     public static List<Feature> visibleFeatures(PanelView view) {
         String q = view.search().trim().toLowerCase();
@@ -234,115 +205,6 @@ public final class PanelGeometry {
             }
         }
         return result;
-    }
-
-    /**
-     * Sidebar row index at panel-local {@code ly}, or -1. Rows are laid out back to back and follow
-     * {@link #sidebarRowHit}, so a point on a boundary belongs to exactly one row.
-     *
-     * <p>Which rows exist depends on the view: a container only lists its children while it holds
-     * the selection, which is why this needs the view at all.
-     */
-    public static int sidebarRowAt(PanelView view, double ly) {
-        int y = SIDEBAR_TOP;
-        int row = 0;
-        if (sidebarRowHit(ly, y)) {
-            return row;
-        }
-        y += SIDEBAR_ITEM_H;
-        for (Category c : Category.topLevel()) {
-            row++;
-            if (sidebarRowHit(ly, y)) {
-                return row;
-            }
-            y += SIDEBAR_ITEM_H;
-            if (c.isContainer() && view.selected() != null && c.contains(view.selected())) {
-                for (Category child : c.children()) {
-                    row++;
-                    if (sidebarRowHit(ly, y)) {
-                        return row;
-                    }
-                    y += SIDEBAR_ITEM_H;
-                }
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Category shown on sidebar row {@code row} - row 0 is "All", which is not a category - or null
-     * when the row does not exist. Mirrors {@link #sidebarRowAt}'s traversal, so it has to be called
-     * with the same view.
-     */
-    public static Category sidebarCategory(PanelView view, int row) {
-        if (row <= 0) {
-            return null;
-        }
-        int r = 0;
-        for (Category c : Category.topLevel()) {
-            if (++r == row) {
-                return c;
-            }
-            if (c.isContainer() && view.selected() != null && c.contains(view.selected())) {
-                for (Category child : c.children()) {
-                    if (++r == row) {
-                        return child;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /** Which part of a card a point falls on. */
-    public enum CardPart {
-        BODY, SETTINGS_BUTTON, STATUS_BAR
-    }
-
-    /** The card under a point: its index in {@link #visibleFeatures} plus the part that was hit. */
-    public record CardHit(int index, CardPart part) {
-    }
-
-    /**
-     * Card under a panel-local point, or null when there is none.
-     *
-     * <p>The single source for "which card, and which part of it": the hover signature, the click
-     * handler and (through them) the drawing all ask this rather than each re-deriving the row and
-     * column arithmetic - the same reason the card's inner offsets are constants here.
-     */
-    public static CardHit cardAt(PanelView view, double lx, double ly) {
-        if (!inCardArea(view, lx, ly)) {
-            return null;
-        }
-        List<Feature> list = visibleFeatures(view);
-        int cols = columns();
-        int index = 0;
-        while (index < list.size()) {
-            int rowCount = Math.min(cols, list.size() - index);
-            int left = cardRowLeft(rowCount);
-            int row = index / cols;
-            int cy = cardRowTop(view, row);
-            for (int j = 0; j < rowCount; j++) {
-                int cx = left + j * (CARD_W + CARD_GAP);
-                if (lx >= cx && lx <= cx + CARD_W && ly >= cy && ly <= cy + CARD_H) {
-                    return new CardHit(index, cardPart(cx, cy, lx, ly));
-                }
-                index++;
-            }
-        }
-        return null;
-    }
-
-    /** Which part of the card at {@code (cx, cy)} holds the point; the parts do not overlap. */
-    private static CardPart cardPart(int cx, int cy, double lx, double ly) {
-        if (ly >= cy + CARD_STATUS_Y && ly <= cy + CARD_STATUS_Y + CARD_STATUS_H) {
-            return CardPart.STATUS_BAR;
-        }
-        if (lx >= cx + CARD_BTN_X && lx <= cx + CARD_BTN_X + CARD_BTN_W
-                && ly >= cy + CARD_BTN_Y && ly <= cy + CARD_BTN_Y + CARD_BTN_H) {
-            return CardPart.SETTINGS_BUTTON;
-        }
-        return CardPart.BODY;
     }
 
 }

@@ -61,6 +61,7 @@ final class ModulesPage {
     private static final int SIDEBAR_TOP_LOCAL = PanelGeometry.SIDEBAR_TOP - PanelGeometry.TAB_BAR_H;
     private static final int SEARCH_TOP = PanelGeometry.SEARCH_Y - PanelGeometry.TAB_BAR_H;
     private static final int CARDS_TOP = PanelGeometry.CONTENT_TOP_MODULES - PanelGeometry.TAB_BAR_H;
+    private static final int HIGHLIGHT_MS = 160;
 
     private final Host host;
     private final WidgetPalette palette;
@@ -79,6 +80,12 @@ final class ModulesPage {
     private long renderRevision;
     private float renderScaleX = 1f;
     private float renderScaleY = 1f;
+    private int highlightIndex;
+    private float highlightY;
+    private float highlightFromY;
+    private float highlightToY;
+    private long highlightStartMs;
+    private boolean highlightInitialized;
 
     ModulesPage(Host host, WidgetPalette palette, float width, float height) {
         this(host, palette, width, height, true);
@@ -97,6 +104,8 @@ final class ModulesPage {
         Box page = new Box(Style.builder().width(width).height(height)
                 .direction(Style.Direction.COLUMN).build());
 
+        boolean hadHighlight = highlightInitialized;
+        float previousHighlight = highlightY;
         Box sidebar = new Box(Style.builder()
                 .position(Style.Position.ABSOLUTE)
                 .left(0f).top(0f).width(PanelGeometry.SIDEBAR_W).height(height)
@@ -104,6 +113,7 @@ final class ModulesPage {
                 .padding(new Insets(SIDEBAR_TOP_LOCAL, 0f, 0f, 0f))
                 .build());
         rows.clear();
+        highlightIndex = 0;
         addSidebarRow(sidebar, null, 0f, false, false, host.selected() == null,
                 () -> host.setSelected(null));
         for (Category category : Category.topLevel()) {
@@ -118,6 +128,18 @@ final class ModulesPage {
                 }
             }
         }
+        float targetHighlight = SIDEBAR_TOP_LOCAL + highlightIndex * PanelGeometry.SIDEBAR_ITEM_H;
+        if (!hadHighlight) {
+            highlightY = targetHighlight;
+            highlightFromY = targetHighlight;
+            highlightToY = targetHighlight;
+            highlightStartMs = System.currentTimeMillis();
+        } else {
+            highlightFromY = previousHighlight;
+            highlightToY = targetHighlight;
+            highlightStartMs = System.currentTimeMillis();
+        }
+        highlightInitialized = true;
         page.add(sidebar);
 
         search = new TextField(Localization.tr("搜索..."), null,
@@ -165,6 +187,9 @@ final class ModulesPage {
                                boolean expanded, boolean selected, Runnable action) {
         SidebarRow row = new SidebarRow(category, indent, container, expanded, selected,
                 action, palette);
+        if (selected) {
+            highlightIndex = rows.size();
+        }
         rows.add(row);
         sidebar.add(row);
     }
@@ -228,10 +253,12 @@ final class ModulesPage {
         if (root == null) {
             return;
         }
+        updateHighlight();
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(0f, PanelGeometry.TAB_BAR_H);
+        drawHighlight(painter);
         // Draw the sidebar/search/navigation without the scroll pane.
         boolean scrollVisible = scroll != null && scroll.visible();
         if (scroll != null) {
@@ -257,6 +284,7 @@ final class ModulesPage {
             lastFocused = focused;
             renderRevision++;
         }
+        updateHighlight();
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
@@ -265,18 +293,20 @@ final class ModulesPage {
             // Caching this chrome as a second page in one frame makes the two textures compete
             // for the cache target, which showed up as the sidebar/search blitted into the
             // settings pane. Chrome is small enough to draw live.
+            drawHighlight(painter);
             drawElement(painter, root);
             pose.popMatrix();
             return;
         }
         boolean cached = GuiPanelCache.draw(graphics, pageCacheKey(),
                 Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
-                scaleX, scaleY, animating,
+                scaleX, scaleY, animating || highlightAnimating(),
                 (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
                 0, 0, 0f);
         renderScaleX = cached ? GuiPanelCache.lastBlitScaleX() : 1f;
         renderScaleY = cached ? GuiPanelCache.lastBlitScaleY() : 1f;
         if (!cached) {
+            drawHighlight(painter);
             drawElement(painter, root);
         } else {
             pose.scale(renderScaleX, renderScaleY);
@@ -296,9 +326,37 @@ final class ModulesPage {
         hash = hash * 31 + ConfigManager.revision();
         hash = hash * 31 + (host.canGoBack() ? 1 : 0);
         hash = hash * 31 + (host.canGoForward() ? 1 : 0);
+        hash = hash * 31 + Math.round(highlightY);
         hash = hash * 31 + hoverHash();
         hash = hash * 31 + (input.focused() == null ? 0 : input.focused().hashCode());
         return hash;
+    }
+
+    private void updateHighlight() {
+        if (!highlightInitialized) {
+            return;
+        }
+        long elapsed = System.currentTimeMillis() - highlightStartMs;
+        if (elapsed >= HIGHLIGHT_MS) {
+            highlightY = highlightToY;
+            return;
+        }
+        float t = Math.max(0f, elapsed / (float) HIGHLIGHT_MS);
+        highlightY = highlightFromY + (highlightToY - highlightFromY)
+                * Easing.EASE_OUT.apply(t);
+    }
+
+    private boolean highlightAnimating() {
+        return highlightInitialized && System.currentTimeMillis() - highlightStartMs < HIGHLIGHT_MS;
+    }
+
+    private void drawHighlight(McUiPainter painter) {
+        if (!highlightInitialized) {
+            return;
+        }
+        painter.fillRounded(new Rect(8f, highlightY, PanelGeometry.SIDEBAR_W - 16f,
+                PanelGeometry.SIDEBAR_ITEM_H), 4f,
+                dev.skypocket.gui.widget.ClickGuiStyle.sidebarSelected());
     }
 
     private long hoverHash() {
@@ -331,9 +389,11 @@ final class ModulesPage {
 
     private void drawBase(GuiGraphicsExtractor graphics) {
         dev.skypocket.render.ScissorTracker.reset(graphics);
+        McUiPainter painter = new McUiPainter(graphics);
         Control.neutralPaint(true);
         try {
-            drawElement(new McUiPainter(graphics), root);
+            drawHighlight(painter);
+            drawElement(painter, root);
         } finally {
             Control.neutralPaint(false);
         }

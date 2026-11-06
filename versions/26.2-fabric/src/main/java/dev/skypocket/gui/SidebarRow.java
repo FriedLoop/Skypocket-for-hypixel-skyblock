@@ -58,22 +58,23 @@ final class SidebarRow extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        if (selected) {
-            painter.fill(bounds(), ClickGuiStyle.sidebarSelected());
-            painter.fill(new dev.skypocket.ui.Rect(bounds().x(), bounds().y(), 2f,
-                    bounds().height()), ClickGuiStyle.tabSelected());
-        } else if (hovered) {
-            painter.fill(bounds(), ClickGuiStyle.sidebarHover());
+        // The selected pill is drawn by ModulesPage so it can slide between rows. Keep this row's
+        // hover surface inset horizontally only; no vertical padding, no accent stripe.
+        if (!selected && hovered) {
+            float hx = bounds().x() + 8f;
+            float hw = bounds().width() - 16f;
+            painter.fillRounded(new dev.skypocket.ui.Rect(hx, bounds().y(), hw,
+                    bounds().height()), 4f, ClickGuiStyle.sidebarHover());
         }
 
         String label = category == null ? Localization.tr("全部")
                 : Localization.tr(category.label());
-        painter.text(label, bounds().x() + 12f + indent,
+        painter.text(label, bounds().x() + 16f + indent,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                 selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
         if (container) {
             String arrow = expanded ? "▼" : "►";
-            painter.text(arrow, bounds().right() - 10f - painter.textWidth(arrow),
+            painter.text(arrow, bounds().right() - 14f - painter.textWidth(arrow),
                     bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                     selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
         }

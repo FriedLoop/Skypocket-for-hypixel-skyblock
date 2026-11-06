@@ -716,10 +716,10 @@ public class OneClickScreen extends Screen {
             // Settings tab spans the panel; a module's settings stay inside the card pane.
             scissorContentArea(graphics, settingsTab ? 0 : SIDEBAR_W, top, PANEL_W);
             if (!settingsTab) {
-                // Feature title beside the back button.
-                ClickGuiFonts.drawText(graphics, viewingFeature.name(), SIDEBAR_W + 20,
-                        top - scrollY + 2,
-                dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
+                dev.skypocket.ui.mc.McUiPainter titlePainter =
+                        new dev.skypocket.ui.mc.McUiPainter(graphics);
+                titlePainter.text(viewingFeature.name(), SIDEBAR_W + 20,
+                        top - scrollY + 2, dev.skypocket.gui.widget.ClickGuiStyle.text());
             }
             ensureStatsPage();
             statsPage.layout();
@@ -784,10 +784,8 @@ public class OneClickScreen extends Screen {
             return true;
         }
 
-        // Panel chrome: PanelInput answers *what* was hit (tabs, footer, sidebar, cards - see its
-        // javadoc), the switch below decides what to do about it. Anything that is not a panel
-        // element falls through to the widget layer.
-        PanelInput.Hit hit = PanelInput.hit(view(), lx, ly);
+        // Shell chrome is only the main tabs and the footer button now.
+        PanelInput.Hit hit = PanelInput.hit(lx, ly);
         switch (hit.kind()) {
             case MODULES_TAB -> {
                 showModules();
@@ -799,28 +797,6 @@ public class OneClickScreen extends Screen {
             }
             case FOOTER_BUTTON -> {
                 Minecraft.getInstance().gui.setScreen(new HudPositionEditorScreen(this));
-                return true;
-            }
-            case SIDEBAR -> {
-                // Choosing a category leaves the open module: its rows belong to the pane we are
-                // navigating away from.
-                navigate(null);
-                selected = hit.category();
-                scrollY = 0;
-                layout();
-                rebuildSettingsWidgets();
-                return true;
-            }
-            case CARD_TOGGLE -> {
-                Feature target = hit.feature();
-                target.setEnabled(!target.isEnabled());
-                return true;
-            }
-            case CARD_OPEN -> {
-                navigate(hit.feature().id());
-                return true;
-            }
-            case CARD_BODY -> {
                 return true;
             }
             case NONE -> {

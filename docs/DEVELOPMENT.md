@@ -787,9 +787,7 @@ layout(location = 0) out vec4 fragColor;
 - MC 输入适配层（26.2/26.3 鼠标键、键盘、IME）
 - 控件库（Button、Switch、Slider、TextField、Dropdown、ColorField、Segmented）
 
-**测试页**：`/skypocket uitest` 打开 `Ui2TestScreen`，覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和 Enter/Space 激活。测试页与正式 ClickGUI 完全隔离。26.2 / 26.3 已实机通过：滚动方向、裁剪、拖出后释放、点击计数、Tab/Shift+Tab、Enter/Space 激活和 Esc 退出均正常。
-
-**测试页小窗口适配**：测试页按窗口尺寸等比缩放（`fitScale`），鼠标坐标反向除以该缩放；否则退出全屏后固定 340 设计高度会让 ScrollView 的 scissor 超出 render area，触发 RenderPearl 的 `Scissor ... out of bounds` 崩溃。
+**测试页**：迁移阶段的 `/skypocket uitest` 与 `Ui2TestScreen` 已删除；正式 ClickGUI 自身覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和输入回归。
 
 **崩溃修复（ScissorTracker）**：
 
@@ -812,7 +810,7 @@ layout(location = 0) out vec4 fragColor;
 - `Button`：动态文案 + action。
 - `Switch`：BooleanSupplier/Consumer。
 - `Slider`：拖拽捕获、左右键微调、数值显示。
-- `Ui2TestScreen` 已改用真实 Button/Switch/Slider；临时 DemoButton 已删除。
+- 迁移阶段的 `Ui2TestScreen` 已随回归入口一起删除。
 
 - `TextField`：单行编辑、光标、Backspace/Delete、左右/Home/End、IME 预编辑接口。
 - `Dropdown`：独立 popup layer，通过 `InputRouter.addLayer` 接收点击；选项由 Button 组成，菜单首/尾项只圆外侧角，中间项直角，避免每个选项像独立卡片。
@@ -827,7 +825,7 @@ layout(location = 0) out vec4 fragColor;
 
 **已完成**：MC 平台 Painter 封装、TextField 点击定位光标、Dropdown 外部点击关闭、长下拉虚拟列表与滚动位置指示。
 
-**可选后续**：滚动条 hover 反馈（会触发页面缓存重烘，暂不默认开启）。
+**已决定不做**：滚动条 hover 反馈（会触发页面缓存重烘，保持无 hover）。
 
 ## 13. 统一 UI v2 设置页
 
@@ -852,4 +850,4 @@ layout(location = 0) out vec4 fragColor;
 
 **P0/P1 已完成**：旧渲染器与旧控件已删除，文本光标定位、长下拉性能、滚动指示、HUD v2 弹窗和小窗口适配均已落地。
 
-**剩余可选项**：页面壳级缓存、颜色弹层静态缓存、真正的 Inter Regular 400、是否保留 `Ui2TestScreen`。
+**剩余可选项**：页面壳级缓存、颜色弹层静态缓存。真正的 Inter Regular 400 已接入；`Ui2TestScreen` 已删除。
