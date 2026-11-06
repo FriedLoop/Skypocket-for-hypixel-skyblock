@@ -68,6 +68,7 @@ public class OneClickScreen extends Screen {
     private final List<Feature> features;
     private final List<Setting> panelSettings;
     private final Feature panelFeature;
+    private final GuiPanelCache.Slot shellCache = new GuiPanelCache.Slot();
     private ModulesPage modulesPage;
     private float modulesPageHeight = -1f;
     private ModulesPage moduleChrome;
@@ -690,8 +691,21 @@ public class OneClickScreen extends Screen {
         // The cache records drawPanel with its own extractor. Start that recording with an empty
         // scissor tracker so custom text states capture the scissor that belongs to this pass.
         dev.skypocket.render.ScissorTracker.reset(graphics);
+        // The translucent body must stay live: a cached body blit can be layered over live page
+        // content and grey it out. Cache only the non-overlapping tabs/footer strip.
         PanelRenderer.drawBackground(graphics, view());
-        PanelRenderer.drawTabs(graphics, view(), lmx, lmy);
+        // GUI blits can be reordered by their bounds; put the background in its own lower
+        // stratum so page content is always composited above it.
+        graphics.nextStratum();
+        GuiPanelCache.PanelContent shellContent =
+                (shellGraphics, shellMouseX, shellMouseY, shellDelta) -> {
+                    PanelRenderer.drawTabs(shellGraphics, view(), shellMouseX, shellMouseY);
+                    PanelRenderer.drawFooter(shellGraphics, shellMouseX, shellMouseY);
+                };
+        if (!shellCache.draw(graphics, shellCacheKey(lmx, lmy, scaleX, scaleY),
+                PANEL_W, PANEL_H, scaleX, scaleY, !animFinished(), shellContent, lmx, lmy, 0f)) {
+            shellContent.drawContent(graphics, lmx, lmy, 0f);
+        }
 
         int top = contentTop();
         if (transitionProgress() < 1f) {
@@ -731,11 +745,34 @@ public class OneClickScreen extends Screen {
             graphics.disableScissor();
         }
 
-        PanelRenderer.drawFooter(graphics, lmx, lmy);
-        // Title and sidebar sit on the translucent shell; the sidebar rows are masked so the ones
-        // below the footer cannot hover.
+        // Title sits above the cached shell; the footer is part of the shell slot.
         ClickGuiFonts.drawTextScaled(graphics, "SkyPocket", 16, 13,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true, ClickGuiFonts.HEADING_SCALE);
+    }
+
+    private long shellCacheKey(int lmx, int lmy, float scaleX, float scaleY) {
+        long key = System.identityHashCode(this);
+        key = key * 31 + (settingsTab ? 1 : 0);
+        key = key * 31 + ConfigManager.revision();
+        key = key * 31 + Math.round(ClickGuiFonts.deviceFactor() * 1000f);
+        key = key * 31 + Math.round(scaleX * 1000f);
+        key = key * 31 + Math.round(scaleY * 1000f);
+        int hover = 0;
+        if (lmy >= PanelGeometry.TAB_Y && lmy <= PanelGeometry.TAB_Y + PanelGeometry.TAB_H) {
+            if (lmx >= PanelGeometry.tabX() && lmx <= PanelGeometry.tabX() + PanelGeometry.TAB_W) {
+                hover = 1;
+            } else if (lmx >= PanelGeometry.tab2X()
+                    && lmx <= PanelGeometry.tab2X() + PanelGeometry.TAB_W) {
+                hover = 2;
+            }
+        }
+        int footerY = PanelGeometry.footerBtnY();
+        if (lmx >= PanelGeometry.FOOTER_BTN_X
+                && lmx <= PanelGeometry.FOOTER_BTN_X + PanelGeometry.FOOTER_BTN_W
+                && lmy >= footerY && lmy <= footerY + PanelGeometry.FOOTER_BTN_H) {
+            hover = 3;
+        }
+        return key * 31 + hover;
     }
 
     /** The theme editor drawer (replaces the old studio screen; see {@link DevDrawer}). */

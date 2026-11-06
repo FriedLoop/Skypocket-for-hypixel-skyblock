@@ -53,6 +53,7 @@ public final class SettingsPage {
     private final float columnWidth;
     private final List<ColorField> colorFields = new ArrayList<>();
     private final List<Dropdown> dropdowns = new ArrayList<>();
+    private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
     private Box root;
     private ScrollView scroll;
     private InputRouter input;
@@ -165,13 +166,13 @@ public final class SettingsPage {
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        boolean cached = GuiPanelCache.draw(graphics, pageCacheKey(),
+        boolean cached = pageCache.draw(graphics, pageCacheKey(),
                 Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
                 scaleX, scaleY, animating,
                 (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
                 0, 0, 0f);
-        renderScaleX = cached ? GuiPanelCache.lastBlitScaleX() : 1f;
-        renderScaleY = cached ? GuiPanelCache.lastBlitScaleY() : 1f;
+        renderScaleX = cached ? pageCache.lastBlitScaleX() : 1f;
+        renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
         if (!cached) {
             drawElement(painter, root);
         } else {

@@ -71,6 +71,7 @@ final class ModulesPage {
     private final List<ModuleCard> cards = new ArrayList<>();
     private final List<SidebarRow> rows = new ArrayList<>();
     private final List<NavButton> navButtons = new ArrayList<>();
+    private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
     private Box root;
     private Box grid;
     private ScrollView scroll;
@@ -298,13 +299,13 @@ final class ModulesPage {
             pose.popMatrix();
             return;
         }
-        boolean cached = GuiPanelCache.draw(graphics, pageCacheKey(),
+        boolean cached = pageCache.draw(graphics, pageCacheKey(),
                 Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
                 scaleX, scaleY, animating || highlightAnimating(),
                 (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
                 0, 0, 0f);
-        renderScaleX = cached ? GuiPanelCache.lastBlitScaleX() : 1f;
-        renderScaleY = cached ? GuiPanelCache.lastBlitScaleY() : 1f;
+        renderScaleX = cached ? pageCache.lastBlitScaleX() : 1f;
+        renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
         if (!cached) {
             drawHighlight(painter);
             drawElement(painter, root);
