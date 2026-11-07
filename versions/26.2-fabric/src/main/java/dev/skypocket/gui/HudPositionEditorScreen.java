@@ -237,6 +237,7 @@ public class HudPositionEditorScreen extends Screen {
         // No widgets any more. The bottom of the screen belongs to the elements being placed, and the
         // scale slider went with them (the per-element settings card will own those controls); ESC closes
         // the screen, which the floating panel says out loud.
+        StatsBarHudElement.setEditorPreview(true);
         clampPanel();
         // A target without a spec would be a NullPointerException on the first click; say so instead.
         if (SPECS.size() != Target.values().length) {
@@ -517,10 +518,14 @@ public class HudPositionEditorScreen extends Screen {
             bounds(t, mc, cfg, b);
             Matrix3x2fStack pose = graphics.pose();
             pose.pushMatrix();
-            pose.translate(b[0], b[1]);
+            StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(t.name());
+            // A bar's bounds start at its icon, but its draw origin is the bar's own left edge.
+            // Translating to the bounds origin and then drawing the icon again applied the icon
+            // offset twice and made every preview sit left of the real HUD bar.
+            pose.translate(bar == null ? b[0] : StatsBarHudElement.x(cfg, bar),
+                    bar == null ? b[1] : StatsBarHudElement.y(cfg, bar));
             float s = scale(t, cfg);
             pose.scale(s, s);
-            StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(t.name());
             if (bar != null) {
                 // A stand-in bar with the real geometry, icon and colour: the editor used to show bars as
                 // an empty frame, so their colour could not be seen while placing them.
@@ -1055,6 +1060,12 @@ public class HudPositionEditorScreen extends Screen {
             return true;
         }
         return super.keyPressed(event);
+    }
+
+    @Override
+    public void removed() {
+        StatsBarHudElement.setEditorPreview(false);
+        super.removed();
     }
 
     @Override

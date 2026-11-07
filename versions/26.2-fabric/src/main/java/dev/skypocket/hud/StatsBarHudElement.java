@@ -75,9 +75,17 @@ public final class StatsBarHudElement {
         }
     }
 
+    private static boolean editorPreview;
+
+    /** The position editor draws its own previews; suppress the real HUD copies while it is open. */
+    public static void setEditorPreview(boolean active) {
+        editorPreview = active;
+    }
+
     private static void render(GuiGraphicsExtractor graphics, Kind kind) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.statsModernStyle || !enabled(cfg, kind) || !StatsOverlayRenderer.active()) {
+        if (editorPreview || !cfg.statsModernStyle || !enabled(cfg, kind)
+                || !StatsOverlayRenderer.active()) {
             return;
         }
         if (!PlayerStatsTracker.hasData()) {

@@ -21,9 +21,8 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class SwingSpeedAnimator {
     /**
-     * Re-swing is allowed once the animation reaches this progress. Vanilla uses
-     * {@code swingTime >= duration / 2} (progress 0.5); 0.6 keeps rapid swings feeling
-     * connected while ignoring clicks that are too early in the swing.
+     * Re-swing is allowed once the animation reaches this progress. This is the original
+     * design: a new swing must not replace the current one before 75%.
      */
     private static final float RESET_THRESHOLD = 0.75f;
 

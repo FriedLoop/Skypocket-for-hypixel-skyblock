@@ -10,7 +10,6 @@ import net.minecraft.world.item.component.SwingAnimation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -38,25 +37,20 @@ public abstract class LivingEntityMixin {
     }
 
     /**
-     * Hands the swing a longer animation before it starts.
-     *
-     * <p>Vanilla reads the duration when {@code swing} is entered, so this is the only place where the
-     * speed can be applied without a second clock overriding the progress afterwards - which is what
-     * made the hand jitter between two slightly different positions.
+     * Vanilla computes the final animation length in {@code getModifiedSwingDuration}, which applies
+     * Haste/Mining Fatigue after the animation argument. Overriding that return is the only place
+     * that can honour ignore-haste; changing the argument alone was immediately re-modified here.
+     * This mutates only the local player's client animation length, not attack logic or packets.
      */
-    @ModifyVariable(method = "swing", at = @At("HEAD"), argsOnly = true, index = 2)
-    private SwingAnimation sky$lengthenSwing(SwingAnimation animation) {
+    @Inject(method = "getModifiedSwingDuration", at = @At("RETURN"), cancellable = true)
+    private void sky$overrideSwingDuration(SwingAnimation animation,
+                                           CallbackInfoReturnable<Integer> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
-            return animation;
+            return;
         }
-        if (!SwingSpeedAnimator.isCustomActive()) {
-            return animation;
+        if (SwingSpeedAnimator.isCustomActive()) {
+            cir.setReturnValue(SwingSpeedAnimator.customDurationTicks());
         }
-        int ticks = SwingSpeedAnimator.customDurationTicks();
-        if (ticks <= animation.duration()) {
-            return animation;
-        }
-        return new SwingAnimation(animation.type(), ticks);
     }
 //#else
     @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"))
@@ -66,6 +60,9 @@ public abstract class LivingEntityMixin {
         }
         SwingSpeedAnimator.setSwingHand(hand);
         if (SwingSpeedAnimator.isCustomActive()) {
+            // Never cancel vanilla's swing: that changes the client swing state. The 75% rule
+            // belongs to the custom clock, and getAttackAnim keeps rendering the custom progress
+            // even when vanilla has started an early swing.
             SwingSpeedAnimator.restart();
         }
     }
@@ -76,7 +73,10 @@ public abstract class LivingEntityMixin {
         if ((Object) this != Minecraft.getInstance().player) {
             return;
         }
-        if (SwingSpeedAnimator.isCustomActive() && SwingSpeedAnimator.rawProgress() < 1.0f) {
+        if (SwingSpeedAnimator.isCustomActive()) {
+            // Always keep rendering on the custom clock while held-item animation is active.
+            // Handing back to vanilla when the custom clock reaches 1 made an early vanilla
+            // swing (which the 75% rule intentionally ignored) suddenly appear as a jump.
             cir.setReturnValue(SwingSpeedAnimator.getProgress(partialTick));
         }
     }
