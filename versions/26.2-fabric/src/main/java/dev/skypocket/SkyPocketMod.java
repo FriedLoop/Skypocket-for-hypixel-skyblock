@@ -16,6 +16,7 @@ import dev.skypocket.hud.MiningBreakHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.skyblock.MiningAbilityTracker;
+import dev.skypocket.skyblock.MiningSpeedBoostTracker;
 import dev.skypocket.skyblock.PlayerStatsTracker;
 import dev.skypocket.net.PingMonitor;
 import dev.skypocket.render.BlockOutlineRenderer;
@@ -81,6 +82,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         // reload, so they have to be dropped then - see LivePostChain.
         LivePostChain.installReloadHook();
         MiningAbilityTracker.init();
+        MiningSpeedBoostTracker.init();
         PlayerStatsTracker.init();
         MentionSoundManager.init();
         MentionAlert.init();

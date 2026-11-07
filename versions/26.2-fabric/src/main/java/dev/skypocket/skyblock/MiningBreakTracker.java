@@ -67,7 +67,7 @@ public final class MiningBreakTracker {
     private static final Map<String, Long> LAST_ARRIVAL_MS = new HashMap<>();
     /** Mining Speed used for this cycle (parsed value with the learned factor applied). */
     private static double speedAtStart = -1;
-    /** The raw tab reading for this cycle, before the factor. */
+    /** The effective speed reading for this cycle, before the learned factor. */
     private static double parsedSpeedAtStart = -1;
     /**
      * Timing fit samples: x = the raw formula duration at the speed the tab reported
@@ -167,6 +167,11 @@ public final class MiningBreakTracker {
         if (pos == null || !enabled() || pos.equals(targetPos)) {
             return;
         }
+        if (!MiningTools.holding()) {
+            // Same gate as Yqloss: predicting while a weapon/other item is held is meaningless.
+            reset();
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || !SkyBlockDetector.isActive()) {
             return;
@@ -174,9 +179,10 @@ public final class MiningBreakTracker {
         targetPos = pos.immutable();
         BlockState state = mc.level.getBlockState(targetPos);
         targetBlockId = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-        startMs = System.currentTimeMillis();
+        long now = System.currentTimeMillis();
+        startMs = now;
         releasedDuringCycle = false;
-        parsedSpeedAtStart = MiningSpeedTracker.speed();
+        parsedSpeedAtStart = MiningSpeedTracker.effectiveSpeed(now);
         speedAtStart = effectiveSpeed(parsedSpeedAtStart, targetBlockId);
         // Instant is its own rule (per block class), not "the formula returned one tick": after the
         // 4-tick floor the formula never returns 1, and an ore needs twice the speed of a plain block.
@@ -244,6 +250,10 @@ public final class MiningBreakTracker {
             reset();
             return;
         }
+        if (!MiningTools.holding()) {
+            reset();
+            return;
+        }
         long now = System.currentTimeMillis();
         switch (phase) {
             case RUNNING -> {
@@ -297,13 +307,6 @@ public final class MiningBreakTracker {
         if (targetBlockId == null || speedAtStart <= 0 || startMs <= 0) {
             return;
         }
-        double settled = MiningSpeedTracker.settledSpeed();
-        if (settled <= 0 || Math.abs(settled - parsedSpeedAtStart) > 0.02 * parsedSpeedAtStart) {
-            // Logged because these breaks stay out of the buckets, which makes the sample count look
-            // complete when it is not.
-            LOGGER.debug("skip {}: speed moved {} -> {}", targetBlockId, parsedSpeedAtStart, settled);
-            return;
-        }
         // Both legs lie between the server's break and the arrival here, so the whole
         // round trip comes off — not half of it.
         double rtt = rttMs();
@@ -311,11 +314,24 @@ public final class MiningBreakTracker {
             return;
         }
         // The raw arrival is valid whatever the speed reading did, so it always feeds
-        // the anchor used to keep the next assertion from firing early.
+        // the anchor used to keep the next assertion from firing early. This must happen
+        // before the learning/transition guards: during a boost, returning early here left
+        // the anchor stuck on the pre-boost duration and clamped every prediction.
         LAST_ARRIVAL_MS.put(targetBlockId, now - startMs);
+
+        if (MiningSpeedTracker.transitioning()) {
+            LOGGER.debug("skip {}: speed timeline changing", targetBlockId);
+            return;
+        }
         if (releasedDuringCycle) {
             LOGGER.debug("skip {}: released mid-cycle", targetBlockId);
-            LAST_ARRIVAL_MS.put(targetBlockId, now - startMs);
+            return;
+        }
+        double settled = MiningSpeedTracker.settledSpeed();
+        if (settled <= 0 || Math.abs(settled - parsedSpeedAtStart) > 0.02 * parsedSpeedAtStart) {
+            // Logged because these breaks stay out of the buckets, which makes the sample count look
+            // complete when it is not.
+            LOGGER.debug("skip {}: speed moved {} -> {}", targetBlockId, parsedSpeedAtStart, settled);
             return;
         }
         addPhase(now - rtt / 2.0);
@@ -568,6 +584,12 @@ public final class MiningBreakTracker {
                     ? toTickBoundary(startMs + delay)
                     : startMs + delay;
             model = (start - startMs) + seconds * 1000.0 + biasMs();
+        }
+        // An active boost is a speed increase, so the previous unboosted arrival cannot
+        // be a lower bound on this break. Keeping the anchor here made every boosted block
+        // use the old, longer duration even after the tab reported the boosted speed.
+        if (MiningSpeedTracker.boostActive()) {
+            return model;
         }
         Long lastArrival = LAST_ARRIVAL_MS.get(blockId);
         if (lastArrival == null) {

@@ -108,6 +108,10 @@ public final class MiningBreakHudElement {
         HudText.draw(graphics, ConfigManager.get(), "speed " + fmt0(MiningSpeedTracker.rawSpeed()) + " settled "
                 + fmt0(MiningSpeedTracker.settledSpeed()), x, y, color, true);
         y += step;
+        HudText.draw(graphics, ConfigManager.get(), "boost "
+                + (MiningSpeedTracker.boostActive() ? fmt2(MiningSpeedTracker.boostMultiplier()) + "x" : "off")
+                + "  now " + fmt0(MiningSpeedTracker.effectiveSpeed(System.currentTimeMillis())), x, y, color, true);
+        y += step;
         HudText.draw(graphics, ConfigManager.get(), "scale " + MiningBreakTracker.debugScales()
                 + "  ph " + MiningBreakTracker.debugPhase()
                 + "  rtt " + fmt0(MiningBreakTracker.debugRttMs()) + "ms"
@@ -128,7 +132,9 @@ public final class MiningBreakHudElement {
         y += step;
         HudText.draw(graphics, ConfigManager.get(), "error " + fmt(MiningBreakTracker.debugError()) + "s", x, y, color, true);
         y += step;
-        HudText.draw(graphics, ConfigManager.get(), "strength " + MiningBreakTracker.debugStrength()
+        int shownStrength = block != null
+                ? MiningBreakTracker.debugStrength() : MiningBreakTracker.debugLastStrength();
+        HudText.draw(graphics, ConfigManager.get(), "strength " + shownStrength
                 + " (" + MiningBreakTracker.debugSource() + ")  implied "
                 + fmt0(MiningBreakTracker.debugImpliedStrength()), x, y, color, true);
         y += step;
