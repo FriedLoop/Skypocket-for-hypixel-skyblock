@@ -67,12 +67,21 @@ public final class SwingSpeedAnimator {
      * clock mid-swing and make the animation jitter.
      */
     public static void restart() {
+        restartIfReady();
+    }
+
+    /**
+     * Restarts only when the original 75% gate allows it; returns whether a new animation began.
+     * 26.3 uses the result to update the synthetic render swing descriptor.
+     */
+    public static boolean restartIfReady() {
         if (progress < RESET_THRESHOLD) {
-            return;
+            return false;
         }
         // Restart the swing immediately from the current position (no queue, no chain).
         progress = 0.0f;
         prevProgress = 0.0f;
+        return true;
     }
 
     /** Advances the clock by one client tick. */

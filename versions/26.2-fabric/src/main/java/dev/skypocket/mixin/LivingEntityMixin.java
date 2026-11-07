@@ -25,7 +25,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class LivingEntityMixin {
 
 //#if MC>=260300
-    /** Remembers the hand: the duration is computed from the held stack. */
+    private InteractionHand sky$swingHand = InteractionHand.MAIN_HAND;
+    private SwingAnimation sky$swingAnimation = SwingAnimation.DEFAULT;
+
+    /** Mirrors 26.2: record the hand, restart only when the custom 75% gate allows it. */
     @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;"
             + "Lnet/minecraft/world/item/component/SwingAnimation;Z)Z", at = @At("HEAD"))
     private void sky$onSwing(InteractionHand hand, SwingAnimation animation, boolean updateSelf,
@@ -34,22 +37,38 @@ public abstract class LivingEntityMixin {
             return;
         }
         SwingSpeedAnimator.setSwingHand(hand);
+        if (SwingSpeedAnimator.isCustomActive()
+                && SwingSpeedAnimator.restartIfReady()) {
+            sky$swingHand = hand;
+            sky$swingAnimation = animation;
+        }
     }
 
-    /**
-     * Vanilla computes the final animation length in {@code getModifiedSwingDuration}, which applies
-     * Haste/Mining Fatigue after the animation argument. Overriding that return is the only place
-     * that can honour ignore-haste; changing the argument alone was immediately re-modified here.
-     * This mutates only the local player's client animation length, not attack logic or packets.
-     */
-    @Inject(method = "getModifiedSwingDuration", at = @At("RETURN"), cancellable = true)
-    private void sky$overrideSwingDuration(SwingAnimation animation,
-                                           CallbackInfoReturnable<Integer> cir) {
+    /** 26.3 render path: same custom progress as 26.2's getAttackAnim. */
+    @Inject(method = "getSwingAnimation", at = @At("RETURN"), cancellable = true)
+    private void sky$overrideSwingAnimation(float partialTick,
+                                            CallbackInfoReturnable<Float> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
             return;
         }
         if (SwingSpeedAnimator.isCustomActive()) {
-            cir.setReturnValue(SwingSpeedAnimator.customDurationTicks());
+            cir.setReturnValue(SwingSpeedAnimator.getProgress(partialTick));
+        }
+    }
+
+    /**
+     * Vanilla clears its SwingState at the vanilla half-duration, so the custom clock also needs a
+     * synthetic render descriptor while it is still playing. This is a read-only render-state
+     * shim: no swing cancellation, packets, or attack logic are involved.
+     */
+    @Inject(method = "getCurrentSwing", at = @At("RETURN"), cancellable = true)
+    private void sky$overrideCurrentSwing(CallbackInfoReturnable<LivingEntity.SwingDescription> cir) {
+        if ((Object) this != Minecraft.getInstance().player) {
+            return;
+        }
+        if (SwingSpeedAnimator.isCustomActive() && SwingSpeedAnimator.rawProgress() < 1.0f) {
+            cir.setReturnValue(new LivingEntity.SwingDescription(sky$swingHand, sky$swingAnimation,
+                    Math.max(1, SwingSpeedAnimator.customDurationTicks())));
         }
     }
 //#else
