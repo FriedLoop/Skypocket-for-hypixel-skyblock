@@ -631,13 +631,6 @@ final class ModuleDefinitions {
                         new Setting.Header("现代风格 · 条",
                                 "位置在「HUD 位置调整」页里逐条拖拽与缩放，这里只管粗细与开关")
                                 .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("条宽", 40, 400, () -> cfg.statsBarWidth,
-                                v -> cfg.statsBarWidth = (int) Math.round(v), "%.0f", 2)
-                                .hint("六条共用，保证一组条的粗细一致")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("条高", 3, 20, () -> cfg.statsBarHeight,
-                                v -> cfg.statsBarHeight = (int) Math.round(v), "%.0f", 1)
-                                .visibleWhen(() -> cfg.statsModernStyle),
                         new Setting.BooleanSetting("条上显示数值", () -> cfg.statsBarShowValues,
                                 v -> cfg.statsBarShowValues = v)
                                 .visibleWhen(() -> cfg.statsModernStyle),

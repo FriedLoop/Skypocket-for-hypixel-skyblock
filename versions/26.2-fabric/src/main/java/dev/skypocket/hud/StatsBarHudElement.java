@@ -5,6 +5,7 @@ import dev.skypocket.SkyPocketMod;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.render.HudText;
+import dev.skypocket.render.StatsBarTexture;
 import dev.skypocket.render.StatsOverlayRenderer;
 import dev.skypocket.skyblock.PlayerStatsTracker;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -227,6 +228,7 @@ public final class StatsBarHudElement {
      * the icon follows the bar wherever it is placed.
      */
     private static void drawIcon(GuiGraphicsExtractor graphics, ModConfig cfg, Kind kind, int x, int y) {
+        StatsBarTexture.ensureRegistered();
         Identifier id = icon(kind);
         int size = iconSize(cfg, kind);
         if (id == null || size <= 0) {
@@ -369,6 +371,7 @@ public final class StatsBarHudElement {
         if (!artAvailable) {
             return false;
         }
+        StatsBarTexture.ensureRegistered();
         slice(graphics, BAR_FRAME, x, y, w, h, frameW, frameH, FRAME_CAP, 0xFFFFFFFF);
         return true;
     }
@@ -380,6 +383,7 @@ public final class StatsBarHudElement {
         if (!artAvailable) {
             return false;
         }
+        StatsBarTexture.ensureRegistered();
         slice(graphics, BAR_FILL, x, y, w, h, fillW, fillH, FILL_CAP, color);
         return true;
     }

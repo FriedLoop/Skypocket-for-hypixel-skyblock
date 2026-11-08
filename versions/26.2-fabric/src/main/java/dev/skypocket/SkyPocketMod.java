@@ -26,6 +26,7 @@ import dev.skypocket.render.HitboxRenderer;
 import dev.skypocket.render.HotspotOverlayRenderer;
 import dev.skypocket.render.DamageSplashRenderer;
 import dev.skypocket.render.MiningBreakRenderer;
+import dev.skypocket.render.StatsBarTexture;
 import dev.skypocket.render.SwingSpeedAnimator;
 import dev.skypocket.skyblock.DamageSplashCompactor;
 import net.fabricmc.api.ClientModInitializer;
@@ -88,6 +89,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         MentionAlert.init();
         registerCommands();
         registerClickGuiKey();
+        ClientTickEvents.END_CLIENT_TICK.register(client -> StatsBarTexture.ensureRegistered());
         ClientTickEvents.END_CLIENT_TICK.register(client -> SwingSpeedAnimator.tick());
         ClientTickEvents.END_CLIENT_TICK.register(client -> DamageSplashCompactor.tick());
         ClientTickEvents.END_CLIENT_TICK.register(PingMonitor::onClientTick);
