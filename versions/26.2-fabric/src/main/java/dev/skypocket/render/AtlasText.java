@@ -10,6 +10,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import dev.skypocket.SkyPocketLog;
 import dev.skypocket.SkyPocketMod;
+import dev.skypocket.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -130,6 +131,7 @@ public final class AtlasText {
             }
         }
         FACES.clear();
+        ConfigManager.touch();
     }
 
     /** Width in panel design units. */
@@ -555,6 +557,7 @@ public final class AtlasText {
             // otherwise linear filtering at a cell edge can read unrelated memory.
             UPLOADS.add(new PendingUpload(this, 0, 0,
                     new NativeImage(NativeImage.Format.RGBA, size, size, true)));
+            ConfigManager.touch();
         }
 
         private boolean allocate(int width, int height) {
