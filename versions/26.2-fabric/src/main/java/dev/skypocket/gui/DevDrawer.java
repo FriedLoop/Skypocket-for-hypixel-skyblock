@@ -572,7 +572,7 @@ final class DevDrawer {
             return true;
         }
         if (picker != null && picker.mouseDragged((mx - (x(screenW) + PAD)) / PICKER_SCALE,
-                (my - (y(screenH) + TITLE_H + PAD)) / PICKER_SCALE, 0, 0)) {
+                (my - (y(screenH) + TITLE_H + THEME_ROW + PAD)) / PICKER_SCALE, 0, 0)) {
             return true;
         }
         if (dragging) {
@@ -679,7 +679,6 @@ final class DevDrawer {
             case "rowHeight" -> 40;
             case "controlHeight" -> 40;
             case "controlWidth" -> 260;
-            case "dividerAlpha" -> 255;
             case "switchWidth" -> 64;
             case "switchHeight" -> 24;
             case "knobSize" -> 24;

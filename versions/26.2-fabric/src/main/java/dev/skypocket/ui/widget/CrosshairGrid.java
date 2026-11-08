@@ -18,7 +18,11 @@ public final class CrosshairGrid extends Control {
     private boolean paintValue = true;
 
     public CrosshairGrid(boolean[] grid, IntSupplier color, Style style) {
-        super(style, WidgetPalette.DARK);
+        this(grid, color, style, WidgetPalette.DARK);
+    }
+
+    public CrosshairGrid(boolean[] grid, IntSupplier color, Style style, WidgetPalette palette) {
+        super(style, palette);
         this.grid = grid;
         this.color = color;
     }
@@ -74,7 +78,7 @@ public final class CrosshairGrid extends Control {
 
     @Override
     public void paint(UiPainter painter) {
-        painter.fill(bounds(), 0xFF000000);
+        painter.fill(bounds(), palette.background());
         int tint = color.getAsInt();
         int originX = Math.round(bounds().x()) + 1;
         int originY = Math.round(bounds().y()) + 1;
@@ -83,7 +87,7 @@ public final class CrosshairGrid extends Control {
                 int px = originX + cx * (CELL + GAP);
                 int py = originY + cy * (CELL + GAP);
                 painter.fill(new Rect(px, py, CELL, CELL),
-                        grid[cy * ModConfig.GRID + cx] ? tint : 0xFF3A3A3A);
+                        grid[cy * ModConfig.GRID + cx] ? tint : palette.outline());
             }
         }
     }

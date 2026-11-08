@@ -49,10 +49,10 @@ public final class Switch extends Control {
         // made some knobs sit one pixel high and others one pixel low.
         float trackY = Math.round(bounds().y() + (bounds().height() - 12f) / 2f);
         painter.pill(new dev.skypocket.ui.Rect(trackX, trackY, trackWidth, 12f),
-                blend(palette.outline(), palette.accent(), p), palette.outline());
+                blend(palette.switchOff(), palette.switchOn(), p), palette.switchOff());
         float knobX = trackX + 2f + p * (trackWidth - 4f - 8f);
         painter.fillRounded(new dev.skypocket.ui.Rect(knobX, trackY + 2f, 8f, 8f), 4f,
-                palette.text());
+                palette.onAccent());
         painter.text(label, bounds().x() + 6f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                 on ? palette.text() : palette.muted());

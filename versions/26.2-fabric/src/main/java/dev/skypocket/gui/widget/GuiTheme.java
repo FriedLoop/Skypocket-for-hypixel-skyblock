@@ -27,7 +27,9 @@ public record GuiTheme(int panelRgb, int tabBarRgb, int sidebarRgb, int sidebarD
                        int switchOff,
                        int text, int textDim, int textMuted,
                        int cardFloat, int cardFloatTitle, int cardText, int switchOn,
-                       int sectionTitle) {
+                       int sectionTitle, int onAccent, int description,
+                       int shadow, int shadowSoft, int selection,
+                       int scrollbarTrack, int scrollbarThumb) {
 
     /** The palette the interface has always used. */
     public static final GuiTheme DARK = new GuiTheme(
@@ -64,7 +66,14 @@ public record GuiTheme(int panelRgb, int tabBarRgb, int sidebarRgb, int sidebarD
             // Darker than the accent on purpose: an ON row's surface is the accent itself, so a track
             // painted with the accent was invisible on it. Separate token = adjustable in the studio.
             0xFF2F7F4C,
-            0xFF3A9E5F);  // section titles (was hard-wired to the accent)
+            0xFF3A9E5F,   // section titles (was hard-wired to the accent)
+            0xFFFFFFFF,   // text/knob on an accent surface
+            0xFF8F9AAA,   // card description
+            0x26000000,   // shadow outer layer
+            0x22000000,   // shadow soft layer
+            0x803A9E5F,   // text selection
+            0x552A2F39,   // scrollbar track
+            0xFF6F7A8C);  // scrollbar thumb
 
     /** A light palette: same structure, inverted surfaces, same accent. */
     public static final GuiTheme LIGHT = new GuiTheme(
@@ -99,18 +108,32 @@ public record GuiTheme(int panelRgb, int tabBarRgb, int sidebarRgb, int sidebarD
             0xFFECECEC,
             0xFF333333,
             0xFF2C7A49,
-            0xFF2F7F4C);
+            0xFF2F7F4C,
+            0xFFFFFFFF,   // text/knob on an accent surface
+            0xFF5F6B7A,   // card description
+            0x26000000,   // shadow outer layer
+            0x22000000,   // shadow soft layer
+            0x803A9E5F,   // text selection
+            0x558A8A8A,   // scrollbar track
+            0xFF7A7A7A);  // scrollbar thumb
 
     private static GuiTheme current = DARK;
+    private static int generation;
 
     /** The palette in use. */
     public static GuiTheme current() {
         return current;
     }
 
+    /** Bumped whenever the palette changes, so pages holding a palette snapshot rebuild. */
+    public static int generation() {
+        return generation;
+    }
+
     /** Switches the palette; the next frame draws with it. */
     public static void use(GuiTheme theme) {
         current = theme == null ? DARK : theme;
+        generation++;
     }
 
 }

@@ -6,6 +6,8 @@ import dev.skypocket.config.ModConfig;
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiBlur;
+import dev.skypocket.gui.widget.GuiMetrics;
+import dev.skypocket.gui.widget.GuiTheme;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
@@ -78,6 +80,8 @@ public class OneClickScreen extends Screen {
     private SettingsPage transitionPage;
     private Feature transitionPageFeature;
     private float statsPageHeight = -1f;
+    /** Last theme/metric generation the cached page objects were built for. */
+    private int builtThemeGeneration = -1;
 
     public OneClickScreen() {
         super(Component.literal("SkyPocket"));
@@ -527,6 +531,31 @@ public class OneClickScreen extends Screen {
         ensureStatsPage();
     }
 
+    /**
+     * v2 pages keep the WidgetPalette they were constructed with. A token edit changes
+     * GuiTheme/GuiMetrics rather than those snapshots, so the page objects (and their page
+     * caches) have to be rebuilt when either generation changes. This is what makes the
+     * theme studio live instead of requiring a trip through a module settings page.
+     */
+    private void refreshThemePagesIfNeeded() {
+        int generation = GuiTheme.generation() * 31 + GuiMetrics.generation();
+        if (generation == builtThemeGeneration) {
+            return;
+        }
+        builtThemeGeneration = generation;
+        modulesPage = null;
+        modulesPageHeight = -1f;
+        moduleChrome = null;
+        moduleChromeHeight = -1f;
+        statsPage = null;
+        statsPageFeature = null;
+        statsPageHeight = -1f;
+        transitionPage = null;
+        transitionPageFeature = null;
+        GuiPanelCache.release();
+        rebuildSettingsWidgets();
+    }
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         dev.skypocket.render.ScissorTracker.reset(graphics);
@@ -538,6 +567,7 @@ public class OneClickScreen extends Screen {
             mc.schedule(() -> mc.gui.setScreen(null));
             return;
         }
+        refreshThemePagesIfNeeded();
         layout();
         int lmx = (int) Math.round(localX(mouseX));
         int lmy = (int) Math.round(localY(mouseY));

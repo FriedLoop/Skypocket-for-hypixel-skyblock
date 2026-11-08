@@ -20,11 +20,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * next frame instead of on the next class load.
  */
 public final class ClickGuiStyle {
-    /** The measurements (row height, control width, paddings) - the other half of the token layer. */
-    public static GuiMetrics metrics() {
-        return GuiMetrics.current();
-    }
-
     /** Corner radius of a small control; the same value the cards' buttons use. */
     public static final int RADIUS = 4;
     /** Corner radius of a rounded pill (the slider track). */
@@ -157,6 +152,26 @@ public final class ClickGuiStyle {
         return GuiTheme.current().sectionTitle();
     }
 
+    public static int onAccent() {
+        return GuiTheme.current().onAccent();
+    }
+
+    public static int description() {
+        return GuiTheme.current().description();
+    }
+
+    public static int selection() {
+        return GuiTheme.current().selection();
+    }
+
+    public static int scrollbarTrack() {
+        return GuiTheme.current().scrollbarTrack();
+    }
+
+    public static int scrollbarThumb() {
+        return GuiTheme.current().scrollbarThumb();
+    }
+
     /**
      * The floating card in the HUD position editor. Separate from {@link #card()} because the card sits
      * over the game and is drawn translucent, and because its body text is one step softer than the
@@ -204,15 +219,11 @@ public final class ClickGuiStyle {
      * stacked translucent layers nudged down by a pixel.
      */
     public static void shadow(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius) {
-        GuiPixels.fillRoundedRect(g, x - 2, y + 2, w + 4, h + 2, radius + 2, 0x26000000);
-        GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1, 0x33000000);
+        GuiPixels.fillRoundedRect(g, x - 2, y + 2, w + 4, h + 2, radius + 2,
+                GuiTheme.current().shadow());
+        GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1,
+                GuiTheme.current().shadowSoft());
     }
-    /** A lighter single-layer shadow, for elements that sit in a list of many (rows). */
-    public static void shadowSoft(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius) {
-        GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1, 0x22000000);
-    }
-
-
     /** A neutral or accent button in its hovered/plain state. */
     public static void button(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered,
                               boolean accent) {
@@ -231,20 +242,6 @@ public final class ClickGuiStyle {
         GuiPixels.fillRoundedRect(g, x, y, w, h, Math.min(PILL, Math.max(1, h / 2)), color);
     }
 
-    /**
-     * Pill with a border ring - the switch track.
-     *
-     * <p>Goes through {@code fillRoundedBorderedRect} rather than "outer pill, then the same pill inset by
-     * one unit": the inset version lets all four sides snap to device pixels independently, so at
-     * fractional GUI scales the ring comes out visibly thicker on some sides than others. That failure is
-     * written down in {@link #surface}, and the switch is another place it shows.
-     */
-    public static void pillBordered(GuiGraphicsExtractor g, int x, int y, int w, int h, int fill,
-                                    int border) {
-        GuiPixels.fillRoundedBorderedRect(g, x, y, w, h, Math.min(PILL, Math.max(1, h / 2)), fill,
-                border);
-    }
-
     /** The fill colour of a neutral/accent button in the given state. */
     public static int fillFor(boolean hovered, boolean accent) {
         if (accent) {
@@ -253,17 +250,4 @@ public final class ClickGuiStyle {
         return hovered ? buttonHover() : button();
     }
 
-    /** Linear blend between two ARGB colours. */
-    public static int blend(int from, int to, float t) {
-        int clamped = Math.max(0, Math.min(255, Math.round(t * 255f)));
-        int r = ((from >> 16) & 0xFF) + ((((to >> 16) & 0xFF) - ((from >> 16) & 0xFF)) * clamped) / 255;
-        int g = ((from >> 8) & 0xFF) + ((((to >> 8) & 0xFF) - ((from >> 8) & 0xFF)) * clamped) / 255;
-        int b = (from & 0xFF) + (((to & 0xFF) - (from & 0xFF)) * clamped) / 255;
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
-    }
-
-    /** A slightly brighter version of a colour - the hover state of the switch track. */
-    public static int lighten(int argb, float amount) {
-        return blend(argb, 0xFFFFFFFF, amount);
-    }
 }

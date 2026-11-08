@@ -103,7 +103,7 @@ public final class Segmented extends Control {
             String text = options.get(i);
             float tx = seg.x() + (seg.width() - painter.textWidth(text)) / 2f;
             float ty = seg.y() + (seg.height() - painter.lineHeight()) / 2f;
-            painter.text(text, tx, ty, i == target ? 0xFFFFFFFF : palette.muted());
+            painter.text(text, tx, ty, i == target ? palette.onAccent() : palette.muted());
         }
     }
 

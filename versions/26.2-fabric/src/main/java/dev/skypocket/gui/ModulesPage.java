@@ -172,7 +172,7 @@ final class ModulesPage {
                     .position(Style.Position.ABSOLUTE)
                     .left(PanelGeometry.SIDEBAR_W).top(CARDS_TOP)
                     .width(PanelGeometry.contentWidth()).height(height - CARDS_TOP)
-                    .build(), grid, 24f, true);
+                    .build(), grid, 24f, true, palette);
             page.add(scroll);
         } else {
             grid = null;

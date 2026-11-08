@@ -8,14 +8,15 @@ import dev.skypocket.ui.input.PointerEvent;
 
 /** Vertical scrollbar that drags the owning ScrollView. */
 public final class Scrollbar extends Control {
-    private static final int TRACK_COLOR = 0x552A2F39;
-    private static final int THUMB_COLOR = 0xFF6F7A8C;
-
     private final ScrollView owner;
     private boolean dragging;
     private float dragOffset;
 
     public Scrollbar(ScrollView owner) {
+        this(owner, WidgetPalette.DARK);
+    }
+
+    public Scrollbar(ScrollView owner, WidgetPalette palette) {
         super(Style.builder()
                         .position(Style.Position.ABSOLUTE)
                         .right(0f)
@@ -23,7 +24,7 @@ public final class Scrollbar extends Control {
                         .bottom(4f)
                         .width(6f)
                         .build(),
-                WidgetPalette.DARK);
+                palette);
         this.owner = owner;
     }
 
@@ -99,8 +100,8 @@ public final class Scrollbar extends Control {
         if (owner.maxScroll() <= 0f) {
             return;
         }
-        painter.fillRounded(bounds(), 2f, TRACK_COLOR);
+        painter.fillRounded(bounds(), 2f, palette.scrollbarTrack());
         painter.fillRounded(new Rect(bounds().x() - 1f, thumbY(), bounds().width() + 2f, thumbHeight()),
-                2f, THUMB_COLOR);
+                2f, palette.scrollbarThumb());
     }
 }

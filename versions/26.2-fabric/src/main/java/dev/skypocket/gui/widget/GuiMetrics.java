@@ -11,7 +11,7 @@ package dev.skypocket.gui.widget;
  * <p>Read through {@link ClickGuiStyle} like the colours, so a change applies on the next frame.
  */
 public record GuiMetrics(int rowHeight, int controlHeight, int labelInset, int controlWidth,
-                        int sectionGap, int sectionTitleHeight, int dividerAlpha, int cardRadius,
+                        int sectionGap, int sectionTitleHeight, int cardRadius,
                         int switchWidth, int switchHeight, int sliderTrackHeight, int knobSize) {
 
     /** The values the interface uses today. */
@@ -22,7 +22,6 @@ public record GuiMetrics(int rowHeight, int controlHeight, int labelInset, int c
             140,  // control column width (sliders/dropdowns); toggles are sized by switchWidth
             8,    // gap above a section title
             14,   // section title height
-            40,   // alpha of the 1 px divider between sections (0-255)
             4,    // corner radius of cards and controls
             38,   // switch track width
             14,   // switch track height
@@ -31,12 +30,18 @@ public record GuiMetrics(int rowHeight, int controlHeight, int labelInset, int c
     );
 
     private static GuiMetrics current = DEFAULT;
+    private static int generation;
 
     public static GuiMetrics current() {
         return current;
     }
 
+    public static int generation() {
+        return generation;
+    }
+
     public static void use(GuiMetrics metrics) {
         current = metrics == null ? DEFAULT : metrics;
+        generation++;
     }
 }

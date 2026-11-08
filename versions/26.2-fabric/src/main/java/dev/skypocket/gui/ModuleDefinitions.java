@@ -69,9 +69,9 @@ final class ModuleDefinitions {
                         new Setting.V2CustomSetting(140, (row, palette) -> {
                             int gridSize = CrosshairGrid.preferredSize();
                             row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
-                                    Style.builder().width(gridSize).height(gridSize).build()));
+                                    Style.builder().width(gridSize).height(gridSize).build(), palette));
                             row.add(new CrosshairPreview(cfg, Style.builder()
-                                    .height(gridSize).flexGrow(1f).build()));
+                                    .height(gridSize).flexGrow(1f).build(), palette));
                         }),
                         new Setting.GroupSetting("准星外观", List.of(
                                 new Setting.BooleanSetting("描边", () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),

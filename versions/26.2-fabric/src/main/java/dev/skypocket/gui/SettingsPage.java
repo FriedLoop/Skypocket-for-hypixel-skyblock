@@ -2,6 +2,7 @@ package dev.skypocket.gui;
 
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.i18n.Localization;
+import dev.skypocket.gui.widget.ClickGuiStyle;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.Box;
@@ -109,7 +110,7 @@ public final class SettingsPage {
                     .width(columnWidth)
                     .height(height)
                     .padding(2f)
-                    .build(), content, 24f, false);
+                    .build(), content, 24f, false, palette);
             page.add(scroll);
             Scrollbar bar = scroll.scrollbar();
             bar.style(Style.builder()
@@ -521,11 +522,11 @@ public final class SettingsPage {
         header.add(new Text(title, Style.builder()
                 .position(Style.Position.ABSOLUTE)
                 .left(0f).right(right).top(0f).height(line).build(),
-                1f, TextWeight.SEMIBOLD).color(headerColor(palette.accent())));
+                1f, TextWeight.SEMIBOLD).color(headerColor(ClickGuiStyle.sectionTitle())));
         header.add(new Text(description, Style.builder()
                 .position(Style.Position.ABSOLUTE)
                 .left(0f).right(right).top(line + gap).height(descHeight).build(),
-                0.82f, TextWeight.REGULAR).color(0xFF8F9AAA));
+                0.82f, TextWeight.REGULAR).color(palette.description()));
         if (toggle != null) {
             toggle.style(Style.builder()
                     .position(Style.Position.ABSOLUTE)

@@ -107,7 +107,7 @@ public final class ImmediateTextField {
         if (focused && selFrom != selTo) {
             int fromX = left + ClickGuiFonts.width(text.substring(0, selFrom));
             int toX = left + ClickGuiFonts.width(text.substring(0, selTo));
-            graphics.fill(fromX, y + 2, toX, y + h - 2, 0x803A9E5F);
+            graphics.fill(fromX, y + 2, toX, y + h - 2, ClickGuiStyle.selection());
         }
         ClickGuiFonts.drawText(graphics, text, left, textY, ClickGuiStyle.text(), true);
 
