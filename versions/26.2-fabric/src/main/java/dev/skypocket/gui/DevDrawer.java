@@ -248,13 +248,19 @@ final class DevDrawer {
 
     private int editorBottom(int screenW, int screenH) {
         int top = y(screenH) + TITLE_H + THEME_ROW + PAD;
+        int description = selected == null ? 0 : descriptionHeight();
         if (selected != null && isColorToken(selected)) {
-            return top + pickerHeight() + PAD;
+            return top + pickerHeight() + description + PAD;
         }
         if (selected != null) {
-            return top + ROW + PAD;
+            return top + ROW + description + PAD;
         }
         return top;
+    }
+
+    /** Two lines are enough for every token explanation at this drawer width. */
+    private int descriptionHeight() {
+        return ClickGuiFonts.lineHeight() * 2 + 2;
     }
 
     private int listTop(int screenW, int screenH) {
@@ -309,6 +315,11 @@ final class DevDrawer {
         } else if (selected != null) {
             drawMetricEditor(graphics, x + PAD, top, mouseX, mouseY);
         }
+        if (selected != null) {
+            int descY = top + (isColorToken(selected) ? pickerHeight() : ROW) + 2;
+            drawWrappedText(graphics, Localization.tr(ThemeStore.tokenDescription(selected)),
+                    x + PAD, descY, WIDTH - PAD * 2, 2, ClickGuiStyle.textMuted(), false);
+        }
 
         // Token list.
         int listTop = listTop(screenW, screenH);
@@ -352,6 +363,26 @@ final class DevDrawer {
         // The confirmation covers the drawer: it is the only thing that can be clicked while it shows.
         if (confirmingDelete) {
             drawDeleteConfirm(graphics, x, y, h, mouseX, mouseY);
+        }
+    }
+
+    /** Draws a short token explanation, wrapping at Chinese/character boundaries. */
+    private static void drawWrappedText(GuiGraphicsExtractor graphics, String text, int x, int y,
+                                        int maxWidth, int maxLines, int color, boolean shadow) {
+        String remaining = text == null ? "" : text;
+        int lineY = y;
+        for (int line = 0; line < maxLines && !remaining.isEmpty(); line++) {
+            int cut = remaining.length();
+            while (cut > 0 && ClickGuiFonts.width(remaining.substring(0, cut)) > maxWidth) {
+                cut--;
+            }
+            if (cut <= 0) {
+                cut = 1;
+            }
+            String part = remaining.substring(0, cut);
+            ClickGuiFonts.drawText(graphics, part, x, lineY, color, shadow);
+            remaining = remaining.substring(cut);
+            lineY += ClickGuiFonts.lineHeight();
         }
     }
 

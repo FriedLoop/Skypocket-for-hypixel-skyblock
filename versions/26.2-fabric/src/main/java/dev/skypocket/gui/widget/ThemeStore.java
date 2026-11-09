@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Named themes on disk: {@code config/skypocket/themes/<name>.json}, one file per theme, holding both
@@ -40,6 +41,55 @@ public final class ThemeStore {
     /** Themes that always exist, without a file. */
     private static final String DARK = "Dark";
     private static final String LIGHT = "Light";
+
+    /**
+     * Old theme keys, tried in order when a canonical key is absent. This keeps hand-edited
+     * themes from before the 14-token consolidation readable; new files only get canonical keys.
+     */
+    private static final Map<String, String[]> LEGACY_KEYS = Map.of(
+            "window", new String[]{"panelRgb"},
+            "chrome", new String[]{"sidebarRgb", "tabBarRgb", "tab"},
+            "surface", new String[]{"card", "cardFloat"},
+            "control", new String[]{"cardSurface"},
+            "primary", new String[]{"accent", "tabSelected", "sectionTitle"},
+            "primaryHover", new String[]{"accentHover"},
+            "onPrimary", new String[]{"onAccent"},
+            "textPrimary", new String[]{"text"},
+            "textSecondary", new String[]{"textDim", "description", "cardText"},
+            "textMuted", new String[]{"textMuted", "disabledText"}
+    );
+
+    /** Studio explanations; the UI localises these strings. */
+    private static final Map<String, String> DESCRIPTIONS = Map.ofEntries(
+            Map.entry("window", "面板主体背景，透明度由“背景透明度”统一控制"),
+            Map.entry("chrome", "顶部栏、侧栏、footer 与 tab 的底色"),
+            Map.entry("surface", "卡片和页面主体表面"),
+            Map.entry("control", "按钮、普通控件和列表行的底色"),
+            Map.entry("field", "输入框、下拉框和搜索框"),
+            Map.entry("fieldInner", "输入框内部的数值框"),
+            Map.entry("primary", "主色填充：选中、开启、滑块和重点元素"),
+            Map.entry("primaryHover", "主色填充的 hover 状态"),
+            Map.entry("onPrimary", "主色背景上的文字和开关滑块"),
+            Map.entry("textPrimary", "主要文字"),
+            Map.entry("textSecondary", "说明文字和次级信息"),
+            Map.entry("textMuted", "弱化文字、禁用文字和占位符"),
+            Map.entry("switchOn", "开关开启时的轨道颜色"),
+            Map.entry("switchOff", "开关关闭时的轨道颜色")
+    );
+
+    private static final Map<String, String> METRIC_DESCRIPTIONS = Map.ofEntries(
+            Map.entry("rowHeight", "每一行设置项的高度"),
+            Map.entry("controlHeight", "行内控件的高度"),
+            Map.entry("labelInset", "标签距离行左侧的距离"),
+            Map.entry("controlWidth", "滑条和下拉框的控件列宽度"),
+            Map.entry("sectionGap", "设置卡片标题上方的间距"),
+            Map.entry("sectionTitleHeight", "设置卡片标题行的高度"),
+            Map.entry("cardRadius", "卡片和控件圆角半径"),
+            Map.entry("switchWidth", "开关轨道宽度"),
+            Map.entry("switchHeight", "开关轨道高度"),
+            Map.entry("sliderTrackHeight", "滑条轨道厚度"),
+            Map.entry("knobSize", "滑条圆点直径")
+    );
 
     private ThemeStore() {
     }
@@ -175,6 +225,20 @@ public final class ThemeStore {
         return names(GuiTheme.class.getRecordComponents());
     }
 
+    /** What a studio colour token controls, ready for the UI to localise. */
+    public static String colorDescription(String name) {
+        return DESCRIPTIONS.getOrDefault(name, name);
+    }
+
+    /** What a studio token controls, colour or metric. */
+    public static String tokenDescription(String name) {
+        String color = DESCRIPTIONS.get(name);
+        if (color != null) {
+            return color;
+        }
+        return METRIC_DESCRIPTIONS.getOrDefault(name, name);
+    }
+
     /** Measurement component names, in declaration order. */
     public static List<String> metricNames() {
         return names(GuiMetrics.class.getRecordComponents());
@@ -290,8 +354,17 @@ public final class ThemeStore {
         RecordComponent[] components = GuiTheme.class.getRecordComponents();
         Object[] args = new Object[components.length];
         for (int i = 0; i < components.length; i++) {
+            String name = components[i].getName();
             int def = (Integer) invoke(components[i].getAccessor(), fallback);
-            JsonElement value = colors.get(components[i].getName());
+            JsonElement value = colors.get(name);
+            if (value == null) {
+                for (String legacy : LEGACY_KEYS.getOrDefault(name, new String[0])) {
+                    value = colors.get(legacy);
+                    if (value != null) {
+                        break;
+                    }
+                }
+            }
             args[i] = value == null ? def : parseColor(value.getAsString(), def);
         }
         return (GuiTheme) instantiate(GuiTheme.class, args);

@@ -4,20 +4,12 @@ import dev.skypocket.render.GuiPixels;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
- * The single source of truth for the Click GUI's control surfaces - buttons, fields, list backgrounds,
- * slider tracks - i.e. the corner radius and the colour palette.
+ * The single source of truth for the Click GUI's controls.
  *
- * <p>Every control is a rounded rect with a 1px border ring and an inset fill: exactly the two-piece
- * structure the cards use. Draw controls through these helpers only. When the settings widgets drew
- * their own flat fills with hard outlines they looked like a different UI than the cards' rounded
- * buttons - which is what this class exists to prevent.
- *
- * <p>Border first, then the inset fill: both are opaque, so a corner pixel covered by both is just a
- * blend of two opaque colours and never doubles a translucent background.
- *
- * <p>The palette values live in {@link GuiTheme} and are read through the methods below. They used to be
- * {@code static final int} fields; they are methods now so that switching the theme takes effect on the
- * next frame instead of on the next class load.
+ * <p>{@link GuiTheme} exposes only semantic colours: window, chrome, surface, control, field,
+ * primary, text and switch states. Component states (hover, selected rows, disabled surfaces,
+ * floating-card alpha, selection and scrollbars) are derived here. The old method names remain
+ * because callers already read naturally; they now delegate to a much smaller palette.
  */
 public final class ClickGuiStyle {
     /** Corner radius of a small control; the same value the cards' buttons use. */
@@ -28,85 +20,80 @@ public final class ClickGuiStyle {
     private ClickGuiStyle() {
     }
 
-    // ---- Panel chrome (the panel itself, its tabs, sidebar and cards) ----
+    // ---- Panel chrome ----
 
     /** RGB only: the alpha is the player's background-opacity setting, combined at draw time. */
     public static int panelRgb() {
-        return GuiTheme.current().panelRgb();
+        return GuiTheme.current().window() & 0xFFFFFF;
     }
 
     public static int tabBarRgb() {
-        return GuiTheme.current().tabBarRgb();
+        return GuiTheme.current().chrome() & 0xFFFFFF;
     }
 
     public static int sidebarRgb() {
-        return GuiTheme.current().sidebarRgb();
+        return GuiTheme.current().chrome() & 0xFFFFFF;
     }
 
     public static int sidebarDividerRgb() {
-        return GuiTheme.current().sidebarDividerRgb();
+        return mix(GuiTheme.current().chrome(), GuiTheme.current().window(), 0.5f) & 0xFFFFFF;
     }
 
     public static int tab() {
-        return GuiTheme.current().tab();
+        return GuiTheme.current().chrome();
     }
 
     public static int tabHover() {
-        return GuiTheme.current().tabHover();
+        return hover(GuiTheme.current().chrome());
     }
 
     public static int tabSelected() {
-        return GuiTheme.current().tabSelected();
+        return GuiTheme.current().primary();
     }
 
     public static int sidebarHover() {
-        return GuiTheme.current().sidebarHover();
+        return rowHover();
     }
 
     public static int sidebarSelected() {
-        return GuiTheme.current().sidebarSelected();
+        return rowSelected();
     }
 
     public static int card() {
-        return GuiTheme.current().card();
+        return GuiTheme.current().surface();
     }
 
     public static int cardHover() {
-        return GuiTheme.current().cardHover();
+        return hover(GuiTheme.current().surface());
     }
 
     // ---- Controls ----
 
     /** Secondary/neutral button - the same grey as the cards' "设置" button. */
     public static int button() {
-        return GuiTheme.current().cardSurface();
+        return GuiTheme.current().control();
     }
 
     public static int buttonHover() {
-        return GuiTheme.current().cardSurfaceHover();
+        return hover(GuiTheme.current().control());
     }
 
-    /** Primary/accent button (ON, selected) - the mod's green, shared with the tabs. */
+    /** Primary fill for enabled/selected states. Never use it for text. */
     public static int accent() {
-        return GuiTheme.current().accent();
+        return GuiTheme.current().primary();
     }
 
     public static int accentHover() {
-        return GuiTheme.current().accentHover();
+        return GuiTheme.current().primaryHover();
     }
 
-    /** A button with nothing to configure. */
+    /** A surface with nothing to configure. */
     public static int disabled() {
-        return GuiTheme.current().disabled();
+        return mix(GuiTheme.current().surface(), GuiTheme.current().window(), 0.45f);
     }
 
     public static int disabledText() {
-        return GuiTheme.current().disabledText();
-    }
-
-    /** Off/destructive state of the card's status button. */
-    public static int danger() {
-        return GuiTheme.current().danger();
+        return GuiTheme.current().textMuted();
     }
 
     /** Field-like surfaces: text fields, dropdowns, the search box, option lists. */
@@ -115,7 +102,7 @@ public final class ClickGuiStyle {
     }
 
     public static int fieldHover() {
-        return GuiTheme.current().fieldHover();
+        return hover(GuiTheme.current().field());
     }
 
     /** The value box inside a labelled text field. */
@@ -123,21 +110,20 @@ public final class ClickGuiStyle {
         return GuiTheme.current().fieldInner();
     }
 
-    /** The dark ring every control shares. */
     /** Option-list rows (kept flat: they are laid out back to back). */
     public static int listRowHover() {
-        return GuiTheme.current().listRowHover();
+        return rowHover();
     }
 
     public static int listRowCurrent() {
-        return GuiTheme.current().listRowCurrent();
+        return rowSelected();
     }
 
     /**
      * The on/off switch: its track in both states, and its ring.
      *
-     * <p>{@code switchOn} is its own token rather than the accent: an ON row's surface is the accent,
-     * so a track painted with the accent disappeared into it. Both are adjustable in the theme studio.
+     * <p>{@code switchOn} is its own token rather than the primary: an ON row's surface is the
+     * primary colour, so a track painted with the primary disappeared into it.
      */
     public static int switchOn() {
         return GuiTheme.current().switchOn();
@@ -147,58 +133,63 @@ public final class ClickGuiStyle {
         return GuiTheme.current().switchOff();
     }
 
-    /** Section titles in the settings pages - its own token so it can differ from the accent. */
+    /** Section titles use the primary colour. */
     public static int sectionTitle() {
-        return GuiTheme.current().sectionTitle();
+        return GuiTheme.current().primary();
     }
 
     public static int onAccent() {
-        return GuiTheme.current().onAccent();
+        return GuiTheme.current().onPrimary();
     }
 
     public static int description() {
-        return GuiTheme.current().description();
+        return GuiTheme.current().textSecondary();
     }
 
     public static int selection() {
-        return GuiTheme.current().selection();
+        return alpha(GuiTheme.current().primary(), 0x66);
     }
 
     public static int scrollbarTrack() {
-        return GuiTheme.current().scrollbarTrack();
+        return alpha(GuiTheme.current().textPrimary(), 0x33);
     }
 
     public static int scrollbarThumb() {
-        return GuiTheme.current().scrollbarThumb();
+        return GuiTheme.current().textMuted();
     }
 
-    /**
-     * The floating card in the HUD position editor. Separate from {@link #card()} because the card sits
-     * over the game and is drawn translucent, and because its body text is one step softer than the
-     * panel's.
-     */
+    /** The floating card in the HUD position editor. */
     public static int cardFloat() {
-        return GuiTheme.current().cardFloat();
+        return alpha(GuiTheme.current().surface(), 0xF4);
     }
 
     public static int cardFloatTitle() {
-        return GuiTheme.current().cardFloatTitle();
+        return alpha(GuiTheme.current().chrome(), 0xF4);
     }
 
     public static int cardText() {
-        return GuiTheme.current().cardText();
+        return GuiTheme.current().textSecondary();
     }
 
     public static int text() {
-        return GuiTheme.current().text();
+        return GuiTheme.current().textPrimary();
     }
 
     public static int textDim() {
-        return GuiTheme.current().textDim();
+        return GuiTheme.current().textSecondary();
     }
 
     public static int textMuted() {
         return GuiTheme.current().textMuted();
+    }
+
+    /** Row state for the sidebar and option lists. */
+    public static int rowHover() {
+        return hover(GuiTheme.current().control());
+    }
+
+    public static int rowSelected() {
+        return mix(GuiTheme.current().surface(), GuiTheme.current().primary(), 0.18f);
     }
 
     /**
@@ -212,19 +203,15 @@ public final class ClickGuiStyle {
     }
 
     /**
-     * A drop shadow behind a rounded surface.
-     *
-     * <p>Strokes are gone, so depth comes from three things: a slightly darker fill than what is behind it,
-     * a shadow, and the shadow's offset. There is no blur available at this layer, so the soft edge is two
-     * stacked translucent layers nudged down by a pixel.
+     * A drop shadow behind a rounded surface. The soft edge is two stacked translucent layers nudged
+     * down by a pixel; the alpha is deliberately not themed, so a theme cannot make cards glow.
      */
     public static void shadow(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius) {
-        GuiPixels.fillRoundedRect(g, x - 2, y + 2, w + 4, h + 2, radius + 2,
-                GuiTheme.current().shadow());
-        GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1,
-                GuiTheme.current().shadowSoft());
+        GuiPixels.fillRoundedRect(g, x - 2, y + 2, w + 4, h + 2, radius + 2, 0x26000000);
+        GuiPixels.fillRoundedRect(g, x - 1, y + 1, w + 2, h + 1, radius + 1, 0x33000000);
     }
-    /** A neutral or accent button in its hovered/plain state. */
+
+    /** A neutral or primary button in its hovered/plain state. */
     public static void button(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered,
                               boolean accent) {
         surface(g, x, y, w, h, fillFor(hovered, accent), 0);
@@ -233,7 +220,7 @@ public final class ClickGuiStyle {
     /** Text field / dropdown / search box. */
     public static void field(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered,
                              boolean focused) {
-        // No outline: focus is shown by the caret and the accent colour, not by a stroke.
+        // No outline: focus is shown by the caret and the primary colour, not by a stroke.
         surface(g, x, y, w, h, hovered ? fieldHover() : field(), focused ? accent() : 0);
     }
 
@@ -242,7 +229,7 @@ public final class ClickGuiStyle {
         GuiPixels.fillRoundedRect(g, x, y, w, h, Math.min(PILL, Math.max(1, h / 2)), color);
     }
 
-    /** The fill colour of a neutral/accent button in the given state. */
+    /** The fill colour of a neutral/primary button in the given state. */
     public static int fillFor(boolean hovered, boolean accent) {
         if (accent) {
             return hovered ? accentHover() : accent();
@@ -250,4 +237,30 @@ public final class ClickGuiStyle {
         return hovered ? buttonHover() : button();
     }
 
+    /** A state that moves away from the base surface: lighter in dark themes, darker in light ones. */
+    public static int hover(int base) {
+        int target = luminance(base) < 0.45f ? 0xFFFFFFFF : 0xFF000000;
+        return mix(base, target, 0.10f);
+    }
+
+    /** ARGB linear mix, used only for derived states. */
+    public static int mix(int from, int to, float t) {
+        float clamped = Math.max(0f, Math.min(1f, t));
+        int a = (int) (((from >>> 24) & 0xFF) + (((to >>> 24) & 0xFF) - ((from >>> 24) & 0xFF)) * clamped);
+        int r = (int) (((from >>> 16) & 0xFF) + (((to >>> 16) & 0xFF) - ((from >>> 16) & 0xFF)) * clamped);
+        int g = (int) (((from >>> 8) & 0xFF) + (((to >>> 8) & 0xFF) - ((from >>> 8) & 0xFF)) * clamped);
+        int b = (int) ((from & 0xFF) + ((to & 0xFF) - (from & 0xFF)) * clamped);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    public static int alpha(int color, int alpha) {
+        return ((alpha & 0xFF) << 24) | (color & 0xFFFFFF);
+    }
+
+    private static float luminance(int color) {
+        float r = ((color >>> 16) & 0xFF) / 255f;
+        float g = ((color >>> 8) & 0xFF) / 255f;
+        float b = (color & 0xFF) / 255f;
+        return 0.2126f * r + 0.7152f * g + 0.0722f * b;
+    }
 }

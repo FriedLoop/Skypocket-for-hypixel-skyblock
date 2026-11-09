@@ -236,6 +236,36 @@ public final class Localization {
     EN.put("名字已存在", "That name already exists");
     EN.put("已还原未保存的改动", "Discarded unsaved changes");
 
+    // Theme studio token help.
+    EN.put("面板主体背景，透明度由“背景透明度”统一控制",
+            "Panel body background; opacity is controlled by Background Opacity");
+    EN.put("顶部栏、侧栏、footer 与 tab 的底色",
+            "Top bar, sidebar, footer and tab base");
+    EN.put("卡片和页面主体表面", "Card and page surfaces");
+    EN.put("按钮、普通控件和列表行的底色", "Buttons, normal controls and list rows");
+    EN.put("输入框、下拉框和搜索框", "Text fields, dropdowns and search boxes");
+    EN.put("输入框内部的数值框", "Value box inside a text field");
+    EN.put("主色填充：选中、开启、滑块和重点元素",
+            "Primary fill: selection, enabled states, sliders and emphasis");
+    EN.put("主色填充的 hover 状态", "Primary fill hover state");
+    EN.put("主色背景上的文字和开关滑块", "Text and switch knobs on primary backgrounds");
+    EN.put("主要文字", "Primary text");
+    EN.put("说明文字和次级信息", "Descriptions and secondary text");
+    EN.put("弱化文字、禁用文字和占位符", "Muted text, disabled text and placeholders");
+    EN.put("开关开启时的轨道颜色", "Switch track when on");
+    EN.put("开关关闭时的轨道颜色", "Switch track when off");
+    EN.put("每一行设置项的高度", "Height of each settings row");
+    EN.put("行内控件的高度", "Height of controls inside a row");
+    EN.put("标签距离行左侧的距离", "Label inset from the row's left edge");
+    EN.put("滑条和下拉框的控件列宽度", "Width of the slider/dropdown control column");
+    EN.put("设置卡片标题上方的间距", "Gap above a card title");
+    EN.put("设置卡片标题行的高度", "Height of the card title row");
+    EN.put("卡片和控件圆角半径", "Card and control corner radius");
+    EN.put("开关轨道宽度", "Switch track width");
+    EN.put("开关轨道高度", "Switch track height");
+    EN.put("滑条轨道厚度", "Slider track thickness");
+    EN.put("滑条圆点直径", "Slider knob diameter");
+
     // Theme studio.
     EN.put("主题工作室", "Theme Studio");
     EN.put("碰撞箱", "Collision boxes");

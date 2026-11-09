@@ -137,10 +137,10 @@ final class ModuleCard extends Control {
         float stY = bounds().y() + CARD_STATUS_Y;
         painter.surface(new Rect(stX, stY, CARD_STATUS_W, CARD_STATUS_H),
                 ClickGuiStyle.RADIUS,
-                feature.isEnabled() ? ClickGuiStyle.accent() : ClickGuiStyle.danger(), 0);
+                feature.isEnabled() ? ClickGuiStyle.accent() : ClickGuiStyle.button(), 0);
         String status = feature.isEnabled() ? "ENABLED" : "DISABLED";
         painter.text(status, stX + (CARD_STATUS_W - painter.textWidth(status)) / 2f,
-                stY + 4f, ClickGuiStyle.text());
+                stY + 4f, feature.isEnabled() ? ClickGuiStyle.text() : ClickGuiStyle.textMuted());
     }
 
     private static String fitTitle(String text, float maxWidth) {
