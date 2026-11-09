@@ -3,6 +3,7 @@ package dev.skypocket;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.skypocket.chat.MentionAlert;
 import dev.skypocket.config.ConfigManager;
+import dev.skypocket.render.GuiCornerTextures;
 import dev.skypocket.gui.OneClickScreen;
 import dev.skypocket.sound.MentionSoundManager;
 import dev.skypocket.hud.ClockHudElement;
@@ -95,6 +96,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(PingMonitor::onClientTick);
         // Pre-build Click GUI fonts in the background so opening the GUI never stalls.
         ClientTickEvents.END_CLIENT_TICK.register(client -> ClickGuiFonts.tick());
+        ClientTickEvents.END_CLIENT_TICK.register(client -> GuiCornerTextures.tick());
     }
 
     public static KeyMapping getClickGuiKey() {

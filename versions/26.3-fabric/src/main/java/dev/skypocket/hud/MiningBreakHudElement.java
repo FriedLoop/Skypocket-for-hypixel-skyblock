@@ -5,7 +5,6 @@ import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.net.PingMonitor;
 import dev.skypocket.net.SkyBlockDetector;
-import dev.skypocket.render.ColorUtil;
 import dev.skypocket.render.HudText;
 import dev.skypocket.skyblock.MiningBreakTracker;
 import dev.skypocket.skyblock.MiningStrengthTable;
@@ -18,17 +17,10 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 
 /**
- * Draws the break prediction around the crosshair: a circular progress ring whose
- * colour runs from the "start" colour to the "end" colour as the percentage grows.
- *
- * <p>It also drives {@link MiningBreakTracker}, because the block outline is rendered
- * from the same state — so the tracker ticks once per frame even when the ring itself
- * is toggled off.
+ * Drives {@link MiningBreakTracker} once per frame and draws its optional debug readout.
  */
 public final class MiningBreakHudElement {
     private static final Identifier ID = Identifier.fromNamespaceAndPath(SkyPocketMod.MOD_ID, "mining_break");
-    /** Ring segments; enough for a smooth circle at any radius. */
-    private static final int SEGMENTS = 72;
 
     private MiningBreakHudElement() {
     }
@@ -52,44 +44,9 @@ public final class MiningBreakHudElement {
         }
         MiningBreakTracker.update(mc);
 
-        float progress = MiningBreakTracker.progress();
-        if (cfg.miningBreakRingEnabled && progress >= 0f) {
-            drawRing(graphics, cfg, progress, MiningBreakTracker.alpha());
-        }
         if (cfg.miningBreakDebugHud) {
             drawDebug(graphics, mc);
         }
-    }
-
-    private static void drawRing(GuiGraphicsExtractor graphics, ModConfig cfg, float progress, float alpha) {
-        int cx = graphics.guiWidth() / 2;
-        int cy = graphics.guiHeight() / 2;
-        int radius = Math.max(4, Math.round(cfg.miningBreakRingRadius));
-        int thickness = Math.max(1, Math.round(cfg.miningBreakRingWidth));
-        int color = lerp(cfg.miningBreakRingColorStart, cfg.miningBreakRingColorEnd, progress, alpha);
-
-        // Filled arc from the top, clockwise; small quads so the ring has no gaps.
-        int last = Math.max(1, Math.round(SEGMENTS * Math.min(1f, progress)));
-        for (int i = 0; i < last; i++) {
-            double a0 = -Math.PI / 2 + 2 * Math.PI * i / SEGMENTS;
-            double a1 = -Math.PI / 2 + 2 * Math.PI * (i + 1) / SEGMENTS;
-            int x0 = cx + (int) Math.round(Math.cos(a0) * radius);
-            int y0 = cy + (int) Math.round(Math.sin(a0) * radius);
-            int x1 = cx + (int) Math.round(Math.cos(a1) * radius);
-            int y1 = cy + (int) Math.round(Math.sin(a1) * radius);
-            graphics.fill(Math.min(x0, x1), Math.min(y0, y1),
-                    Math.max(x0, x1) + thickness, Math.max(y0, y1) + thickness, color);
-        }
-    }
-
-    /** Progress colour: linearly between the two configured colours. */
-    private static int lerp(int from, int to, float t, float alpha) {
-        float k = Math.max(0f, Math.min(1f, t));
-        int a = Math.round((ColorUtil.alpha(from) + (ColorUtil.alpha(to) - ColorUtil.alpha(from)) * k) * alpha);
-        int r = Math.round(ColorUtil.red(from) + (ColorUtil.red(to) - ColorUtil.red(from)) * k);
-        int g = Math.round(ColorUtil.green(from) + (ColorUtil.green(to) - ColorUtil.green(from)) * k);
-        int b = Math.round(ColorUtil.blue(from) + (ColorUtil.blue(to) - ColorUtil.blue(from)) * k);
-        return (Math.max(0, Math.min(255, a)) << 24) | (r << 16) | (g << 8) | b;
     }
 
     /**

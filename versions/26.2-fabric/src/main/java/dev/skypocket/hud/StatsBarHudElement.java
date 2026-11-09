@@ -456,7 +456,7 @@ public final class StatsBarHudElement {
     private static void value(GuiGraphicsExtractor graphics, ModConfig cfg, String text, int x, int y,
                               int width, int height, int barColor) {
         float scale = Math.min(2.8f, Math.max(0.4f, height / 8f));
-        float textWidth = HudText.width(cfg, text) * scale;
+        float textWidth = HudText.width(cfg, text, scale) * scale;
         float textHeight = 8f * scale;
         int x0 = Math.round(x + (width - textWidth) / 2f);
         int y0 = Math.round(y + height - 1f - textHeight);
@@ -466,7 +466,7 @@ public final class StatsBarHudElement {
         pose.scale(scale, scale);
         // Shadow on: against the bar's own fill the brightened colour alone was not enough to read at
         // small sizes, and a drop shadow is one extra draw rather than the four an outline needed.
-        HudText.draw(graphics, cfg, text, 0, 0, brighter(barColor), true);
+        HudText.draw(graphics, cfg, text, 0, 0, brighter(barColor), true, scale);
         pose.popMatrix();
     }
 

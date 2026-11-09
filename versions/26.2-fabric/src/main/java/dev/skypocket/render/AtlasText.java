@@ -20,7 +20,6 @@ import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fStack;
@@ -75,12 +74,17 @@ public final class AtlasText {
     };
     private static final List<PendingUpload> UPLOADS = new ArrayList<>();
     private static int nextPage;
+    private static boolean rebuildPending;
 
     private AtlasText() {
     }
 
     /** Uploads queued glyph cells at a safe point: client tick, not GUI extraction. */
     public static void tick() {
+        if (rebuildPending) {
+            rebuildPending = false;
+            reset();
+        }
         if (uploadAll()) {
             // The panel may already have baked frames with the old/blank atlas.
             dev.skypocket.config.ConfigManager.touch();
@@ -113,9 +117,8 @@ public final class AtlasText {
 
     /** Drops pages and layouts when the experimental font settings change. */
     public static void reset() {
-        TextureManager textures = Minecraft.getInstance().getTextureManager();
         for (AtlasPage page : PAGES) {
-            textures.release(page.id);
+            page.texture.close();
         }
         PAGES.clear();
         GLYPHS.clear();
@@ -160,6 +163,28 @@ public final class AtlasText {
     public static void draw(GuiGraphicsExtractor graphics, String text, float x, float y, int color,
                             boolean shadow, float scale, float deviceFactor, int pixelSize,
                             int oversample, FontLab.Weight weight) {
+        drawInternal(graphics, text, x, y, color, shadow, scale, deviceFactor, pixelSize,
+                oversample, weight, false);
+    }
+
+    /** HUD text uses the same atlas but honours its own shadow flag, not the ClickGUI setting. */
+    public static void drawHud(GuiGraphicsExtractor graphics, String text, int x, int y, int color,
+                               boolean shadow, float deviceFactor, int pixelSize) {
+        drawHud(graphics, text, x, y, color, shadow, deviceFactor, pixelSize,
+                FontLab.Weight.REGULAR);
+    }
+
+    public static void drawHud(GuiGraphicsExtractor graphics, String text, int x, int y, int color,
+                               boolean shadow, float deviceFactor, int pixelSize,
+                               FontLab.Weight weight) {
+        drawInternal(graphics, text, x, y, color, shadow, 1.0f, deviceFactor, pixelSize, 1,
+                weight, true);
+    }
+
+    private static void drawInternal(GuiGraphicsExtractor graphics, String text, float x, float y,
+                                     int color, boolean shadow, float scale, float deviceFactor,
+                                     int pixelSize, int oversample, FontLab.Weight weight,
+                                     boolean forceShadow) {
         Run run = run(text, scale, deviceFactor, pixelSize, oversample, weight);
         flushBeforeDraw();
         if (run.glyphs.isEmpty()) {
@@ -172,7 +197,7 @@ public final class AtlasText {
             y = Math.round(y / grid) * grid;
         }
         float rasterToDesign = 1.0f / (deviceFactor * oversample);
-        if (shadow && dev.skypocket.config.ConfigManager.get().clickGuiTextShadow) {
+        if (shadow && (forceShadow || dev.skypocket.config.ConfigManager.get().clickGuiTextShadow)) {
             // One device pixel, not one raster pixel: a 2x atlas would otherwise halve the shadow.
             float offset = 1.0f / deviceFactor;
             drawPass(graphics, run, x + offset, y + offset, shadowColor(color), rasterToDesign);
@@ -201,6 +226,17 @@ public final class AtlasText {
         }
         for (Map.Entry<AtlasPage, List<Quad>> entry : batches.entrySet()) {
             AtlasPage page = entry.getKey();
+            if (!page.texture.usable()) {
+                // A reset or a lost GPU texture invalidated this run. Defer the rebuild to the next
+                // client tick: closing textures during GUI extraction leaves the current frame's
+                // render states pointing at deleted GL texture names.
+                if (!rebuildPending) {
+                    LOGGER.warn("atlas page {} is not usable; scheduling atlas rebuild", page.id);
+                }
+                rebuildPending = true;
+                ConfigManager.touch();
+                return;
+            }
             accessor.sky$getRenderState().addGuiElement(new AtlasRunRenderState(
                     new Matrix3x2f(graphics.pose()), page, entry.getValue(), scissor));
         }
@@ -552,7 +588,9 @@ public final class AtlasText {
             this.id = Identifier.fromNamespaceAndPath(SkyPocketMod.MOD_ID,
                     "font_atlas_" + nextPage++);
             this.texture = new PageTexture(size);
-            Minecraft.getInstance().getTextureManager().register(id, texture);
+            // This texture is owned by AtlasText, not by TextureManager: registering it there let
+            // unrelated texture lifecycle cleanup close the page while cached render states still
+            // held its view, which made every atlas glyph sample as a solid quad.
             // Pages are not zeroed by the GPU. Clear the whole page before any glyph cell is sampled;
             // otherwise linear filtering at a cell edge can read unrelated memory.
             UPLOADS.add(new PendingUpload(this, 0, 0,
@@ -583,6 +621,10 @@ public final class AtlasText {
                     () -> "skypocket font atlas", 7, GpuFormat.RGBA8_UNORM, size, size, 1, 1);
             sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
             textureView = RenderSystem.getDevice().createTextureView(texture);
+        }
+
+        private boolean usable() {
+            return texture != null && !texture.isClosed() && textureView != null;
         }
     }
 }

@@ -430,7 +430,7 @@ public class HudPositionEditorScreen extends Screen {
         int w = 0;
         for (String line : ls) {
             // Plain metrics, measured with the font the HUD draws in (see HudText).
-            w = Math.max(w, (int) Math.ceil(HudText.width(cfg, line) * s));
+            w = Math.max(w, (int) Math.ceil(HudText.width(cfg, line, s) * s));
         }
         int pitch = lineHeight(t, mc, cfg);
         out[0] = x(t, cfg);
@@ -537,7 +537,7 @@ public class HudPositionEditorScreen extends Screen {
                 for (String line : lines(t, mc, cfg)) {
                     // Same font the HUD itself will use, so the frame really does frame it - and the same
                     // colour, which used to be hardcoded white for every element.
-                    HudText.draw(graphics, cfg, line, 0, ly, color, true);
+                    HudText.draw(graphics, cfg, line, 0, ly, color, true, s);
                     ly += lineH;
                 }
             }

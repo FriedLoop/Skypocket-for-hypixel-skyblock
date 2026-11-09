@@ -44,6 +44,7 @@ public final class CrosshairRenderer {
         }
         pixel = Math.max(1, Math.min(MAX_PIXEL, pixel));
         int border = Math.max(1, Math.round(strokeWidth));
+        // The tint is per-target: keep the colour in the bake key so entity changes repaint the mask.
         ensureTexture(pixel, grid, color, stroke, border);
 
         int size = n * pixel;

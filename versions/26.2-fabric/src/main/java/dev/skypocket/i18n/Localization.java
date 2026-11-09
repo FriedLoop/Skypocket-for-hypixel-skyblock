@@ -164,11 +164,6 @@ public final class Localization {
     EN.put("标题颜色", "Header Color");
     EN.put("未完成颜色", "Pending Color");
     EN.put("完成颜色", "Done Color");
-        EN.put("准星进度圆环", "Crosshair Progress Ring");
-        EN.put("圆环半径", "Ring Radius");
-        EN.put("圆环线宽", "Ring Width");
-        EN.put("进度起始颜色", "Progress Start Color");
-        EN.put("进度结束颜色", "Progress End Color");
         EN.put("方块轮廓", "Block Outline");
         EN.put("轮廓颜色", "Outline Color");
         EN.put("延后 Tick", "Assert Delay");
@@ -265,6 +260,74 @@ public final class Localization {
     EN.put("开关轨道高度", "Switch track height");
     EN.put("滑条轨道厚度", "Slider track thickness");
     EN.put("滑条圆点直径", "Slider knob diameter");
+
+    // Module settings card headers and descriptions.
+    EN.put("布局与动画", "Layout & Animation");
+    EN.put("调整 ClickGUI 缩放和打开/关闭动画",
+            "Adjust ClickGUI scale and open/close animation");
+    EN.put("控制模块生效范围和界面语言",
+            "Control module availability and interface language");
+    EN.put("性能", "Performance");
+    EN.put("控制面板渲染缓存", "Control panel render caching");
+    EN.put("调整主题、毛玻璃、透明度和文字阴影",
+            "Adjust theme, blur, opacity and text shadows");
+    EN.put("HUD 字体", "HUD Font");
+    EN.put("选择 HUD 文本使用的字体；切换后立即重新测量",
+            "Choose the HUD text font; switching re-measures immediately");
+    EN.put("使用 SkyPocket 字体", "Use SkyPocket Font");
+    EN.put("预览", "Preview");
+    EN.put("实时预览准星形状与像素网格", "Live preview of the crosshair shape and pixel grid");
+    EN.put("外观", "Appearance");
+    EN.put("目标变色", "Target Tint");
+    EN.put("行为", "Behavior");
+    EN.put("显示", "Display");
+    EN.put("提醒", "Alerts");
+    EN.put("过滤", "Filter");
+    EN.put("动作", "Actions");
+    EN.put("位置与旋转", "Position & Rotation");
+    EN.put("位置与大小", "Position & Size");
+    EN.put("校准与调试", "Calibration & Debug");
+    EN.put("显示风格", "Display Style");
+    EN.put("原版元素", "Vanilla Elements");
+    EN.put("经典文字行", "Classic Text Rows");
+    EN.put("经典布局", "Classic Layout");
+    EN.put("现代条", "Modern Bars");
+    EN.put("重置与恢复", "Reset & Restore");
+    EN.put("控制伤害飘字的合并、归属与显示次数",
+            "Control damage splash merging, attribution and count display");
+    EN.put("调整方块轮廓、提示偏移与提醒音效",
+            "Adjust the block outline, cue offset and alert sound");
+    EN.put("调整描边颜色、厚度与方块面填充",
+            "Adjust outline colour, thickness and block-face fill");
+    EN.put("设置提及音效、文本与 ID 匹配长度",
+            "Set the mention sound, text and ID match length");
+    EN.put("设置重复聊天消息的合并窗口", "Set the merge window for repeated chat messages");
+    EN.put("调整技能名与可用颜色、缩放和提醒音效",
+            "Adjust ability name/available colours, scale and alert sound");
+    EN.put("调整委托列表的排序、缩放与颜色",
+            "Adjust commission ordering, scale and colours");
+    EN.put("调整玩家发光的颜色", "Adjust the player glow colour");
+    EN.put("调整末影龙发光的颜色", "Adjust the ender dragon glow colour");
+    EN.put("设置隐藏附近玩家的范围", "Set the range for hiding nearby players");
+    EN.put("调整碰撞箱颜色、线宽和视线",
+            "Adjust hitbox colour, line width and line of sight");
+    EN.put("选择要显示碰撞箱的实体类型",
+            "Choose which entity types show hitboxes");
+    EN.put("控制碰撞箱的显示距离", "Control the hitbox display distance");
+    EN.put("调整热点类型颜色、高度、线宽与显示距离",
+            "Adjust hotspot colours, height, line width and range");
+    EN.put("设置提示框的滚动方式与灵敏度",
+            "Set tooltip scrolling behaviour and sensitivity");
+    EN.put("调整手持物品的大小", "Adjust the held item size");
+    EN.put("控制挥动、切换和挥砍速度",
+            "Control swing, re-equip and swing speed");
+    EN.put("调整第一人称手部的偏移与旋转",
+            "Adjust first-person hand offset and rotation");
+    EN.put("设置时间制式与时钟大小", "Set the time format and clock size");
+    EN.put("调整世界天数文字大小", "Adjust the world day text size");
+    EN.put("选择显示项目、大小与排版", "Choose displayed values, size and layout");
+    EN.put("调整手持物品名的缩放与屏幕偏移",
+            "Adjust held item name scale and screen offset");
 
     // Theme studio.
     EN.put("主题工作室", "Theme Studio");

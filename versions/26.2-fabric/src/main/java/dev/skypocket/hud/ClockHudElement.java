@@ -44,7 +44,7 @@ public final class ClockHudElement {
         pose.pushMatrix();
         pose.translate(config.clockX, config.clockY);
         pose.scale(config.clockScale, config.clockScale);
-        HudText.draw(graphics, config, text, 0, 0, 0xFFFFFFFF, true);
+        HudText.draw(graphics, config, text, 0, 0, 0xFFFFFFFF, true, config.clockScale);
         pose.popMatrix();
     }
 

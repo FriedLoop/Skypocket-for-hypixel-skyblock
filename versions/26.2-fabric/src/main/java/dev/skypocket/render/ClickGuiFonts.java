@@ -349,6 +349,48 @@ public final class ClickGuiFonts {
     }
 
     /**
+     * HUD text is measured in the HUD element's local GUI units. The element's pose applies
+     * {@code scale} afterwards, so the glyphs are rasterized at the final device size and never
+     * upscaled from a fixed 9px bitmap.
+     */
+    public static int hudWidth(String text, float scale) {
+        float factor = Math.max(0.01f, scale) * guiScale();
+        return AtlasText.width(text, 1.0f, factor, hudPixelSize(scale), 1,
+                hudWeight(scale));
+    }
+
+    /** HUD line height in local GUI units; the element's pose applies the scale. */
+    public static int hudLineHeight() {
+        return 9;
+    }
+
+    public static void hudDraw(GuiGraphicsExtractor graphics, String text, int x, int y, int color,
+                               boolean shadow, float scale) {
+        float factor = Math.max(0.01f, scale) * guiScale();
+        AtlasText.drawHud(graphics, text, x, y, color, shadow, factor, hudPixelSize(scale),
+                hudWeight(scale));
+    }
+
+    private static int hudPixelSize(float scale) {
+        int size = Math.round(DESIGN_SIZE * Math.max(0.01f, scale) * guiScale());
+        return Math.max(4, Math.min(256, size));
+    }
+
+    /**
+     * A slightly heavier face carries thin horizontal strokes at large HUD scales. Keep the
+     * default scale on Regular so the option does not silently embolden every HUD element.
+     */
+    private static FontLab.Weight hudWeight(float scale) {
+        if (scale >= 1.8f) {
+            return FontLab.Weight.SEMIBOLD;
+        }
+        if (scale >= 1.0f) {
+            return FontLab.Weight.MEDIUM;
+        }
+        return FontLab.Weight.REGULAR;
+    }
+
+    /**
      * Vanilla anchors every TTF glyph to a hardcoded 7px ascent below the draw
      * position, independent of the raster size. Compensate so the baseline lands at
      * the design position for any pixel size.

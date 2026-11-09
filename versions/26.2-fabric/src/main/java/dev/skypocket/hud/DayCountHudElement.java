@@ -35,7 +35,7 @@ public final class DayCountHudElement {
         pose.pushMatrix();
         pose.translate(cfg.dayCountX, cfg.dayCountY);
         pose.scale(cfg.dayCountScale, cfg.dayCountScale);
-        HudText.draw(graphics, cfg, text, 0, 0, 0xFFFFFFFF, true);
+        HudText.draw(graphics, cfg, text, 0, 0, 0xFFFFFFFF, true, cfg.dayCountScale);
         pose.popMatrix();
     }
 

@@ -66,6 +66,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("crosshair", "自定义准星", Category.RENDER,
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
+                        new Setting.Header("预览", "实时预览准星形状与像素网格"),
                         new Setting.V2CustomSetting(140, (row, palette) -> {
                             int gridSize = CrosshairGrid.preferredSize();
                             row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
@@ -73,7 +74,7 @@ final class ModuleDefinitions {
                             row.add(new CrosshairPreview(cfg, Style.builder()
                                     .height(gridSize).flexGrow(1f).build(), palette));
                         }),
-                        new Setting.GroupSetting("准星外观", List.of(
+                        new Setting.GroupSetting("外观", List.of(
                                 new Setting.BooleanSetting("描边", () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),
                                 new Setting.SliderSetting("描边宽度", 0.5, 4.0, () -> cfg.crosshairStrokeWidth, v -> cfg.crosshairStrokeWidth = (float) v, "%.1f", 0.1),
                                 new Setting.ColorSetting("准星颜色", cfg::getCrosshairColorARGB, v -> {
@@ -87,13 +88,13 @@ final class ModuleDefinitions {
                         .subtitle("调整准星线条、颜色、像素大小与缩放"),
                         // The switch is the feature's own flag: it was a row of its own before, and
                         // turning it off really does stop the tint (the renderer reads this field).
-                        new Setting.GroupSetting("瞄准目标变色", () -> cfg.crosshairEntityColorEnabled,
+                        new Setting.GroupSetting("目标变色", () -> cfg.crosshairEntityColorEnabled,
                                 v -> cfg.crosshairEntityColorEnabled = v, List.of(
                                 new Setting.ColorSetting("友好颜色", () -> cfg.crosshairFriendlyColor, v -> cfg.crosshairFriendlyColor = v),
                                 new Setting.ColorSetting("中立颜色", () -> cfg.crosshairNeutralColor, v -> cfg.crosshairNeutralColor = v),
                                 new Setting.ColorSetting("敌对颜色", () -> cfg.crosshairHostileColor, v -> cfg.crosshairHostileColor = v),
                                 new Setting.ColorSetting("箱子颜色", () -> cfg.crosshairContainerColor, v -> cfg.crosshairContainerColor = v)))
-                        .subtitle("按目标类型切换准星颜色")
+                                .subtitle("按目标类型切换准星颜色")
                 )));
     }
 
@@ -101,6 +102,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("block_outline", "方块描边", Category.RENDER,
                 () -> cfg.blockOutlineEnabled, v -> cfg.blockOutlineEnabled = v,
                 List.of(
+                        new Setting.Header("外观", "调整描边颜色、厚度与方块面填充"),
                         new Setting.ColorSetting("描边颜色", cfg::getBlockOutlineColorARGB, v -> {
                             cfg.blockOutlineRed = ColorUtil.red(v);
                             cfg.blockOutlineGreen = ColorUtil.green(v);
@@ -125,6 +127,7 @@ final class ModuleDefinitions {
 
     private static void registerMentionAlert(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("提醒", "设置提及音效、文本与 ID 匹配长度"));
         settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
                 () -> cfg.mentionAlertSound, v -> cfg.mentionAlertSound = v));
         settings.add(new Setting.SliderSetting("音量", 0, 200, () -> cfg.mentionAlertVolume * 100,
@@ -142,6 +145,7 @@ final class ModuleDefinitions {
 
     private static void registerSplashCompact(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("行为", "控制伤害飘字的合并、归属与显示次数"));
         settings.add(new Setting.BooleanSetting("合并", () -> cfg.damageSplashCompactEnabled,
                 v -> cfg.damageSplashCompactEnabled = v));
         settings.add(new Setting.BooleanSetting("大写格式化", () -> cfg.damageSplashUppercase,
@@ -154,7 +158,7 @@ final class ModuleDefinitions {
         settings.add(new Setting.SliderSetting("合并窗口(毫秒)", 200, 3000,
                 () -> cfg.damageSplashWindowMs,
                 v -> cfg.damageSplashWindowMs = (int) Math.round(v), "%.0f", 100));
-        settings.add(new Setting.Header("Display", "控制伤害飘字的显示时长、淡出与排版"));
+        settings.add(new Setting.Header("显示", "控制伤害飘字的显示时长、淡出与排版"));
         settings.add(new Setting.SliderSetting("显示时长(毫秒)", 300, 5000,
                 () -> cfg.damageSplashLifetimeMs,
                 v -> cfg.damageSplashLifetimeMs = (int) Math.round(v), "%.0f", 100));
@@ -173,6 +177,7 @@ final class ModuleDefinitions {
 
     private static void registerChatCompact(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("行为", "设置重复聊天消息的合并窗口"));
         settings.add(new Setting.SliderSetting("压缩窗口(秒)", 1, 120,
                 () -> cfg.chatCompactTimeoutSeconds,
                 v -> cfg.chatCompactTimeoutSeconds = (int) Math.round(v), "%.0f", 1));
@@ -182,6 +187,7 @@ final class ModuleDefinitions {
 
     private static void registerMiningAbilityReminder(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("提醒", "调整技能名与可用颜色、缩放和提醒音效"));
         settings.add(new Setting.ColorSetting("技能名颜色", () -> cfg.miningAbilityNameColor,
                 v -> cfg.miningAbilityNameColor = v));
         settings.add(new Setting.ColorSetting("可用颜色", () -> cfg.miningAbilityAvailableColor,
@@ -354,6 +360,7 @@ final class ModuleDefinitions {
 
     private static void registerCommissions(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("显示", "调整委托列表的排序、缩放与颜色"));
         settings.add(new Setting.BooleanSetting("隐藏已完成的委托", () -> cfg.commissionsHideDone,
                 v -> cfg.commissionsHideDone = v));
         settings.add(new Setting.BooleanSetting("未完成的置顶", () -> cfg.commissionsPendingFirst,
@@ -373,16 +380,7 @@ final class ModuleDefinitions {
 
     private static void registerMiningBreakPredict(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.BooleanSetting("准星进度圆环", () -> cfg.miningBreakRingEnabled,
-                v -> cfg.miningBreakRingEnabled = v));
-        settings.add(new Setting.SliderSetting("圆环半径", 6, 120, () -> cfg.miningBreakRingRadius,
-                v -> cfg.miningBreakRingRadius = (float) v, "%.0f", 1));
-        settings.add(new Setting.SliderSetting("圆环线宽", 1, 8, () -> cfg.miningBreakRingWidth,
-                v -> cfg.miningBreakRingWidth = (float) v, "%.1f", 0.5));
-        settings.add(new Setting.ColorSetting("进度起始颜色", () -> cfg.miningBreakRingColorStart,
-                v -> cfg.miningBreakRingColorStart = v, true));
-        settings.add(new Setting.ColorSetting("进度结束颜色", () -> cfg.miningBreakRingColorEnd,
-                v -> cfg.miningBreakRingColorEnd = v, true));
+        settings.add(new Setting.Header("提醒", "调整方块轮廓、提示偏移与提醒音效"));
         settings.add(new Setting.BooleanSetting("方块轮廓", () -> cfg.miningBreakOutlineEnabled,
                 v -> cfg.miningBreakOutlineEnabled = v));
         settings.add(new Setting.ColorSetting("轮廓颜色", () -> cfg.miningBreakOutlineColor,
@@ -416,7 +414,7 @@ final class ModuleDefinitions {
                 v -> cfg.miningMinBreakTicks = (int) Math.round(v), "%.0f", 1));
         advanced.add(new Setting.BooleanSetting("调试信息", () -> cfg.miningBreakDebugHud,
                 v -> cfg.miningBreakDebugHud = v));
-        settings.add(new Setting.GroupSetting("高级", advanced)
+        settings.add(new Setting.GroupSetting("校准与调试", advanced)
                 .subtitle("调试信息与高级显示选项"));
         ModuleRegistry.register(new Module("mining_break_predict", "挖矿破坏预测", Category.SKYBLOCK_MINING,
                 () -> cfg.miningBreakPredictEnabled, v -> cfg.miningBreakPredictEnabled = v, settings));
@@ -431,6 +429,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("player_glow", "人物发光", Category.RENDER,
                 () -> cfg.playerGlowEnabled, v -> cfg.playerGlowEnabled = v,
                 List.of(
+                        new Setting.Header("外观", "调整玩家发光的颜色"),
                         new Setting.ColorSetting("发光颜色", () -> cfg.playerGlowColor, v -> cfg.playerGlowColor = v)
                 )));
     }
@@ -439,6 +438,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("dragon_glow", "末影龙发光", Category.SKYBLOCK_COMBAT,
                 () -> cfg.dragonGlowEnabled, v -> cfg.dragonGlowEnabled = v,
                 List.of(
+                        new Setting.Header("外观", "调整末影龙发光的颜色"),
                         new Setting.ColorSetting("发光颜色", () -> cfg.dragonGlowColor, v -> cfg.dragonGlowColor = v)
                 )));
     }
@@ -447,6 +447,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("hide_players", "隐藏附近玩家", Category.RENDER,
                 () -> cfg.hideNearbyPlayersEnabled, v -> cfg.hideNearbyPlayersEnabled = v,
                 List.of(
+                        new Setting.Header("行为", "设置隐藏附近玩家的范围"),
                         new Setting.SliderSetting("范围", 0, 10, () -> cfg.hideNearbyPlayersRange,
                                 v -> cfg.hideNearbyPlayersRange = (float) v, "%.1f", 0.1)
                 )));
@@ -456,17 +457,20 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("hitbox", "碰撞箱", Category.RENDER,
                 () -> cfg.hitboxEnabled, v -> cfg.hitboxEnabled = v,
                 List.of(
+                        new Setting.Header("显示", "调整碰撞箱颜色、线宽和视线"),
                         new Setting.ColorSetting("颜色", () -> cfg.hitboxColor, v -> cfg.hitboxColor = v),
                         new Setting.SliderSetting("线宽", 0.5, 8.0, () -> cfg.hitboxLineWidth, v -> cfg.hitboxLineWidth = (float) v, "%.1f", 0.5),
+                        new Setting.BooleanSetting("实体视线", () -> cfg.hitboxShowLineOfSight, v -> cfg.hitboxShowLineOfSight = v),
+                        new Setting.ColorSetting("视线颜色", () -> cfg.lookRayColor, v -> cfg.lookRayColor = v),
+                        new Setting.SliderSetting("视线长度", 1.0, 64.0, () -> cfg.lookRayLength, v -> cfg.lookRayLength = (float) v, "%.1f", 0.5),
+                        new Setting.Header("过滤", "选择要显示碰撞箱的实体类型"),
                         new Setting.BooleanSetting("玩家", () -> cfg.hitboxShowPlayer, v -> cfg.hitboxShowPlayer = v),
                         new Setting.BooleanSetting("箭矢", () -> cfg.hitboxShowProjectile, v -> cfg.hitboxShowProjectile = v),
                         new Setting.BooleanSetting("敌对生物", () -> cfg.hitboxShowHostile, v -> cfg.hitboxShowHostile = v),
                         new Setting.BooleanSetting("中立生物", () -> cfg.hitboxShowNeutral, v -> cfg.hitboxShowNeutral = v),
                         new Setting.BooleanSetting("箱子", () -> cfg.hitboxShowContainer, v -> cfg.hitboxShowContainer = v),
                         new Setting.BooleanSetting("其他", () -> cfg.hitboxShowOther, v -> cfg.hitboxShowOther = v),
-                        new Setting.BooleanSetting("实体视线", () -> cfg.hitboxShowLineOfSight, v -> cfg.hitboxShowLineOfSight = v),
-                        new Setting.ColorSetting("视线颜色", () -> cfg.lookRayColor, v -> cfg.lookRayColor = v),
-                        new Setting.SliderSetting("视线长度", 1.0, 64.0, () -> cfg.lookRayLength, v -> cfg.lookRayLength = (float) v, "%.1f", 0.5),
+                        new Setting.Header("范围", "控制碰撞箱的显示距离"),
                         new Setting.BooleanSetting("不限距离", () -> cfg.hitboxUnlimitedRange, v -> cfg.hitboxUnlimitedRange = v),
                         new Setting.SliderSetting("范围", 1.0, 128.0, () -> cfg.hitboxRange, v -> cfg.hitboxRange = (float) v, "%.0f", 1)
                 )));
@@ -484,6 +488,7 @@ final class ModuleDefinitions {
 
     private static void registerFishingHotspotOverlay(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
+        settings.add(new Setting.Header("显示", "调整热点类型颜色、高度、线宽与显示距离"));
         for (HotspotType t : HotspotType.values()) {
             settings.add(new Setting.ColorSetting(t.label, () -> t.color(cfg), v -> t.setColor(cfg, v)));
         }
@@ -499,6 +504,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("scrollable_tooltips", "滚动提示框", Category.RENDER,
                 () -> cfg.scrollableTooltipsEnabled, v -> cfg.scrollableTooltipsEnabled = v,
                 List.of(
+                        new Setting.Header("行为", "设置提示框的滚动方式与灵敏度"),
                         new Setting.BooleanSetting("始终可滚动", () -> cfg.scrollableTooltipsAlwaysScroll, v -> cfg.scrollableTooltipsAlwaysScroll = v),
                         new Setting.SliderSetting("滚动灵敏度", 0.25, 4.0, () -> cfg.scrollableTooltipsSensitivity,
                                 v -> cfg.scrollableTooltipsSensitivity = (float) v, "%.2fx", 0.05)
@@ -509,11 +515,14 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("hand_item", "手持物品动画", Category.RENDER,
                 () -> cfg.handItemEnabled, v -> cfg.handItemEnabled = v,
                 List.of(
+                        new Setting.Header("外观", "调整手持物品的大小"),
                         new Setting.SliderSetting("物品大小", 0.1, 4.0, () -> cfg.handItemScale, v -> cfg.handItemScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
+                        new Setting.Header("动作", "控制挥动、切换和挥砍速度"),
                         new Setting.BooleanSetting("禁用挥动动画", () -> cfg.handItemDisableSwing, v -> cfg.handItemDisableSwing = v),
                         new Setting.BooleanSetting("禁用切换动画", () -> cfg.handItemDisableReequip, v -> cfg.handItemDisableReequip = v),
                         new Setting.SliderSetting("挥砍速度", 0.0, 200.0, () -> cfg.swingSpeed, v -> cfg.swingSpeed = (int) Math.round(v), "%.0f%%", 1),
                         new Setting.BooleanSetting("忽略急迫等效果", () -> cfg.swingIgnoreHaste, v -> cfg.swingIgnoreHaste = v),
+                        new Setting.Header("位置与旋转", "调整第一人称手部的偏移与旋转"),
                         new Setting.SliderSetting("位置 X", -1.0, 1.0, () -> cfg.handItemOffsetX, v -> cfg.handItemOffsetX = (float) v, "%.3f", 0.01),
                         new Setting.SliderSetting("位置 Y", -1.0, 1.0, () -> cfg.handItemOffsetY, v -> cfg.handItemOffsetY = (float) v, "%.3f", 0.01),
                         new Setting.SliderSetting("位置 Z", -1.0, 1.0, () -> cfg.handItemOffsetZ, v -> cfg.handItemOffsetZ = (float) v, "%.3f", 0.01),
@@ -527,6 +536,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("clock", "时钟", Category.HUD,
                 () -> cfg.clockEnabled, v -> cfg.clockEnabled = v,
                 List.of(
+                        new Setting.Header("显示", "设置时间制式与时钟大小"),
                         new Setting.BooleanSetting("24 小时制", () -> cfg.clockFormat24h, v -> cfg.clockFormat24h = v),
                         new Setting.SliderSetting("时钟大小", 0.25, 6.0, () -> cfg.clockScale, v -> cfg.clockScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
                 )));
@@ -536,6 +546,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("day_count", "世界天数", Category.HUD,
                 () -> cfg.dayCountEnabled, v -> cfg.dayCountEnabled = v,
                 List.of(
+                        new Setting.Header("显示", "调整世界天数文字大小"),
                         new Setting.SliderSetting("大小", 0.25, 6.0, () -> cfg.dayCountScale, v -> cfg.dayCountScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
                 )));
     }
@@ -544,6 +555,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("fps_tps_ping", "FPS/TPS/Ping", Category.HUD,
                 () -> cfg.fpsTpsPingEnabled, v -> cfg.fpsTpsPingEnabled = v,
                 List.of(
+                        new Setting.Header("显示", "选择显示项目、大小与排版"),
                         new Setting.BooleanSetting("FPS", () -> cfg.fpsTpsPingShowFps, v -> cfg.fpsTpsPingShowFps = v),
                         new Setting.BooleanSetting("TPS", () -> cfg.fpsTpsPingShowTps, v -> cfg.fpsTpsPingShowTps = v),
                         new Setting.BooleanSetting("Ping", () -> cfg.fpsTpsPingShowPing, v -> cfg.fpsTpsPingShowPing = v),
@@ -594,6 +606,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("held_item_name", "手持物品名", Category.HUD,
                 () -> cfg.heldItemNameEnabled, v -> cfg.heldItemNameEnabled = v,
                 List.of(
+                        new Setting.Header("位置与大小", "调整手持物品名的缩放与屏幕偏移"),
                         new Setting.SliderSetting("缩放", 0.25, 4.0, () -> cfg.heldItemNameScale,
                                 v -> cfg.heldItemNameScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
                         new Setting.SliderSetting("水平偏移", -400, 400, () -> cfg.heldItemNameOffsetX,
@@ -606,7 +619,7 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("stats_display", "玩家数值显示", Category.SKYBLOCK_HUD,
                 () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
                 List.of(
-                        new Setting.Header("风格", "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
+                        new Setting.Header("显示风格", "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
                         new Setting.ChoiceSetting("风格", List.of("经典", "现代"),
                                 () -> cfg.statsModernStyle ? 1 : 0,
                                 index -> {
@@ -615,7 +628,7 @@ final class ModuleDefinitions {
                                 }, true),
                         // Vanilla HUD is its own card: the style switch above only chooses the module's
                         // presentation and must not visually own the vanilla-element toggles.
-                        new Setting.Header("原版 HUD", "隐藏原版元素，避免和本模块重复绘制"),
+                        new Setting.Header("原版元素", "隐藏原版元素，避免和本模块重复绘制"),
                         new Setting.BooleanSetting("隐藏原版生命条",
                                 () -> cfg.statsHideVanillaHealth,
                                 v -> cfg.statsHideVanillaHealth = v)
@@ -658,7 +671,7 @@ final class ModuleDefinitions {
                                 v -> cfg.statsVitalityColor = v),
                         // Classic-only: the modern style renders these values inside its bars, so
                         // separate text rows would duplicate the same responsibility.
-                        new Setting.Header("文字行", "仅经典风格；现代风格的条已经直接显示这些数值")
+                        new Setting.Header("经典文字行", "仅经典风格；现代风格的条已经直接显示这些数值")
                                 .visibleWhen(() -> !cfg.statsModernStyle),
                         new Setting.BooleanSetting("防御文字", () -> cfg.statsDefenseEnabled,
                                 v -> cfg.statsDefenseEnabled = v)
@@ -678,7 +691,7 @@ final class ModuleDefinitions {
                         new Setting.SliderSetting("活力文字大小", 0.25, 6.0, () -> cfg.statsVitalityScale,
                                 v -> cfg.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
                                 .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.Header("经典风格", "原版图标 + 精确数值；两行文字的位置在「HUD 位置调整」页里拖")
+                        new Setting.Header("经典布局", "原版图标 + 精确数值；两行文字的位置在「HUD 位置调整」页里拖")
                                 .visibleWhen(() -> !cfg.statsModernStyle),
                         // Classic-only: blink the mana container when mana runs low.
                         new Setting.BooleanSetting("法力不足时闪烁", () -> cfg.statsManaBlink,
@@ -703,7 +716,7 @@ final class ModuleDefinitions {
                         // each. Position comes from the HUD position editor, where every bar is its
                         // own target; these rows are for switching them on and for sizing them
                         // without leaving the panel.
-                        new Setting.Header("现代风格 · 条",
+                        new Setting.Header("现代条",
                                 "位置在「HUD 位置调整」页里逐条拖拽与缩放，这里只管粗细与开关")
                                 .visibleWhen(() -> cfg.statsModernStyle),
                         new Setting.BooleanSetting("条上显示数值", () -> cfg.statsBarShowValues,
@@ -748,7 +761,7 @@ final class ModuleDefinitions {
                                 .visibleWhen(() -> cfg.statsModernStyle),
                         // Advanced is its own card: it is a different kind of operation from the bar
                         // switches above, and should not read as another bar row.
-                        new Setting.Header("高级", "重置条位置与恢复默认颜色")
+                        new Setting.Header("重置与恢复", "重置条位置与恢复默认颜色")
                                 .visibleWhen(() -> cfg.statsModernStyle),
                         new Setting.ActionSetting(() -> Localization.tr("重置条位置"),
                                 () -> StatsBarHudElement.resetToDefaults(cfg))

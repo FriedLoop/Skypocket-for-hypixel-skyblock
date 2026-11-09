@@ -420,17 +420,18 @@ public class OneClickScreen extends Screen {
     private List<Setting> buildPanelSettings() {
         ModConfig cfg = ConfigManager.get();
         return List.of(
+                new Setting.Header("外观", "调整主题、毛玻璃、透明度和文字阴影"),
+                // Palette. The setter applies it immediately; Setting already wraps it with touch(), so
+                // the panel cache drops its baked texture and the very next frame is drawn with the new
+                // colours (see GuiTheme).
+                new Setting.DropdownSetting("主题", dev.skypocket.gui.widget.ThemeStore::names,
+                        () -> cfg.clickGuiTheme, v -> {
+                            cfg.clickGuiTheme = v;
+                            dev.skypocket.gui.widget.ThemeStore.apply(v);
+                        }),
                 new Setting.BooleanSetting("毛玻璃效果", () -> cfg.clickGuiBlur, v -> {
                     cfg.clickGuiBlur = v;
                     ClickGuiBlur.apply();
-                }),
-                new Setting.BooleanSetting("文字阴影", () -> cfg.clickGuiTextShadow, v -> cfg.clickGuiTextShadow = v),
-
-                new Setting.BooleanSetting("面板渲染缓存", () -> cfg.clickGuiPanelCache, v -> {
-                    cfg.clickGuiPanelCache = v;
-                    if (!v) {
-                        GuiPanelCache.release();
-                    }
                 }),
                 new Setting.SliderSetting("毛玻璃强度", 0, 100, () -> cfg.clickGuiBlurIntensity, v -> {
                     cfg.clickGuiBlurIntensity = (int) Math.round(v);
@@ -438,8 +439,17 @@ public class OneClickScreen extends Screen {
                 }, "%.0f%%", 1),
                 new Setting.SliderSetting("背景透明度", 0, 255, () -> cfg.clickGuiBackgroundAlpha,
                         v -> cfg.clickGuiBackgroundAlpha = (int) Math.round(v), "%.0f", 1),
+                new Setting.BooleanSetting("文字阴影", () -> cfg.clickGuiTextShadow, v -> cfg.clickGuiTextShadow = v),
+
+                new Setting.Header("布局与动画", "调整 ClickGUI 缩放和打开/关闭动画"),
                 new Setting.SliderSetting("ClickGUI 缩放", ClickGuiFonts.SCALE_MIN, ClickGuiFonts.SCALE_MAX,
                         () -> cfg.clickGuiScale, v -> cfg.clickGuiScale = (float) v, "%.1f", ClickGuiFonts.SCALE_STEP),
+                new Setting.SliderSetting("动画时长", 0, 600, () -> cfg.clickGuiAnimDuration,
+                        v -> cfg.clickGuiAnimDuration = (int) Math.round(v), "%.0fms", 10),
+                new Setting.DropdownSetting("缓动曲线", Easing::ids,
+                        () -> cfg.clickGuiEasing, v -> cfg.clickGuiEasing = v),
+
+                new Setting.Header("行为", "控制模块生效范围和界面语言"),
                 new Setting.BooleanSetting("SkyBlock 模块仅在 SkyBlock 生效", () -> cfg.skyBlockModulesOnly,
                         v -> cfg.skyBlockModulesOnly = v),
                 new Setting.DropdownSetting("语言",
@@ -463,24 +473,19 @@ public class OneClickScreen extends Screen {
                                 }
                             });
                         }),
-                new Setting.SliderSetting("动画时长", 0, 600, () -> cfg.clickGuiAnimDuration,
-                        v -> cfg.clickGuiAnimDuration = (int) Math.round(v), "%.0fms", 10),
-                new Setting.DropdownSetting("缓动曲线", Easing::ids,
-                        () -> cfg.clickGuiEasing, v -> cfg.clickGuiEasing = v),
-                // Palette. The setter applies it immediately; Setting already wraps it with touch(), so
-                // the panel cache drops its baked texture and the very next frame is drawn with the new
-                // colours (see GuiTheme).
-                new Setting.DropdownSetting("主题", dev.skypocket.gui.widget.ThemeStore::names,
-                        () -> cfg.clickGuiTheme, v -> {
-                            cfg.clickGuiTheme = v;
-                            dev.skypocket.gui.widget.ThemeStore.apply(v);
-                        }),
+
+                new Setting.Header("性能", "控制面板渲染缓存"),
+                new Setting.BooleanSetting("面板渲染缓存", () -> cfg.clickGuiPanelCache, v -> {
+                    cfg.clickGuiPanelCache = v;
+                    if (!v) {
+                        GuiPanelCache.release();
+                    }
+                }),
+
                 // Everything diagnostic lives here, folded away: these rows only write to the log and
                 // are of no use to a player. Giving the next debug switch an obvious home beats
                 // sprinkling them through the panel's settings.
                 new Setting.GroupSetting("调试", List.of(
-                        // Developer-only switching lives under an explicit card description below.
-
                         // Live token editor: gallery on the left, tokens in the middle, editor on the right.
                         new Setting.ActionSetting("主题工作室", this::toggleDevDrawer),
                         // Master switch for the mod's information logs; warnings and errors always print.
@@ -522,7 +527,14 @@ public class OneClickScreen extends Screen {
                             FontLab.applyCrispPreset();
                             ConfigManager.touch();
                         })
-                ), false).subtitle("字体与渲染调试选项")
+                ), false).subtitle("字体与渲染调试选项"),
+
+                new Setting.Header("HUD 字体", "选择 HUD 文本使用的字体；切换后立即重新测量"),
+                new Setting.BooleanSetting("使用 SkyPocket 字体", () -> cfg.hudSkyPocketFont,
+                        v -> {
+                            cfg.hudSkyPocketFont = v;
+                            ConfigManager.touch();
+                        })
         );
     }
 

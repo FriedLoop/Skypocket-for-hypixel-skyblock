@@ -154,18 +154,14 @@ public final class Localization {
     EN.put("标题颜色", "Header Color");
     EN.put("未完成颜色", "Pending Color");
     EN.put("完成颜色", "Done Color");
-        EN.put("准星进度圆环", "Crosshair Progress Ring");
-        EN.put("圆环半径", "Ring Radius");
-        EN.put("圆环线宽", "Ring Width");
-        EN.put("进度起始颜色", "Progress Start Color");
-        EN.put("进度结束颜色", "Progress End Color");
         EN.put("方块轮廓", "Block Outline");
         EN.put("轮廓颜色", "Outline Color");
         EN.put("延后 Tick", "Assert Delay");
         EN.put("提示偏移(Tick)", "Alert Offset (ticks)");
         EN.put("重置破坏时长学习", "Reset Break-Time Learning");
         EN.put("重置矿物强度识别", "Reset Block Identification");
-        EN.put("调试信息", "Debug Info");
+        EN.put("调试信息", "Debug Info");
+
     EN.put("取整方式", "Rounding");
     EN.put("自动校准速度刻度", "Auto-calibrate speed");
     EN.put("相位对齐", "Tick phase alignment");

@@ -46,7 +46,8 @@ public final class MiningAbilityHudElement {
             pose.pushMatrix();
             pose.translate(cfg.miningAbilityX, cfg.miningAbilityY);
             pose.scale(cfg.miningAbilityScale, cfg.miningAbilityScale);
-            HudText.draw(graphics, cfg, line, 0, 0, MiningAbilityTracker.hudColor(), true);
+            HudText.draw(graphics, cfg, line, 0, 0, MiningAbilityTracker.hudColor(), true,
+                    cfg.miningAbilityScale);
             pose.popMatrix();
         }
         renderReminder(graphics, cfg);
@@ -72,9 +73,12 @@ public final class MiningAbilityHudElement {
         pose.translate(cfg.miningAbilitySubtitleX, cfg.miningAbilitySubtitleY);
         pose.scale(cfg.miningAbilitySubtitleScale, cfg.miningAbilitySubtitleScale);
         HudText.draw(graphics, cfg, name, 0, 0,
-                (nameAlpha << 24) | (cfg.miningAbilityNameColor & 0xFFFFFF), true);
-        HudText.draw(graphics, cfg, avail, HudText.width(cfg, name), 0,
-                (availAlpha << 24) | (cfg.miningAbilityAvailableColor & 0xFFFFFF), true);
+                (nameAlpha << 24) | (cfg.miningAbilityNameColor & 0xFFFFFF), true,
+                cfg.miningAbilitySubtitleScale);
+        HudText.draw(graphics, cfg, avail,
+                HudText.width(cfg, name, cfg.miningAbilitySubtitleScale), 0,
+                (availAlpha << 24) | (cfg.miningAbilityAvailableColor & 0xFFFFFF), true,
+                cfg.miningAbilitySubtitleScale);
         pose.popMatrix();
     }
 

@@ -279,13 +279,6 @@ public class ModConfig {
 
     // ---- Mining break prediction (high-ping compensation) ----
     public boolean miningBreakPredictEnabled = false;
-    /** Crosshair progress ring. */
-    public boolean miningBreakRingEnabled = true;
-    public float miningBreakRingRadius = 22.0f;
-    public float miningBreakRingWidth = 2.5f;
-    /** Ring colour at 0% and at 100% (the colour is interpolated with progress). */
-    public int miningBreakRingColorStart = ColorUtil.argb(255, 255, 60, 60);
-    public int miningBreakRingColorEnd = ColorUtil.argb(255, 80, 255, 80);
     /** Block outline growing out of the eight corners. */
     public boolean miningBreakOutlineEnabled = true;
     public int miningBreakOutlineColor = ColorUtil.argb(210, 255, 255, 255);
@@ -395,6 +388,8 @@ public class ModConfig {
     public String clickGuiEasing = "ease";
     /** Draw text shadows in the Click GUI (off by default: it doubles text geometry). */
     public boolean clickGuiTextShadow = false;
+    /** Draw HUD text with the SkyPocket atlas font instead of the vanilla font. */
+    public boolean hudSkyPocketFont = false;
     /**
      * Log panel-cache statistics to the game log every five seconds: frames, bakes, reuse percentage
      * and the average time spent submitting the cached blit. Diagnostic only, off by default.
@@ -789,8 +784,6 @@ public class ModConfig {
         bloomStrength = ColorUtil.clamp(bloomStrength, 0f, 2f);
         bloomThreshold = ColorUtil.clamp(bloomThreshold, 0f, 1f);
         bloomRadius = ColorUtil.clamp(bloomRadius, 1f, 64f);
-        miningBreakRingRadius = ColorUtil.clamp(miningBreakRingRadius, 6f, 120f);
-        miningBreakRingWidth = ColorUtil.clamp(miningBreakRingWidth, 1f, 8f);
         miningBreakBiasTicks = ColorUtil.clamp(miningBreakBiasTicks, -6, 3);
         miningMinBreakTicks = ColorUtil.clamp(miningMinBreakTicks, 1, 20);
         if (miningCategoryScale == null) {

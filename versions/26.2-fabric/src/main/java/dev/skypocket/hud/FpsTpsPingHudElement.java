@@ -47,7 +47,7 @@ public final class FpsTpsPingHudElement {
         int y = 0;
         int lineH = lineHeight(mc, cfg);
         for (String line : lines) {
-            HudText.draw(graphics, cfg, line, 0, y, 0xFFFFFFFF, true);
+            HudText.draw(graphics, cfg, line, 0, y, 0xFFFFFFFF, true, cfg.fpsTpsPingScale);
             y += lineH;
         }
         pose.popMatrix();

@@ -311,16 +311,6 @@ final class ModuleDefinitions {
 
     private static void registerMiningBreakPredict(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.BooleanSetting("准星进度圆环", () -> cfg.miningBreakRingEnabled,
-                v -> cfg.miningBreakRingEnabled = v));
-        settings.add(new Setting.SliderSetting("圆环半径", 6, 120, () -> cfg.miningBreakRingRadius,
-                v -> cfg.miningBreakRingRadius = (float) v, "%.0f", 1));
-        settings.add(new Setting.SliderSetting("圆环线宽", 1, 8, () -> cfg.miningBreakRingWidth,
-                v -> cfg.miningBreakRingWidth = (float) v, "%.1f", 0.5));
-        settings.add(new Setting.ColorSetting("进度起始颜色", () -> cfg.miningBreakRingColorStart,
-                v -> cfg.miningBreakRingColorStart = v, true));
-        settings.add(new Setting.ColorSetting("进度结束颜色", () -> cfg.miningBreakRingColorEnd,
-                v -> cfg.miningBreakRingColorEnd = v, true));
         settings.add(new Setting.BooleanSetting("方块轮廓", () -> cfg.miningBreakOutlineEnabled,
                 v -> cfg.miningBreakOutlineEnabled = v));
         settings.add(new Setting.ColorSetting("轮廓颜色", () -> cfg.miningBreakOutlineColor,

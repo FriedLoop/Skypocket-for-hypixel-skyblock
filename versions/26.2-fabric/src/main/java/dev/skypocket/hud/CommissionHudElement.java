@@ -72,7 +72,7 @@ public final class CommissionHudElement {
         int lineH = lineHeight(mc);
         int y = 0;
         for (Line line : lines) {
-            HudText.draw(graphics, cfg, line.text(), 0, y, line.color(), true);
+            HudText.draw(graphics, cfg, line.text(), 0, y, line.color(), true, cfg.commissionsScale);
             y += lineH;
         }
         pose.popMatrix();

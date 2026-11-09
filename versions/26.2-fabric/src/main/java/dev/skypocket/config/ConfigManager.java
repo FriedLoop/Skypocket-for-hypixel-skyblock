@@ -20,7 +20,7 @@ public final class ConfigManager {
             FabricLoader.getInstance().getConfigDir().resolve("skypocket.json");
 
     /** Shape version this build writes. Bump it together with a new entry in {@link #MIGRATIONS}. */
-    public static final int CURRENT_VERSION = 1;
+    public static final int CURRENT_VERSION = 2;
 
     /**
      * Ordered upgrade steps: entry {@code i} turns a v{i} file into v{i+1}.
@@ -37,6 +37,9 @@ public final class ConfigManager {
                 if (cfg.statsBarHeight == 6) {
                     cfg.statsBarHeight = 20;
                 }
+            },
+            // v1 -> v2: hudSkyPocketFont was added; the field default is off, so no conversion.
+            cfg -> {
             });
 
     private static ModConfig config = new ModConfig();

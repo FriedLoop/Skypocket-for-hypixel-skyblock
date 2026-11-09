@@ -1,5 +1,6 @@
 package dev.skypocket.gui;
 
+import dev.skypocket.config.ConfigManager;
 import dev.skypocket.gui.setting.Setting;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.gui.widget.ClickGuiStyle;
@@ -215,7 +216,8 @@ public final class SettingsPage {
         // A rebuilt page can reuse renderRevision 0 and the same scroll offset; its identity prevents
         // the global GuiPanelCache from blitting the previous layout's texture.
         return System.identityHashCode(this) * 1_000_003L
-                + renderRevision * 31_415_926_535L + scrollHash;
+                + renderRevision * 31_415_926_535L + scrollHash
+                + ConfigManager.revision() * 2_654_435_761L;
     }
 
     private void drawBase(GuiGraphicsExtractor graphics) {

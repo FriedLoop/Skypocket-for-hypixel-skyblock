@@ -72,8 +72,9 @@ public final class StatTextHudElement {
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         pose.translate(x(cfg, kind), y(cfg, kind));
-        pose.scale(scale(cfg, kind), scale(cfg, kind));
-        HudText.draw(graphics, cfg, line, 0, 0, color(cfg, kind), true);
+        float scale = scale(cfg, kind);
+        pose.scale(scale, scale);
+        HudText.draw(graphics, cfg, line, 0, 0, color(cfg, kind), true, scale);
         pose.popMatrix();
     }
 

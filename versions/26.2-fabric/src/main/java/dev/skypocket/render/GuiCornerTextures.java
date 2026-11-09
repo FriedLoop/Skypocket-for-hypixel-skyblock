@@ -9,8 +9,11 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +43,8 @@ public final class GuiCornerTextures {
 
     /** Access-ordered so the oldest entry is the least recently used one. */
     private static final Map<Integer, Mask> CACHE = new LinkedHashMap<>(16, 0.75f, true);
+    /** Radii first seen during a draw; baked on the next client tick, never mid-frame. */
+    private static final LinkedHashSet<Integer> PENDING = new LinkedHashSet<>();
     private static boolean disabled;
 
     private GuiCornerTextures() {
@@ -59,16 +64,43 @@ public final class GuiCornerTextures {
             if (cached != null && isLive(cached)) {
                 return cached;
             }
-            try {
-                Mask mask = bake(radius);
-                CACHE.put(radius, mask);
-                evictStale();
-                return mask;
-            } catch (Throwable t) {
-                // Never break the GUI over an optimisation: the caller draws rows instead.
-                disabled = true;
-                LOGGER.warn("corner mask unavailable, drawing corners row by row", t);
-                return null;
+            // Do not bake here: this method is called while GUI geometry is being recorded.
+            // Creating/registering a DynamicTexture mid-draw corrupts texture state and can
+            // invalidate the glyph atlas. The caller falls back to row-by-row corners for
+            // this frame; the next tick bakes the mask once.
+            PENDING.add(radius);
+            return null;
+        }
+    }
+
+    /** Bakes masks requested during drawing at a safe point: the client tick. */
+    public static void tick() {
+        if (disabled) {
+            return;
+        }
+        List<Integer> radii;
+        synchronized (CACHE) {
+            if (PENDING.isEmpty()) {
+                return;
+            }
+            radii = new ArrayList<>(PENDING);
+            PENDING.clear();
+        }
+        for (int radius : radii) {
+            synchronized (CACHE) {
+                Mask cached = CACHE.get(radius);
+                if (cached != null && isLive(cached)) {
+                    continue;
+                }
+                try {
+                    CACHE.put(radius, bake(radius));
+                    evictStale();
+                } catch (Throwable t) {
+                    // Never break the GUI over an optimisation: callers draw rows instead.
+                    disabled = true;
+                    LOGGER.warn("corner mask unavailable, drawing corners row by row", t);
+                    return;
+                }
             }
         }
     }
