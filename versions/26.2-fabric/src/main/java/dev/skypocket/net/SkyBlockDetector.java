@@ -13,18 +13,18 @@ import java.util.Locale;
 
 /**
  * Detects whether the client is currently connected to Hypixel SkyBlock, and gates
- * SkyBlock-category modules accordingly.
+ * SkyBlock-only modules accordingly.
  *
  * <p>Detection is lightweight and self-contained: Hypixel is recognized by the
  * current server address, and SkyBlock by the sidebar objective's "SKYBLOCK" title.
- * SkyBlock-category modules should wrap their effect in {@link #isActive()} so they
+ * SkyBlock-only modules should wrap their effect in {@link #isActive()} so they
  * only run in SkyBlock when the "SkyBlock modules only in SkyBlock" setting is on.
  */
 public final class SkyBlockDetector {
     private SkyBlockDetector() {
     }
 
-    /** Whether a SkyBlock-category module should run right now: always true unless the
+    /** Whether a SkyBlock-only module should run right now: always true unless the
      *  "SkyBlock modules only in SkyBlock" setting is on and we're not on SkyBlock. */
     public static boolean isActive() {
         return !ConfigManager.get().skyBlockModulesOnly || isOnSkyBlock();

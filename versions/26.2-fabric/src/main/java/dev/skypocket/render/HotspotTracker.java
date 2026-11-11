@@ -243,9 +243,9 @@ public final class HotspotTracker {
         Hotspot best = null;
         double bestD2 = Double.MAX_VALUE;
         for (Hotspot h : HOTSPOTS.values()) {
-            if (h.locked) {
-                continue; // size is fixed; no need to keep sampling this hotspot
-            }
+            // Locked hotspots must still participate in nearest-centre attribution. Otherwise
+            // their ring particles are handed to a nearby unlocked hotspot and pollute its
+            // distance histogram, so two close hotspots can leave one with no estimated radius.
             double dx = x - h.x;
             double dz = z - h.z;
             double d2 = dx * dx + dz * dz;
@@ -254,7 +254,7 @@ public final class HotspotTracker {
                 best = h;
             }
         }
-        if (best == null) {
+        if (best == null || best.locked) {
             return;
         }
         double d = Math.sqrt(bestD2);

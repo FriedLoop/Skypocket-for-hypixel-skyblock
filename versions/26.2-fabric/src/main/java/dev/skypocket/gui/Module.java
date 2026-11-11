@@ -24,6 +24,7 @@ public final class Module implements Feature {
     private final BooleanSupplier enabled;
     private final Consumer<Boolean> setEnabled;
     private final List<Setting> settings;
+    private boolean skyBlockOnly;
 
     public Module(String id, String name, Category category, BooleanSupplier enabled, Consumer<Boolean> setEnabled, List<Setting> settings) {
         this.id = id;
@@ -53,6 +54,16 @@ public final class Module implements Feature {
 
     @Override public Category category() {
         return category;
+    }
+
+    /** Marks this module as SkyBlock-only and returns it for fluent registration. */
+    public Module markSkyBlockOnly() {
+        this.skyBlockOnly = true;
+        return this;
+    }
+
+    @Override public boolean skyBlockOnly() {
+        return skyBlockOnly;
     }
 
     @Override public boolean isEnabled() {

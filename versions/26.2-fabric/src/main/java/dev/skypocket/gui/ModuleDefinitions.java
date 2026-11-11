@@ -11,6 +11,7 @@ import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.AntialiasingRenderer;
 import dev.skypocket.render.ColorGradeRenderer;
 import dev.skypocket.render.ColorUtil;
+import dev.skypocket.render.HotspotOverlayStyle;
 import dev.skypocket.render.HotspotType;
 import dev.skypocket.skyblock.MiningStrengthTable;
 import dev.skypocket.sound.MentionSoundManager;
@@ -44,10 +45,13 @@ final class ModuleDefinitions {
         registerPlayerGlow(cfg);
         registerDragonGlow(cfg);
         registerHidePlayers(cfg);
+        registerHideSpawnPointPlayers(cfg);
+        registerHidePlayersNearNpcs(cfg);
         registerHitbox(cfg);
         registerHideLandedArrows(cfg);
         registerHideStuckArrows(cfg);
         registerFishingHotspotOverlay(cfg);
+        registerLegendarySeaCreatureWarning(cfg);
         registerMiningAbilityReminder(cfg);
         registerMiningBreakPredict(cfg);
         registerCommissions(cfg);
@@ -58,6 +62,7 @@ final class ModuleDefinitions {
         registerFpsTpsPing(cfg);
         registerHeldItemName(cfg);
         registerStatsDisplay(cfg);
+        registerSkillDisplay(cfg);
         registerAutoSprint(cfg);
         registerScrollableTooltips(cfg);
     }
@@ -171,8 +176,9 @@ final class ModuleDefinitions {
         settings.add(new Setting.SliderSetting("行高", 0.1, 0.8,
                 () -> cfg.damageSplashRowHeight,
                 v -> cfg.damageSplashRowHeight = v, "%.1f", 0.05));
-        ModuleRegistry.register(new Module("damage_splash_compact", "伤害飘字", Category.SKYBLOCK_COMBAT,
-                () -> cfg.damageSplashEnabled, v -> cfg.damageSplashEnabled = v, settings));
+        ModuleRegistry.register(new Module("damage_splash_compact", "伤害飘字", Category.COMBAT,
+                () -> cfg.damageSplashEnabled, v -> cfg.damageSplashEnabled = v, settings)
+                .markSkyBlockOnly());
     }
 
     private static void registerChatCompact(ModConfig cfg) {
@@ -204,8 +210,9 @@ final class ModuleDefinitions {
                 v -> cfg.miningAbilityReminderVolume = (float) (v / 100.0), "%.0f%%", 1));
         settings.add(new Setting.SliderSetting("音高", 0.5, 2.0, () -> cfg.miningAbilityReminderPitch,
                 v -> cfg.miningAbilityReminderPitch = (float) v, "%.2f", 0.05));
-        ModuleRegistry.register(new Module("mining_ability_reminder", "挖矿技能提醒", Category.SKYBLOCK_MINING,
-                () -> cfg.miningAbilityReminderEnabled, v -> cfg.miningAbilityReminderEnabled = v, settings));
+        ModuleRegistry.register(new Module("mining_ability_reminder", "挖矿技能提醒", Category.MINING,
+                () -> cfg.miningAbilityReminderEnabled, v -> cfg.miningAbilityReminderEnabled = v, settings)
+                .markSkyBlockOnly());
     }
 
     /**
@@ -374,8 +381,9 @@ final class ModuleDefinitions {
                 v -> cfg.commissionsStartColor = v));
         settings.add(new Setting.ColorSetting("完成颜色", () -> cfg.commissionsDoneColor,
                 v -> cfg.commissionsDoneColor = v));
-        ModuleRegistry.register(new Module("commissions", "挖矿委托", Category.SKYBLOCK_MINING,
-                () -> cfg.commissionsEnabled, v -> cfg.commissionsEnabled = v, settings));
+        ModuleRegistry.register(new Module("commissions", "挖矿委托", Category.MINING,
+                () -> cfg.commissionsEnabled, v -> cfg.commissionsEnabled = v, settings)
+                .markSkyBlockOnly());
     }
 
     private static void registerMiningBreakPredict(ModConfig cfg) {
@@ -416,8 +424,9 @@ final class ModuleDefinitions {
                 v -> cfg.miningBreakDebugHud = v));
         settings.add(new Setting.GroupSetting("校准与调试", advanced)
                 .subtitle("调试信息与高级显示选项"));
-        ModuleRegistry.register(new Module("mining_break_predict", "挖矿破坏预测", Category.SKYBLOCK_MINING,
-                () -> cfg.miningBreakPredictEnabled, v -> cfg.miningBreakPredictEnabled = v, settings));
+        ModuleRegistry.register(new Module("mining_break_predict", "挖矿破坏预测", Category.MINING,
+                () -> cfg.miningBreakPredictEnabled, v -> cfg.miningBreakPredictEnabled = v, settings)
+                .markSkyBlockOnly());
     }
 
     private static void registerNoHurtCamera(ModConfig cfg) {
@@ -426,7 +435,7 @@ final class ModuleDefinitions {
     }
 
     private static void registerPlayerGlow(ModConfig cfg) {
-        ModuleRegistry.register(new Module("player_glow", "人物发光", Category.RENDER,
+        ModuleRegistry.register(new Module("player_glow", "人物发光", Category.ESP,
                 () -> cfg.playerGlowEnabled, v -> cfg.playerGlowEnabled = v,
                 List.of(
                         new Setting.Header("外观", "调整玩家发光的颜色"),
@@ -435,16 +444,16 @@ final class ModuleDefinitions {
     }
 
     private static void registerDragonGlow(ModConfig cfg) {
-        ModuleRegistry.register(new Module("dragon_glow", "末影龙发光", Category.SKYBLOCK_COMBAT,
+        ModuleRegistry.register(new Module("dragon_glow", "末影龙发光", Category.ESP,
                 () -> cfg.dragonGlowEnabled, v -> cfg.dragonGlowEnabled = v,
                 List.of(
                         new Setting.Header("外观", "调整末影龙发光的颜色"),
                         new Setting.ColorSetting("发光颜色", () -> cfg.dragonGlowColor, v -> cfg.dragonGlowColor = v)
-                )));
+                )).markSkyBlockOnly());
     }
 
     private static void registerHidePlayers(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_players", "隐藏附近玩家", Category.RENDER,
+        ModuleRegistry.register(new Module("hide_players", "隐藏附近玩家", Category.ESP,
                 () -> cfg.hideNearbyPlayersEnabled, v -> cfg.hideNearbyPlayersEnabled = v,
                 List.of(
                         new Setting.Header("行为", "设置隐藏附近玩家的范围"),
@@ -453,8 +462,30 @@ final class ModuleDefinitions {
                 )));
     }
 
+    private static void registerHideSpawnPointPlayers(ModConfig cfg) {
+        ModuleRegistry.register(new Module("hide_spawn_point_players", "隐藏出生点玩家", Category.ESP,
+                () -> cfg.hideSpawnPointPlayers, v -> cfg.hideSpawnPointPlayers = v,
+                List.of(
+                        new Setting.Header("行为", "隐藏站在 Hub 出生点的真实玩家"),
+                        new Setting.SliderSetting("出生点范围", 0.1, 3.0,
+                                () -> cfg.hideSpawnPointRadius,
+                                v -> cfg.hideSpawnPointRadius = (float) v, "%.1f", 0.1)
+                )).markSkyBlockOnly());
+    }
+
+    private static void registerHidePlayersNearNpcs(ModConfig cfg) {
+        ModuleRegistry.register(new Module("hide_players_near_npcs", "隐藏 NPC 附近玩家", Category.ESP,
+                () -> cfg.hidePlayersNearNpcs, v -> cfg.hidePlayersNearNpcs = v,
+                List.of(
+                        new Setting.Header("行为", "隐藏站在 SkyBlock NPC 附近的真实玩家"),
+                        new Setting.SliderSetting("NPC 附近范围", 0.5, 8.0,
+                                () -> cfg.hidePlayersNearNpcsRange,
+                                v -> cfg.hidePlayersNearNpcsRange = (float) v, "%.1f", 0.5)
+                )).markSkyBlockOnly());
+    }
+
     private static void registerHitbox(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hitbox", "碰撞箱", Category.RENDER,
+        ModuleRegistry.register(new Module("hitbox", "碰撞箱", Category.ESP,
                 () -> cfg.hitboxEnabled, v -> cfg.hitboxEnabled = v,
                 List.of(
                         new Setting.Header("显示", "调整碰撞箱颜色、线宽和视线"),
@@ -477,27 +508,45 @@ final class ModuleDefinitions {
     }
 
     private static void registerHideLandedArrows(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_landed_arrows", "隐藏落地箭矢", Category.RENDER,
+        ModuleRegistry.register(new Module("hide_landed_arrows", "隐藏落地箭矢", Category.ESP,
                 () -> cfg.hideLandedArrows, v -> cfg.hideLandedArrows = v, List.of()));
     }
 
     private static void registerHideStuckArrows(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_stuck_arrows", "隐藏插体箭矢", Category.RENDER,
+        ModuleRegistry.register(new Module("hide_stuck_arrows", "隐藏插体箭矢", Category.ESP,
                 () -> cfg.hideStuckArrows, v -> cfg.hideStuckArrows = v, List.of()));
     }
 
     private static void registerFishingHotspotOverlay(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("显示", "调整热点类型颜色、高度、线宽与显示距离"));
+        settings.add(new Setting.Header("显示", "调整热点样式、颜色、高度、线宽与显示距离"));
+        settings.add(new Setting.DropdownSetting("样式", HotspotOverlayStyle::labels,
+                () -> cfg.hotspotOverlayStyle, v -> cfg.hotspotOverlayStyle = v));
         for (HotspotType t : HotspotType.values()) {
             settings.add(new Setting.ColorSetting(t.label, () -> t.color(cfg), v -> t.setColor(cfg, v)));
         }
         settings.add(new Setting.ColorSetting("未知类型", () -> cfg.hotspotOverlayColor, v -> cfg.hotspotOverlayColor = v));
-        settings.add(new Setting.SliderSetting("高度", 0.25, 256.0, () -> cfg.hotspotOverlayHeight, v -> cfg.hotspotOverlayHeight = (float) v, "%.2f", 0.05));
+        settings.add(new Setting.SliderSetting("高度", 0.25, 256.0, () -> cfg.hotspotOverlayHeight, v -> cfg.hotspotOverlayHeight = (float) v, "%.2f", 0.05)
+                .visibleWhen(() -> HotspotOverlayStyle.byLabel(cfg.hotspotOverlayStyle).isCylinder()));
         settings.add(new Setting.SliderSetting("线宽", 0.5, 4.0, () -> cfg.hotspotOverlayLineWidth, v -> cfg.hotspotOverlayLineWidth = (float) v, "%.1f", 0.5));
         settings.add(new Setting.SliderSetting("显示距离", 8.0, 256.0, () -> cfg.hotspotOverlayRange, v -> cfg.hotspotOverlayRange = (float) v, "%.0f", 1.0));
-        ModuleRegistry.register(new Module("fishing_hotspot_overlay", "钓鱼热点覆盖层", Category.SKYBLOCK_FISHING,
-                () -> cfg.hotspotOverlayEnabled, v -> cfg.hotspotOverlayEnabled = v, settings));
+        ModuleRegistry.register(new Module("fishing_hotspot_overlay", "钓鱼热点覆盖层", Category.FISHING,
+                () -> cfg.hotspotOverlayEnabled, v -> cfg.hotspotOverlayEnabled = v, settings)
+                .markSkyBlockOnly());
+    }
+
+    private static void registerLegendarySeaCreatureWarning(ModConfig cfg) {
+        ModuleRegistry.register(new Module("legendary_sea_creature_warning", "传奇海怪警告", Category.FISHING,
+                () -> cfg.legendarySeaCreatureWarning, v -> cfg.legendarySeaCreatureWarning = v,
+                List.of(
+                        new Setting.Header("警告", "检测传奇/神话海怪刷新并显示中央警告"),
+                        new Setting.ColorSetting("警告颜色", () -> cfg.legendaryWarningColor,
+                                v -> cfg.legendaryWarningColor = v),
+                        new Setting.SliderSetting("显示时长", 1, 10,
+                                () -> cfg.legendaryWarningDurationMs / 1000.0,
+                                v -> cfg.legendaryWarningDurationMs = (int) Math.round(v * 1000),
+                                "%.0fs", 1)
+                )).markSkyBlockOnly());
     }
 
     private static void registerScrollableTooltips(ModConfig cfg) {
@@ -598,7 +647,7 @@ final class ModuleDefinitions {
      *
      * <p>A general HUD feature rather than a SkyBlock one: it is pure vanilla furniture that is simply
      * the wrong size on a large GUI, so it belongs in {@link Category#HUD} next to the clock and the
-     * FPS readout, not under {@code SKYBLOCK_HUD}. Its real controls are the position editor's drag and
+     * FPS readout, not under a separate SkyBlock HUD group. Its real controls are the position editor's drag and
      * wheel; the offsets are also exposed here because they are the only way to bring it back after
      * dragging it somewhere silly.
      */
@@ -616,7 +665,7 @@ final class ModuleDefinitions {
     }
 
     private static void registerStatsDisplay(ModConfig cfg) {
-        ModuleRegistry.register(new Module("stats_display", "玩家数值显示", Category.SKYBLOCK_HUD,
+        ModuleRegistry.register(new Module("stats_display", "玩家数值显示", Category.HUD,
                 () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
                 List.of(
                         new Setting.Header("显示风格", "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
@@ -779,7 +828,23 @@ final class ModuleDefinitions {
                                     rebuildPanelAfterStyleChange();
                                 })
                                 .visibleWhen(() -> cfg.statsModernStyle)
-                )));
+                )).markSkyBlockOnly());
+    }
+
+    private static void registerSkillDisplay(ModConfig cfg) {
+        ModuleRegistry.register(new Module("skill_display", "技能进度显示", Category.HUD,
+                () -> cfg.skillDisplayEnabled, v -> cfg.skillDisplayEnabled = v,
+                List.of(
+                        new Setting.Header("显示", "显示最近获得经验的技能、当前 XP 和下一级需求，图标使用原版物品"),
+                        new Setting.BooleanSetting("仅显示百分比", () -> cfg.skillDisplayPercentageOnly,
+                                v -> cfg.skillDisplayPercentageOnly = v),
+                        new Setting.ColorSetting("文字颜色", () -> cfg.skillDisplayColor,
+                                v -> cfg.skillDisplayColor = v),
+                        new Setting.SliderSetting("显示时长", 1, 8,
+                                () -> cfg.skillDisplayDurationMs / 1000.0,
+                                v -> cfg.skillDisplayDurationMs = (int) Math.round(v * 1000),
+                                "%.0fs", 1)
+                )).markSkyBlockOnly());
     }
 
     private static void registerAutoSprint(ModConfig cfg) {

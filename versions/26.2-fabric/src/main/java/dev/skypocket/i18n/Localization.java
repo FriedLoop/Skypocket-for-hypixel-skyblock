@@ -35,6 +35,9 @@ public final class Localization {
         EN.put("钓鱼", "Fishing");
         EN.put("事件", "Events");
         EN.put("钓鱼热点覆盖层", "Fishing Hotspot Overlay");
+        EN.put("无底圆柱（侧面）", "Bottomless Cylinder (Side)");
+        EN.put("实心圆", "Filled Circle");
+        EN.put("空心圆", "Hollow Circle");
         EN.put("钓鱼速度", "Fishing Speed");
         EN.put("海洋生物几率", "Sea Creature Chance");
         EN.put("双重上钩几率", "Double Hook Chance");
@@ -314,6 +317,9 @@ public final class Localization {
     EN.put("选择要显示碰撞箱的实体类型",
             "Choose which entity types show hitboxes");
     EN.put("控制碰撞箱的显示距离", "Control the hitbox display distance");
+    EN.put("样式", "Style");
+    EN.put("调整热点样式、颜色、高度、线宽与显示距离",
+            "Adjust hotspot style, colours, height, line width and range");
     EN.put("调整热点类型颜色、高度、线宽与显示距离",
             "Adjust hotspot colours, height, line width and range");
     EN.put("设置提示框的滚动方式与灵敏度",
@@ -396,6 +402,25 @@ public final class Localization {
         EN.put("末影龙发光", "Ender Dragon Glow");
         EN.put("发光颜色", "Glow Color");
         EN.put("隐藏附近玩家", "Hide Nearby Players");
+        EN.put("隐藏出生点玩家", "Hide Spawn Point Players");
+        EN.put("隐藏 NPC 附近玩家", "Hide Players Near NPCs");
+        EN.put("出生点范围", "Spawn Point Radius");
+        EN.put("NPC 附近范围", "NPC Radius");
+        EN.put("隐藏站在 Hub 出生点的真实玩家", "Hide real players standing at the Hub spawn point");
+        EN.put("隐藏站在 SkyBlock NPC 附近的真实玩家",
+                "Hide real players standing near a SkyBlock NPC");
+        EN.put("传奇海怪警告", "Legendary Sea Creature Warning");
+        EN.put("警告", "Warning");
+        EN.put("警告颜色", "Warning Colour");
+        EN.put("显示时长", "Display Duration");
+        EN.put("检测传奇/神话海怪刷新并显示中央警告",
+                "Detect Legendary/Mythic sea creature spawns and show a centre warning");
+        EN.put("传奇海怪出现!", "Legendary Sea Creature!");
+        EN.put("技能进度显示", "Skill Progress Display");
+        EN.put("显示最近获得经验的技能、当前 XP 和下一级需求，图标使用原版物品",
+                "Show the most recently gained skill, current XP and next-level requirement");
+        EN.put("仅显示百分比", "Percentage Only");
+        EN.put("文字颜色", "Text Colour");
         EN.put("隐藏落地箭矢", "Hide Landed Arrows");
         EN.put("隐藏插体箭矢", "Hide Stuck Arrows");
         EN.put("范围", "Range");

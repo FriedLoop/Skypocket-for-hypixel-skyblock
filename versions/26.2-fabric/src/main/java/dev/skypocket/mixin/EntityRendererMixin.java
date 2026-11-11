@@ -1,7 +1,9 @@
 package dev.skypocket.mixin;
 
 import dev.skypocket.config.ConfigManager;
+import dev.skypocket.net.SkyBlockDetector;
 import dev.skypocket.skyblock.PlayerLookalike;
+import dev.skypocket.skyblock.SkyBlockNpcTracker;
 import dev.skypocket.config.ModConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -31,7 +33,10 @@ public abstract class EntityRendererMixin {
 //#endif
                                        CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.hideNearbyPlayersEnabled || cfg.hideNearbyPlayersRange <= 0) {
+        boolean nearby = cfg.hideNearbyPlayersEnabled && cfg.hideNearbyPlayersRange > 0;
+        boolean spawn = cfg.hideSpawnPointPlayers;
+        boolean nearNpc = cfg.hidePlayersNearNpcs;
+        if (!nearby && !spawn && !nearNpc) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -47,8 +52,21 @@ public abstract class EntityRendererMixin {
         if (!PlayerLookalike.isRealPlayer(entity)) {
             return;
         }
+
+        if (cfg.hideSpawnPointPlayers && SkyBlockDetector.isActive()
+                && entity.position().distanceToSqr(0.5, 77.0, -0.5)
+                <= (double) cfg.hideSpawnPointRadius * cfg.hideSpawnPointRadius) {
+            cir.setReturnValue(false);
+            return;
+        }
+        if (cfg.hidePlayersNearNpcs && SkyBlockDetector.isActive()
+                && SkyBlockNpcTracker.isNearNpc(entity)) {
+            cir.setReturnValue(false);
+            return;
+        }
+
         double range = cfg.hideNearbyPlayersRange;
-        if (entity.distanceToSqr(mc.player) < range * range) {
+        if (nearby && entity.distanceToSqr(mc.player) < range * range) {
             cir.setReturnValue(false);
         }
     }

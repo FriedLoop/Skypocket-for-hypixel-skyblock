@@ -12,13 +12,17 @@ import dev.skypocket.hud.CrosshairHudElement;
 import dev.skypocket.hud.DayCountHudElement;
 import dev.skypocket.hud.FpsTpsPingHudElement;
 import dev.skypocket.hud.HeldItemNameHudElement;
+import dev.skypocket.hud.LegendarySeaCreatureWarningHudElement;
 import dev.skypocket.hud.MiningAbilityHudElement;
 import dev.skypocket.hud.MiningBreakHudElement;
+import dev.skypocket.hud.SkillDisplayHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.skyblock.MiningAbilityTracker;
 import dev.skypocket.skyblock.MiningSpeedBoostTracker;
 import dev.skypocket.skyblock.PlayerStatsTracker;
+import dev.skypocket.skyblock.SkillDisplayTracker;
+import dev.skypocket.skyblock.SkyBlockNpcTracker;
 import dev.skypocket.net.PingMonitor;
 import dev.skypocket.render.BlockOutlineRenderer;
 import dev.skypocket.render.ClickGuiFonts;
@@ -38,7 +42,6 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Client-only entrypoint (fabric.mod.json has "environment": "client").
@@ -72,6 +75,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         FpsTpsPingHudElement.register();
         StatTextHudElement.register();
         StatsBarHudElement.register();
+        SkillDisplayHudElement.register();
         BlockOutlineRenderer.init();
         HitboxRenderer.init();
         HotspotOverlayRenderer.init();
@@ -80,12 +84,14 @@ public final class SkyPocketMod implements ClientModInitializer {
         MiningAbilityHudElement.register();
         MiningBreakHudElement.register();
         CommissionHudElement.register();
+        LegendarySeaCreatureWarningHudElement.register();
         // The live post chains (colour grade, bloom) hold objects the device rebuilds on a resource
         // reload, so they have to be dropped then - see LivePostChain.
         LivePostChain.installReloadHook();
         MiningAbilityTracker.init();
         MiningSpeedBoostTracker.init();
         PlayerStatsTracker.init();
+        SkillDisplayTracker.init();
         MentionSoundManager.init();
         MentionAlert.init();
         registerCommands();
@@ -97,6 +103,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         // Pre-build Click GUI fonts in the background so opening the GUI never stalls.
         ClientTickEvents.END_CLIENT_TICK.register(client -> ClickGuiFonts.tick());
         ClientTickEvents.END_CLIENT_TICK.register(client -> GuiCornerTextures.tick());
+        ClientTickEvents.END_CLIENT_TICK.register(SkyBlockNpcTracker::tick);
     }
 
     public static KeyMapping getClickGuiKey() {
@@ -109,7 +116,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         clickGuiKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.skypocket.clickgui",
                 InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                InputConstants.KEY_RSHIFT,
                 category
         ));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

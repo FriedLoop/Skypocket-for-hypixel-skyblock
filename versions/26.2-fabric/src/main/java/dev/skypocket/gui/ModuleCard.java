@@ -114,9 +114,14 @@ final class ModuleCard extends Control {
                     ClickGuiStyle.text());
         }
 
-        painter.text(fitTitle(feature.name(), CARD_TITLE_MAX_W),
+        float titleMax = feature.skyBlockOnly() ? CARD_TITLE_MAX_W - 16f : CARD_TITLE_MAX_W;
+        painter.text(fitTitle(feature.name(), titleMax),
                 bounds().x() + CARD_TITLE_X, bounds().y() + CARD_TITLE_Y,
                 ClickGuiStyle.text());
+        if (feature.skyBlockOnly()) {
+            painter.text("SB", bounds().x() + CARD_TITLE_X + titleMax + 3f,
+                    bounds().y() + CARD_TITLE_Y, ClickGuiStyle.accent());
+        }
 
         float btnX = bounds().x() + CARD_BTN_X;
         float btnY = bounds().y() + CARD_BTN_Y;

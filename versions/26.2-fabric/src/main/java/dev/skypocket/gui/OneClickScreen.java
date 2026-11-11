@@ -11,7 +11,6 @@ import dev.skypocket.gui.widget.GuiTheme;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
-import dev.skypocket.ui.input.Keys;
 import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PreeditEvent;
 import net.minecraft.client.Minecraft;
@@ -22,7 +21,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2fStack;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -65,7 +63,7 @@ public class OneClickScreen extends Screen {
     private int scrollY;
     private boolean settingsTab;
     private String search = "";
-    private Category selected = Category.RENDER;
+    private Category selected = null;
     private Feature viewingFeature;
     private final List<Feature> features;
     private final List<Setting> panelSettings;
@@ -311,31 +309,7 @@ public class OneClickScreen extends Screen {
     }
 
     private int canonicalKey(KeyEvent event) {
-        if (event.isCycleFocus()) {
-            return Keys.TAB;
-        }
-        if (event.isEscape()) {
-            return Keys.ESCAPE;
-        }
-        if (event.isConfirmation()) {
-            return Keys.ENTER;
-        }
-        if (event.isLeft()) {
-            return Keys.LEFT;
-        }
-        if (event.isRight()) {
-            return Keys.RIGHT;
-        }
-        if (event.input() == 32 || event.input() == 44) {
-            return 32;
-        }
-        return switch (event.input()) {
-            case 42 -> Keys.BACKSPACE;
-            case 76 -> Keys.DELETE;
-            case 74 -> Keys.HOME;
-            case 77 -> Keys.END;
-            default -> event.input();
-        };
+        return InputKeys.canonical(event);
     }
 
     private int pageModifiers(KeyEvent event) {
@@ -1091,10 +1065,10 @@ public class OneClickScreen extends Screen {
     @Override
     public boolean keyReleased(KeyEvent event) {
         int key = event.key();
-        if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (InputKeys.isShift(event)) {
             shiftDown = false;
         }
-        if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+        if (InputKeys.isControl(event)) {
             ctrlDown = false;
         }
         if (modulesPageActive()) {
@@ -1124,10 +1098,10 @@ public class OneClickScreen extends Screen {
             return true;
         }
         int key = event.key();
-        if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (InputKeys.isShift(event)) {
             shiftDown = true;
         }
-        if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+        if (InputKeys.isControl(event)) {
             ctrlDown = true;
         }
         if (SkyPocketMod.getClickGuiKey() != null && SkyPocketMod.getClickGuiKey().matches(event)) {
@@ -1138,7 +1112,7 @@ public class OneClickScreen extends Screen {
         if (devDrawer.keyPressed(key, shiftDown, ctrlDown)) {
             return true;
         }
-        if (devDrawer.isOpen() && key == GLFW.GLFW_KEY_ESCAPE) {
+        if (devDrawer.isOpen() && InputKeys.isEscape(event)) {
             devDrawer.close();
             return true;
         }
@@ -1185,11 +1159,11 @@ public class OneClickScreen extends Screen {
                     pageModifiers(event), true));
             return true;
         }
-        if (key == GLFW.GLFW_KEY_ESCAPE) {
+        if (InputKeys.isEscape(event)) {
             onClose();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE && !search.isEmpty()) {
+        if (InputKeys.isBackspace(event) && !search.isEmpty()) {
             search = search.substring(0, search.length() - 1);
             scrollY = 0;
             layout();
@@ -1213,7 +1187,7 @@ public class OneClickScreen extends Screen {
                 ensureModulesPage();
                 if (modulesPage.hasFocus()) {
                     modulesPage.layout();
-                    modulesPage.textInput(typed);
+                    modulesPage.searchInput(typed);
                     return true;
                 }
                 return false;

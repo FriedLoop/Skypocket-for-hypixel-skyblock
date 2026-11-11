@@ -5,6 +5,7 @@ import dev.skypocket.gui.widget.ClickGuiStyle;
 import dev.skypocket.gui.widget.GuiMetrics;
 import dev.skypocket.gui.widget.GuiTheme;
 import dev.skypocket.gui.widget.ImmediateColorPicker;
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.skypocket.gui.widget.ImmediateTextField;
 import dev.skypocket.gui.widget.PickerMemory;
 import dev.skypocket.gui.widget.ThemeStore;
@@ -637,19 +638,18 @@ final class DevDrawer {
             return false;
         }
         if (confirmingDelete) {
-            if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 confirmingDelete = false;
             }
             // While the confirmation shows, keys go to it and nowhere else.
             return true;
         }
         if (naming && nameField != null) {
-            if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
-                    || key == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 createTheme();
                 return true;
             }
-            if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 naming = false;
                 nameField.blur();
                 return true;

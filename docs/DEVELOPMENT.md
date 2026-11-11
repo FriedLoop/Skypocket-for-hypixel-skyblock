@@ -3,6 +3,7 @@
 > 本文件是唯一权威开发文档，与代码一起版本化。开发新功能前先读本文件，不要重复探索整个代码库。
 > 约定/架构变更时同步更新本文件。
 > 专题参考：**`docs/SKYBLOCK_STATS.md`** —— SkyBlock 玩家数据从哪来、怎么抠（ActionBar / Tab / NBT / BossBar），含必须照抄的解析语义与踩坑。
+> 数据表清单：**`docs/MAINTENANCE_TABLES.md`** —— 技能 XP、矿物强度/instamine、工具白名单、热点类型等需要手动维护的表。
 
 ## 1. 项目概览
 
@@ -39,7 +40,7 @@ dev.skypocket/
 ## 3. 核心契约与约定（必须遵守）
 
 ### 3.1 功能 = Feature 契约
-- `Feature` 接口是唯一功能契约：`id()/name()/rawName()/category()/isEnabled()/setEnabled()/settings()/hasSettings()`（搜索、`hasSettings`、`settingsHeight` 为默认方法）。
+- `Feature` 接口是唯一功能契约：`id()/name()/rawName()/category()/skyBlockOnly()/isEnabled()/setEnabled()/settings()/hasSettings()`（搜索、`hasSettings`、`settingsHeight` 为默认方法）。`skyBlockOnly()` 只用于“仅 SkyBlock”徽标和语义，不替代 `SkyBlockDetector.isActive()` 门控。
 - `Module` 是默认实现。**新功能用 `Module`，不要自己实现 `Feature`。**
 
 ### 3.2 设置一律内联 ClickGUI
@@ -88,8 +89,9 @@ dev.skypocket/
   - 组的高度 = 组头 + 展开时的所有子设置高度（`GroupSetting.height()` 递归求和），所以 `panelSettingsHeight()`/`isRowVisible()` 不用改；折叠时调 `relayout()`（下一 tick 重排，与 `ColorSetting`/`DropdownSetting` 同一路径）。
   - **带动画的 off/on 开关（`ToggleButton`）**：动画状态放在 **Setting** 上（`ToggleAnimation`），不是控件上 —— 行每次滚动都会重建，控件自己存进度就会"每次都从终点开始"；而且它是**按时间推进**的（读时钟）而不是按绘制推进，否则离屏的开关会卡在半途、让缓存键永远不干净。**面板缓存键里有 `ToggleAnimation.signature()` 这一项**（静止时恒为 0，运动中随进度变化）——漏了它就是"开关卡在中间不动/动画被冻进缓存帧"。
 - **所有滑条都必须有步进**（`SliderSetting` 不再接受"连续"）：不写时按量程自动取约百分之一（`defaultStep`），量纲明确的写死（像素大小步进 1、缩放 0.05、位置 0.01、旋转 1）。理由：无步进时拖动一个像素数字就跳一次、读数没法看，而且同一个量程的两个滑条行为不该不同。
-- 分类：`Category` 是**两级树模型**（不再是枚举）：叶子节点（RENDER/HUD/MOVEMENT）直接挂功能，容器节点（SKYBLOCK）挂子分类。新增子分类改 `Category` 里的 `SKYBLOCK` 定义，并在 `Localization` 补翻译。
-- 侧边栏：`PanelRenderer.drawSidebar` 渲染「全部 + 一级分类 + 选中容器的子分类」（容器选中即展开）。过滤规则：`selected == null` 显示全部；叶子精确匹配；容器通过 `Category.contains()` 覆盖其所有后代。卡片网格/搜索框都在侧边栏右侧的面板内。
+- 分类：`Category` 仍是两级树模型，但**不设 `SkyBlock` 一级容器**。模组整体面向 SkyBlock，顶层直接按玩家活动领域分：`HUD / 挖矿 / 战斗 / 钓鱼 / ESP / 渲染 / 通知 / 移动`。空的领域不要保留占位，等真正有模块时再加；容器能力保留给未来的确有子分组的领域。
+- 侧边栏：`PanelRenderer.drawSidebar` 渲染「全部 + 一级分类」。过滤规则：`selected == null` 显示全部；叶子精确匹配；未来容器仍通过 `Category.contains()` 覆盖后代。卡片网格/搜索框都在侧边栏右侧的面板内。
+- `skyBlockOnly` 标记：只有真正依赖 Hypixel SkyBlock 的模块才调用 `Module.markSkyBlockOnly()`，卡片显示 `SB` 徽标；模块逻辑仍必须自己调用 `SkyBlockDetector.isActive()`，不能靠分类或徽标门控。
 - **面板几何数值只写一处，而且都在 `gui/PanelGeometry`**：面板尺寸 `PANEL_W/H`、圆角 `ROUND`、tab（`TAB_*`、`tabX()`、`tab2X()`）、卡片（`CARD_W/H/GAP`、`ICON_SIZE`、`CARD_PAD`、`CARD_TITLE_*`、`CARD_BTN_*`、`CARD_STATUS_*`）、搜索框（`SEARCH_X/Y/W/H`）、内容区（`CONTENT_TOP_MODULES/SETTINGS`、`contentTop(view)`、`contentBottom(Row)`）、侧边栏（`SIDEBAR_*`）、页脚（`FOOTER_*`、`footerBtnY()`）、卡片网格（`columns()`、`cardRowLeft(rowCount)`、`cardRowTop(view, row)`）。
   - **这些值同时被绘制与命中检测使用**（`PanelRenderer` ↔ `hoveredCardKey` / `insideSearchBox` / `PanelInput.hit` …）。以前两处各写一遍，改一处忘另一处会**静默**造成"看到的位置和能点的位置不一致"；现在改成只在一处定义。
   - 依赖状态的查询（`contentTop`、`inCardArea`、`visibleFeatures`、`maxScroll`、`hoveredSidebarKey`、`hoveredCardKey`、`sidebarRowAt`、`sidebarCategory`、`cardAt`、`sidebarTargetY`）接收一个 `PanelView` 快照（`OneClickScreen.view()` 每帧构造，纯 record，零成本）；`OneClickScreen` 只保留仍然有人用的一行委托。
@@ -269,7 +271,9 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 
 - `SkyBlockDetector`（`net` 包）提供：`isOnHypixel()`（服务器地址含 `hypixel.net`，兼容直接连接）、`isOnSkyBlock()`（记分板 SIDEBAR 标题含 `SKYBLOCK`）、`isActive()`（门控：`!skyBlockModulesOnly || isOnSkyBlock()`）。
 - 配置开关 `skyBlockModulesOnly`（默认 true），在 ClickGUI「设置」页用 `BooleanSetting("SkyBlock 模块仅在 SkyBlock 生效")` 暴露。
-- **SkyBlock 分类（`Category.SKYBLOCK` 及其子分类）下的功能，实际逻辑必须用 `SkyBlockDetector.isActive()` 门控**（mixin/渲染器里 `cfg.xxxEnabled && SkyBlockDetector.isActive()`），否则开关不生效。新增 SkyBlock 模块时记得加。
+- **标记为 `skyBlockOnly` 的功能，实际逻辑必须用 `SkyBlockDetector.isActive()` 门控**（mixin/渲染器里 `cfg.xxxEnabled && SkyBlockDetector.isActive()`），否则开关不生效。新增 SkyBlock 模块时：注册 `Module` 后调用 `.markSkyBlockOnly()`，再确认渲染/事件路径有 `isActive()`。
+- 出生点隐藏使用 Hypixel Hub 的硬编码点 `(0.5, 77, -0.5)`，半径可配置；NPC 判定复用 SBA 的启发式（UUID version 2 + 满血 + 未睡眠），位置缓存由 `SkyBlockNpcTracker` 每 tick 更新。该隐藏只作用于 `PlayerLookalike.isRealPlayer`，不会误隐 NPC 本身。
+- 技能进度显示只解析 ActionBar 中当前获得经验的技能，4 秒（可配）后消失；未满级显示 `+gained Skill (current/total)`，`total=0` 的满级显示 `+gained Skill (current)`。模块设置里的 `仅显示百分比` 可强制使用 `+gained Skill (xx.xx%)`；关闭时百分比-only 的 ActionBar 用 `SkillXpTable` + `SkillLevelTracker` 反推 current/total，TabList 等级未知或已满级时保留百分比作为回退。六个技能图标直接使用原版物品图标：Farming 钻石锄、Mining 钻石镐、Combat 钻石剑、Foraging 钻石斧、Fishing 钓鱼竿、Enchanting 附魔台。图标随资源包变化，不额外维护贴图。表维护见 `docs/MAINTENANCE_TABLES.md`。
 
 ### 7.7 钓鱼热点（Hotspot）检测与覆盖层
 
@@ -520,7 +524,7 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 - 风格：**灰度/白色 + 代码染色** 能让一份图服务多个属性（现代条的填充就走这条）；原版心那种带描边高光的图必须逐张画。
 - vanilla 风格**不需要新图**：血量沿用 `minecraft:hud/heart/*`（含 `absorbing_full|half`），空气沿用 `hud/air*`；只有法力需要 6 张自绘（`mana_container` / `mana_container_blink` / `mana_full` / `mana_half` / `mana_overflow_full` / `mana_overflow_half`）。
 
-**两套风格**（`render/StatsStyle` 的两个实现，`render/StatsOverlayRenderer` 分发）：模块本身挂在 `Category.SKYBLOCK_HUD`（`Category` 里新增的 SkyBlock 子分类，标签就叫 `HUD`，避免与顶层「界面」在侧边栏里重名）。
+**两套风格**（`render/StatsStyle` 的两个实现，`render/StatsOverlayRenderer` 分发）：模块本身挂在顶层 `Category.HUD`，并标记为 `skyBlockOnly`。
 
 - **`Setting#visibleWhen(BooleanSupplier)`**：给设置系统新增的能力，用来把「只属于某个模式」的行整行隐藏（两套风格的专属设置就靠它，否则切到经典风格还挂着一堆条形设置）。接线只有两处：`OneClickScreen` 构建循环里 `continue` 掉不可见的行、`Feature#settingsHeight()` 同样跳过（卡片高度要跟着变）。⚠️ **行是构建一次而不是每帧重建**，所以切换后必须自己触发重排：`ConfigManager.touch()` 走普通 setter 是不够的，要 `mc.schedule(() -> screen.rebuildAfterSettingChange())`（`contentRevision++` 会同时让面板缓存失效）。
 
@@ -550,31 +554,38 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 
 ## 8. 模块清单（现状）
 
-| 分类 | 模块 | 有设置 |
-|---|---|---|
-| 渲染 RENDER | 自定义准星 crosshair | 有 |
-| 渲染 RENDER | 后处理 post_process（抗锯齿 / 动态模糊 / 画面调色 / 泛光 四个分组） | 有 |
-| 渲染 RENDER | 方块描边 block_outline | 有 |
-| 渲染 RENDER | 第三人称穿墙 third_person | 无 |
-| 渲染 RENDER | 受伤镜头不抖动 no_hurt_camera | 无 |
-| 渲染 RENDER | 人物发光 player_glow | 有 |
-| SkyBlock 战斗 SKYBLOCK_COMBAT | 末影龙发光 dragon_glow | 有 |
-| SkyBlock 钓鱼 SKYBLOCK_FISHING | 钓鱼热点覆盖层 fishing_hotspot_overlay | 有 |
-| SkyBlock 挖矿 SKYBLOCK_MINING | 挖矿技能提醒 mining_ability_reminder | 有 |
-| SkyBlock 挖矿 SKYBLOCK_MINING | 挖矿破坏预测 mining_break_predict | 有 |
-| SkyBlock 挖矿 SKYBLOCK_MINING | 挖矿委托 commissions | 有 |
-| SkyBlock HUD SKYBLOCK_HUD | 玩家数值显示 stats_display（经典 / 现代两套风格） | 有 |
-| 通知 NOTIFICATION | 聊天提及提醒 mention_alert | 有 |
-| 渲染 RENDER | 隐藏附近玩家 hide_players | 有 |
-| 渲染 RENDER | 隐藏落地箭矢 hide_landed_arrows | 无 |
-| 渲染 RENDER | 隐藏插体箭矢 hide_stuck_arrows | 无 |
-| 渲染 RENDER | 碰撞箱 hitbox | 有 |
-| 渲染 RENDER | 手持物品动画 hand_item | 有 |
-| 渲染 RENDER | 滚动提示框 scrollable_tooltips | 有 |
-| 界面 HUD | 时钟 clock | 有 |
-| 界面 HUD | 世界天数 day_count | 有 |
-| 界面 HUD | FPS/TPS/Ping fps_tps_ping | 有 |
-| 移动 MOVEMENT | 自动疾跑 auto_sprint | 无 |
+| 分类 | 模块 | 有设置 | SB |
+|---|---|---|---|
+| HUD | 玩家数值显示 stats_display（经典 / 现代两套风格） | 有 | 是 |
+| HUD | 时钟 clock | 有 | |
+| HUD | 世界天数 day_count | 有 | |
+| HUD | FPS/TPS/Ping fps_tps_ping | 有 | |
+| HUD | 手持物品名 held_item_name | 有 | |
+| HUD | 技能进度显示 skill_display | 有 | 是 |
+| 挖矿 MINING | 挖矿技能提醒 mining_ability_reminder | 有 | 是 |
+| 挖矿 MINING | 挖矿委托 commissions | 有 | 是 |
+| 挖矿 MINING | 挖矿破坏预测 mining_break_predict | 有 | 是 |
+| 战斗 COMBAT | 伤害飘字 damage_splash_compact | 有 | 是 |
+| 钓鱼 FISHING | 钓鱼热点覆盖层 fishing_hotspot_overlay | 有 | 是 |
+| 钓鱼 FISHING | 传奇海怪警告 legendary_sea_creature_warning | 有 | 是 |
+| ESP | 人物发光 player_glow | 有 | |
+| ESP | 末影龙发光 dragon_glow | 有 | 是 |
+| ESP | 隐藏附近玩家 hide_players | 有 | |
+| ESP | 隐藏出生点玩家 hide_spawn_point_players | 有 | 是 |
+| ESP | 隐藏 NPC 附近玩家 hide_players_near_npcs | 有 | 是 |
+| ESP | 碰撞箱 hitbox | 有 | |
+| ESP | 隐藏落地箭矢 hide_landed_arrows | 无 | |
+| ESP | 隐藏插体箭矢 hide_stuck_arrows | 无 | |
+| 渲染 RENDER | 自定义准星 crosshair | 有 | |
+| 渲染 RENDER | 后处理 post_process（抗锯齿 / 动态模糊 / 画面调色 / 泛光 四个分组） | 有 | |
+| 渲染 RENDER | 方块描边 block_outline | 有 | |
+| 渲染 RENDER | 第三人称穿墙 third_person | 无 | |
+| 渲染 RENDER | 受伤镜头不抖动 no_hurt_camera | 无 | |
+| 渲染 RENDER | 手持物品动画 hand_item | 有 | |
+| 渲染 RENDER | 滚动提示框 scrollable_tooltips | 有 | |
+| 通知 NOTIFICATION | 聊天提及提醒 mention_alert | 有 | |
+| 通知 NOTIFICATION | 聊天消息压缩 chat_compact | 有 | |
+| 移动 MOVEMENT | 自动疾跑 auto_sprint | 无 | |
 
 ## 9. 多版本适配（26.2 / 26.3）
 
@@ -629,7 +640,7 @@ SkyPocket/
 | 纹理包 | `blaze3d.textures.*` | `renderpearl.api.textures.*` | Bloom 整包改名 |
 | buffer | `blaze3d.buffers.GpuBuffer` / `TransientMemory` | `renderpearl.api.buffers.*`（`Std140Builder` **不搬**） | Bloom **精确到类名**，不要整包替换 |
 | 渲染管线 | `blaze3d.pipeline.RenderPipeline` / `DepthStencilState`、`blaze3d.platform.CompareOp` | `renderpearl.api.pipeline.*` | Bloom 改名 |
-| 鼠标按键号 | 左 0 / 右 1 | 左 **1** / 右 **2** | `MouseButtons.isLeft/isRight`（`//#if` 各一份），Bloom 把 18 处字面量判断改走它 |
+| 鼠标按键号 | 左 0 / 右 1 | 左 **1** / 中 **2** / 右 **3** | `MouseButtons.isLeft/isRight`（`//#if` 各一份），Bloom 把 18 处字面量判断改走它 |
 | 实体类 | `EnderMan` | `Enderman` | Bloom 两条（**全限定名 + 裸名**，只改 import 对 usages 无效） |
 | 手持渲染类 | `ItemInHandRenderer` | `FirstPersonHandsAndItemsRenderer`（`applyItemArmTransform`/`swingArm` 仍是私有同名方法） | Bloom 只改 `import` 与 `@Mixin(...)`，**不要改自己的 Mixin 类名**（类名必须等于文件名） |
 | 粒子包 | `getParticle()/getX()/getY()/getZ()` | record 访问器 `particle()/x()/y()/z()` | `//#if` |
@@ -857,12 +868,19 @@ layout(location = 0) out vec4 fragColor;
 - `ScreenRectangle.intersection` 对不相交矩形可能返回 `null`；直接 `ArrayDeque.push(null)` 会 NPE，导致所有 GUI 崩溃。现在交集为空时降级为 `ScreenRectangle.empty()`，不再推入 null。
 - mixin 只旁路观察 `enableScissor`/`disableScissor`，不取消、不修改参数和返回值；原版和其他 mod 的渲染行为不变。代价是每次 scissor 调用多一次 map 查找和 deque push/pop。
 
-**26.2 / 26.3 输入差异**：
+**26.2 / 26.3 输入差异（高风险，必须按平台适配层处理）**：
 
+- 26.2 的输入后端是 **GLFW**；26.3 是 **SDL3**。这不是单纯换一个库：`Screen` 事件里的语义相同，但原始数字不同。
 - 26.2 的 `KeyEvent.key()` 是 GLFW 键码；26.3 的 `key()` 是 SDL 键码，直接用 `256/257/258` 判断会导致 26.3 的 Esc、Tab、Enter 全部失效。
 - 跨版本必须使用 `InputWithModifiers` 的语义方法：`isEscape()`、`isCycleFocus()`、`isConfirmation()`，再转换成 `InputRouter` 自己的 canonical keys。
+- **鼠标按键也重新编号**：26.2 左/右是 `0/1`，26.3 是左/中/右 `1/2/3`。任何 `event.button() == 0/1` 都必须走 `MouseButtons.isLeft/isRight`；`PointerEvent` 内部使用 canonical 左 0/右 1，边界适配必须保持一致。
+- **不要直接比较 GLFW 常量或 GLFW 数字**（Esc/Backspace/Delete/Home/End/方向键/Shift/Ctrl）。平台边界统一走 `gui/InputKeys`：`canonical(KeyEvent)` 把 Screen 事件转成 `ui.input.Keys`；需要原始字母的即时文本框走 `InputConstants.KEY_*`。`OneClickScreen`、`HudPositionEditorScreen`、`DevDrawer`、`ImmediateTextField`、HUD 设置卡和键位注册均已迁移；新增代码不得再写 `GLFW.GLFW_KEY_*` 或 `event.input() == 32/42/44/74/76/77`。
+- **文本输入走 `Screen.charTyped(CharacterEvent)` / `preeditUpdated`**，不要自己注册 GLFW char callback，也不要假设 26.3 的 SDL text-input/IME 时序与 GLFW 相同。`CharacterEvent.codepointAsString()` 和 `isAllowedChatCharacter()` 是当前可移植入口；IME 预编辑和提交时机仍要两版分别测。
+- `KeyMapping` / `InputConstants` 的注册可能仍使用 GLFW 常量；修改键位相关代码时必须在 26.2 和 26.3 都实际按键验证。
 - `GuiGraphicsExtractor.fill` 参数是 `x1,y1,x2,y2`，而 `outline` 是 `x,y,width,height`；混用会把焦点框画成巨大的矩形。
 - 滚轮事件的正 delta 表示向上；`ScrollView` 用 `scrollY - delta * step`，不要直接相加。
+
+**结论**：输入后端差异是长期维护风险，不是一次迁移就能忽略的差异。所有新输入代码都视为跨平台代码，至少回归 26.2/26.3 的点击、滚轮、Esc/Enter/Tab、退格、字符输入和 IME。
 
 **基础控件（第一批）**：
 

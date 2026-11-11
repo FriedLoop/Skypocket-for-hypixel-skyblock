@@ -37,6 +37,15 @@ public final class InputRouter {
         return captured;
     }
 
+    /**
+     * Captures pointer events for a host that handled focus itself (the homepage search field
+     * has a dedicated hit path). Without this, a drag released outside the field never reaches
+     * its {@code onPointerUp}, leaving the field stuck in selecting/pressed state.
+     */
+    public void capture(UiElement element) {
+        captured = element;
+    }
+
     public UiElement hovered() {
         return hovered;
     }

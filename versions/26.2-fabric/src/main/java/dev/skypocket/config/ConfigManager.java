@@ -20,7 +20,7 @@ public final class ConfigManager {
             FabricLoader.getInstance().getConfigDir().resolve("skypocket.json");
 
     /** Shape version this build writes. Bump it together with a new entry in {@link #MIGRATIONS}. */
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     /**
      * Ordered upgrade steps: entry {@code i} turns a v{i} file into v{i+1}.
@@ -39,6 +39,9 @@ public final class ConfigManager {
                 }
             },
             // v1 -> v2: hudSkyPocketFont was added; the field default is off, so no conversion.
+            cfg -> {
+            },
+            // v2 -> v3: spawn/NPC hiding and the legendary warning were added; defaults are off.
             cfg -> {
             });
 

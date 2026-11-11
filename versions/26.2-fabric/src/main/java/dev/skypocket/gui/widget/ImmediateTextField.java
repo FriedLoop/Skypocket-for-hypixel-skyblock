@@ -156,7 +156,7 @@ public final class ImmediateTextField {
             return false;
         }
         switch (key) {
-            case GLFW.GLFW_KEY_BACKSPACE -> {
+            case InputConstants.KEY_BACKSPACE -> {
                 if (clearSelection()) {
                     return true;
                 }
@@ -167,7 +167,7 @@ public final class ImmediateTextField {
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_DELETE -> {
+            case InputConstants.KEY_DELETE -> {
                 if (clearSelection()) {
                     return true;
                 }
@@ -177,23 +177,15 @@ public final class ImmediateTextField {
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_LEFT -> {
+            case InputConstants.KEY_LEFT -> {
                 moveCaret(caret - 1, shift);
                 return true;
             }
-            case GLFW.GLFW_KEY_RIGHT -> {
+            case InputConstants.KEY_RIGHT -> {
                 moveCaret(caret + 1, shift);
                 return true;
             }
-            case GLFW.GLFW_KEY_HOME -> {
-                moveCaret(0, shift);
-                return true;
-            }
-            case GLFW.GLFW_KEY_END -> {
-                moveCaret(text.length(), shift);
-                return true;
-            }
-            case GLFW.GLFW_KEY_A -> {
+            case InputConstants.KEY_A -> {
                 if (ctrl) {
                     anchor = 0;
                     caret = text.length();
@@ -201,14 +193,14 @@ public final class ImmediateTextField {
                 }
                 return false;
             }
-            case GLFW.GLFW_KEY_C -> {
+            case InputConstants.KEY_C -> {
                 if (ctrl) {
                     setClipboard(selected());
                     return true;
                 }
                 return false;
             }
-            case GLFW.GLFW_KEY_X -> {
+            case InputConstants.KEY_X -> {
                 if (ctrl) {
                     setClipboard(selected());
                     clearSelection();
@@ -216,7 +208,7 @@ public final class ImmediateTextField {
                 }
                 return false;
             }
-            case GLFW.GLFW_KEY_V -> {
+            case InputConstants.KEY_V -> {
                 if (ctrl) {
                     String pasted = clipboard();
                     StringBuilder keep = new StringBuilder();

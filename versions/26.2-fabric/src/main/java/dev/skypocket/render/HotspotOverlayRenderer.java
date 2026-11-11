@@ -56,11 +56,16 @@ public final class HotspotOverlayRenderer {
         PoseStack poseStack = context.poseStack();
         Vec3 camera = context.levelState().cameraRenderState.pos;
 
+        HotspotOverlayStyle style = HotspotOverlayStyle.byLabel(cfg.hotspotOverlayStyle);
         poseStack.pushPose();
         poseStack.translate(-camera.x, -camera.y, -camera.z);
         for (HotspotTracker.Hotspot h : hotspots) {
             int argb = h.type != null ? h.type.color(cfg) : cfg.hotspotOverlayColor;
-            renderCylinder(collector, poseStack, h, rgba(argb), cfg);
+            switch (style) {
+                case CYLINDER -> renderCylinder(collector, poseStack, h, rgba(argb), cfg);
+                case FILLED_CIRCLE -> renderCircle(collector, poseStack, h, rgba(argb), cfg, true);
+                case HOLLOW_CIRCLE -> renderCircle(collector, poseStack, h, rgba(argb), cfg, false);
+            }
         }
         poseStack.popPose();
     }
@@ -85,7 +90,8 @@ public final class HotspotOverlayRenderer {
             }
         });
 
-        // Crisp edge rings at the base and the top (full alpha regardless of fill alpha).
+        // Crisp edge rings at the base and the top. The ring thickness intentionally reuses the
+        // shared line-width setting; the cylinder has no separate wall-thickness parameter.
         float[] lc = {c[0], c[1], c[2], 1.0f};
         float width = cfg.hotspotOverlayLineWidth;
         collector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, vc) -> {
@@ -98,6 +104,46 @@ public final class HotspotOverlayRenderer {
                 double z1 = h.z + Math.sin(a1) * r;
                 line(vc, pose, x0, baseY, z0, x1, baseY, z1, lc, width);
                 line(vc, pose, x0, topY, z0, x1, topY, z1, lc, width);
+            }
+        });
+    }
+
+    /**
+     * Flat water-surface circle. The filled variant also gets the same crisp outer ring as the
+     * hollow variant, so both read as the same range marker.
+     */
+    private static void renderCircle(SubmitNodeCollector collector, PoseStack poseStack,
+                                     HotspotTracker.Hotspot h, float[] c, ModConfig cfg,
+                                     boolean filled) {
+        double y = h.baseY + 0.01;
+        double r = h.radius;
+        double step = 2 * Math.PI / SEGMENTS;
+        float[] lc = {c[0], c[1], c[2], 1.0f};
+        float width = cfg.hotspotOverlayLineWidth;
+
+        if (filled) {
+            collector.submitCustomGeometry(poseStack, RenderTypes.debugTriangleFan(), (pose, vc) -> {
+                vc.addVertex(pose, (float) h.x, (float) y, (float) h.z)
+                        .setColor(c[0], c[1], c[2], c[3]);
+                for (int i = 0; i <= SEGMENTS; i++) {
+                    double angle = i * step;
+                    vc.addVertex(pose,
+                                    (float) (h.x + Math.cos(angle) * r),
+                                    (float) y,
+                                    (float) (h.z + Math.sin(angle) * r))
+                            .setColor(c[0], c[1], c[2], c[3]);
+                }
+            });
+        }
+
+        collector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, vc) -> {
+            for (int i = 0; i < SEGMENTS; i++) {
+                double a0 = i * step;
+                double a1 = (i + 1) * step;
+                line(vc, pose,
+                        h.x + Math.cos(a0) * r, y, h.z + Math.sin(a0) * r,
+                        h.x + Math.cos(a1) * r, y, h.z + Math.sin(a1) * r,
+                        lc, width);
             }
         });
     }

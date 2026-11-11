@@ -9,10 +9,12 @@ import dev.skypocket.hud.DayCountHudElement;
 import dev.skypocket.hud.FpsTpsPingHudElement;
 import dev.skypocket.hud.HeldItemNameHudElement;
 import dev.skypocket.hud.MiningAbilityHudElement;
+import dev.skypocket.hud.SkillDisplayHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.gui.widget.ClickGuiStyle;
+import dev.skypocket.ui.input.Keys;
 import dev.skypocket.gui.widget.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.GuiPixels;
@@ -25,7 +27,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3x2fStack;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,7 @@ public class HudPositionEditorScreen extends Screen {
         CLOCK, DAY_COUNT, FPS_TPS_PING, MINING_ABILITY, MINING_ABILITY_SUBTITLE, COMMISSION,
         /** Text rows: the classic readouts and the three values that never become icons. */
         STAT_HEALTH, STAT_MANA, STAT_DEFENSE, STAT_SPEED, STAT_VITALITY,
+        SKILL_DISPLAY,
         /**
          * Vanilla's held item tooltip. Stored as an offset from its own vanilla baseline rather than as
          * a position (it belongs to the hotbar and must keep following it), so its box is recomputed on
@@ -108,6 +110,9 @@ public class HudPositionEditorScreen extends Screen {
         putStat(Target.STAT_VITALITY, StatTextHudElement.Kind.VITALITY);
         putStat(Target.STAT_HEALTH, StatTextHudElement.Kind.HEALTH);
         putStat(Target.STAT_MANA, StatTextHudElement.Kind.MANA);
+        put(Target.SKILL_DISPLAY, c -> c.skillDisplayX, (c, v) -> c.skillDisplayX = v,
+                c -> c.skillDisplayY, (c, v) -> c.skillDisplayY = v,
+                c -> c.skillDisplayScale, (c, v) -> c.skillDisplayScale = (float) v);
         // Stored as an offset from the hotbar anchor: shift it by however far the requested position is
         // from where it currently lands, so the writer stays right no matter how the box is computed.
         put(Target.HELD_ITEM_NAME, c -> heldItemNameBox(c)[0],
@@ -321,6 +326,7 @@ public class HudPositionEditorScreen extends Screen {
             // pair is on the screen at a time - which is also what stops them overlapping here.
             case STAT_HEALTH -> !cfg.statsModernStyle && cfg.statsHealthTextEnabled;
             case STAT_MANA -> !cfg.statsModernStyle && cfg.statsManaTextEnabled;
+            case SKILL_DISPLAY -> cfg.skillDisplayEnabled;
             case HELD_ITEM_NAME -> cfg.heldItemNameEnabled;
             // Bars are handled above; anything new defaults to visible rather than disappearing silently.
             default -> true;
@@ -371,6 +377,7 @@ public class HudPositionEditorScreen extends Screen {
             // Bars have no text lines: their box comes from the bar's own size (see bounds).
             case STAT_HEALTH -> List.of(statLine(StatTextHudElement.Kind.HEALTH, cfg));
             case STAT_MANA -> List.of(statLine(StatTextHudElement.Kind.MANA, cfg));
+            case SKILL_DISPLAY -> SkillDisplayHudElement.previewLines();
             case HELD_ITEM_NAME -> List.of(
                     HeldItemNameHudElement.previewName(mc, Localization.tr("物品名")));
             case BAR_HEALTH, BAR_MANA, BAR_DEFENSE, BAR_SPEED, BAR_VITALITY, BAR_AIR -> List.of();
@@ -418,6 +425,16 @@ public class HudPositionEditorScreen extends Screen {
             out[1] = StatsBarHudElement.y(cfg, bar);
             out[2] = icon + Math.round(StatsBarHudElement.width(cfg, bar) * s);
             out[3] = Math.round(StatsBarHudElement.height(cfg, bar) * s);
+            return;
+        }
+        if (t == Target.SKILL_DISPLAY) {
+            String line = lines(t, mc, cfg).get(0);
+            float s = scale(t, cfg);
+            int text = (int) Math.ceil(HudText.width(cfg, line, s) * s);
+            out[0] = x(t, cfg);
+            out[1] = y(t, cfg);
+            out[2] = Math.round(SkillDisplayHudElement.TEXT_GAP * s) + text;
+            out[3] = Math.round(SkillDisplayHudElement.ICON_SIZE * s);
             return;
         }
         if (t == Target.HELD_ITEM_NAME) {
@@ -472,6 +489,7 @@ public class HudPositionEditorScreen extends Screen {
             case STAT_VITALITY -> StatTextHudElement.label(StatTextHudElement.Kind.VITALITY);
             case STAT_HEALTH -> StatTextHudElement.label(StatTextHudElement.Kind.HEALTH);
             case STAT_MANA -> StatTextHudElement.label(StatTextHudElement.Kind.MANA);
+            case SKILL_DISPLAY -> Localization.tr("技能进度显示");
             case HELD_ITEM_NAME -> Localization.tr("手持物品名");
             case BAR_HEALTH -> StatsBarHudElement.label(StatsBarHudElement.Kind.HEALTH);
             case BAR_MANA -> StatsBarHudElement.label(StatsBarHudElement.Kind.MANA);
@@ -530,6 +548,8 @@ public class HudPositionEditorScreen extends Screen {
                 // A stand-in bar with the real geometry, icon and colour: the editor used to show bars as
                 // an empty frame, so their colour could not be seen while placing them.
                 StatsBarHudElement.preview(graphics, cfg, bar);
+            } else if (t == Target.SKILL_DISPLAY) {
+                SkillDisplayHudElement.preview(graphics, cfg);
             } else {
                 int lineH = lineHeight(t, mc, cfg);
                 int ly = 0;
@@ -821,11 +841,10 @@ public class HudPositionEditorScreen extends Screen {
 
     @Override
     public boolean keyReleased(KeyEvent event) {
-        int key = event.key();
-        if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (InputKeys.isShift(event)) {
             shiftDown = false;
         }
-        if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+        if (InputKeys.isControl(event)) {
             ctrlDown = false;
         }
         return super.keyReleased(event);
@@ -860,6 +879,7 @@ public class HudPositionEditorScreen extends Screen {
             case MINING_ABILITY, MINING_ABILITY_SUBTITLE -> "mining_ability_reminder";
             case COMMISSION -> "commissions";
             case STAT_HEALTH, STAT_MANA, STAT_DEFENSE, STAT_SPEED, STAT_VITALITY -> "stats_display";
+            case SKILL_DISPLAY -> "skill_display";
             case HELD_ITEM_NAME -> "held_item_name";
             // The six bars return early above; listing them again keeps the switch exhaustive.
             default -> "stats_display";
@@ -1031,30 +1051,29 @@ public class HudPositionEditorScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        int key = event.key();
-        if (key == GLFW.GLFW_KEY_LEFT_SHIFT || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+        if (InputKeys.isShift(event)) {
             shiftDown = true;
         }
-        if (key == GLFW.GLFW_KEY_LEFT_CONTROL || key == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+        if (InputKeys.isControl(event)) {
             ctrlDown = true;
         }
+        int key = InputKeys.canonical(event);
         // A focused field in the card owns the keys (Backspace edits text, not the element).
         if (settingsCard.keyPressed(key, shiftDown, ctrlDown)) {
             return true;
         }
         // ESC layers: the settings card closes first, the editor second.
-        if (key == GLFW.GLFW_KEY_ESCAPE && settingsCard.isOpen()) {
+        if (InputKeys.isEscape(event) && settingsCard.isOpen()) {
             settingsCard.close();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_LEFT || key == GLFW.GLFW_KEY_RIGHT
-                || key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN) {
+        if (key == Keys.LEFT || key == Keys.RIGHT || key == Keys.UP || key == Keys.DOWN) {
             ModConfig cfg = ConfigManager.get();
             switch (key) {
-                case GLFW.GLFW_KEY_LEFT -> setX(selected, cfg, x(selected, cfg) - 1);
-                case GLFW.GLFW_KEY_RIGHT -> setX(selected, cfg, x(selected, cfg) + 1);
-                case GLFW.GLFW_KEY_UP -> setY(selected, cfg, y(selected, cfg) - 1);
-                case GLFW.GLFW_KEY_DOWN -> setY(selected, cfg, y(selected, cfg) + 1);
+                case Keys.LEFT -> setX(selected, cfg, x(selected, cfg) - 1);
+                case Keys.RIGHT -> setX(selected, cfg, x(selected, cfg) + 1);
+                case Keys.UP -> setY(selected, cfg, y(selected, cfg) - 1);
+                case Keys.DOWN -> setY(selected, cfg, y(selected, cfg) + 1);
                 default -> { }
             }
             return true;

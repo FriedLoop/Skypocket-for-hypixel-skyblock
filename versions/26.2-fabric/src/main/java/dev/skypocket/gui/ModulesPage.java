@@ -445,8 +445,23 @@ final class ModulesPage {
     }
 
     boolean pointerDown(float x, float y, int modifiers) {
+        // The search field lives above the scroll layer. Resolve it by its visual box first:
+        // if the generic hit-test lands on a decorator instead, the user still gets a focused field.
+        if (search != null && search.visible() && insideSearch(x, y)) {
+            input.focus(search);
+            input.capture(search);
+            search.onPointerDown(new PointerEvent(x, y, 0, modifiers));
+            return true;
+        }
         input.pointerDown(new PointerEvent(x, y, 0, modifiers));
         return true;
+    }
+
+    private boolean insideSearch(float x, float y) {
+        float sx = search.visualX();
+        float sy = search.visualY();
+        return x >= sx && y >= sy && x < sx + search.bounds().width()
+                && y < sy + search.bounds().height();
     }
 
     boolean pointerMove(float x, float y, int modifiers) {
@@ -485,6 +500,15 @@ final class ModulesPage {
 
     boolean hasFocus() {
         return input.focused() != null;
+    }
+
+    /**
+     * Sends a character straight to the homepage search field. The homepage has no other
+     * text target, so this avoids depending on the generic focus router's current node
+     * when the cursor is already visibly inside the search box.
+     */
+    boolean searchInput(String value) {
+        return search != null && search.onTextInput(new TextInputEvent(value));
     }
 
     boolean hasPointerCapture() {

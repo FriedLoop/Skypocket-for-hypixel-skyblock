@@ -11,8 +11,10 @@ public final class Keys {
     public static final int RIGHT = 262;
     public static final int UP = 265;
     public static final int DOWN = 264;
-    public static final int HOME = 268;
-    public static final int END = 269;
+    public static final int A = 'A';
+    public static final int C = 'C';
+    public static final int X = 'X';
+    public static final int V = 'V';
 
     private Keys() {
     }

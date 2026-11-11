@@ -5,6 +5,7 @@ import dev.skypocket.gui.widget.ClickGuiStyle;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.GuiPixels;
 import dev.skypocket.ui.input.KeyEvent;
+import dev.skypocket.ui.input.Keys;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import org.joml.Matrix3x2fStack;
@@ -256,7 +257,7 @@ final class HudSettingsCard {
         if (!open || page == null) {
             return false;
         }
-        if (key == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE && page.hasOpenPopup()) {
+        if (key == Keys.ESCAPE && page.hasOpenPopup()) {
             page.closePopups();
             return true;
         }

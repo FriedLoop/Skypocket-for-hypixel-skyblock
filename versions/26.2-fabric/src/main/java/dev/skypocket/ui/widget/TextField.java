@@ -6,6 +6,7 @@ import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.KeyEvent;
 import dev.skypocket.ui.input.Keys;
+import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.PreeditEvent;
 import dev.skypocket.ui.input.TextInputEvent;
@@ -20,6 +21,8 @@ public final class TextField extends Control {
     private boolean labelOutside;
     private final StringBuilder value = new StringBuilder();
     private int cursor;
+    private int anchor;
+    private boolean selecting;
     private String preedit = "";
     private Consumer<String> changeHandler = text -> {
     };
@@ -61,6 +64,7 @@ public final class TextField extends Control {
         value.setLength(0);
         value.append(next == null ? "" : next);
         cursor = value.length();
+        anchor = cursor;
         return this;
     }
 
@@ -78,28 +82,50 @@ public final class TextField extends Control {
         super.onFocusChanged(focused);
         if (focused) {
             cursor = value.length();
+            anchor = cursor;
         } else {
             preedit = "";
+            selecting = false;
+            pressed = false;
+            anchor = cursor;
         }
     }
 
     @Override
     public boolean onPointerDown(PointerEvent event) {
         // Place the caret at the closest character boundary instead of always jumping to the end.
-        float localX = (float) event.x() - ancestorOffsetX();
-        float startX = textStartX();
+        cursor = indexAt(event.x());
+        if (!Modifiers.shift(event.modifiers())) {
+            anchor = cursor;
+        }
+        selecting = true;
+        pressed = true;
+        preedit = "";
+        return true;
+    }
+
+    @Override
+    public boolean onPointerMove(PointerEvent event) {
+        if (!selecting) {
+            return false;
+        }
+        cursor = indexAt(event.x());
+        return true;
+    }
+
+    private int indexAt(float mouseX) {
+        float localX = mouseX - textStartX();
         int best = 0;
-        float bestDistance = Math.abs(localX - startX);
+        float bestDistance = Math.abs(localX);
         for (int i = 1; i <= value.length(); i++) {
-            float x = startX + ClickGuiFonts.width(value.substring(0, i));
-            float distance = Math.abs(localX - x);
+            float width = ClickGuiFonts.width(value.substring(0, i));
+            float distance = Math.abs(localX - width);
             if (distance < bestDistance) {
                 bestDistance = distance;
                 best = i;
             }
         }
-        cursor = best;
-        return true;
+        return best;
     }
 
     private float textStartX() {
@@ -117,6 +143,7 @@ public final class TextField extends Control {
 
     @Override
     public boolean onPointerUp(PointerEvent event) {
+        selecting = false;
         pressed = false;
         return true;
     }
@@ -126,8 +153,7 @@ public final class TextField extends Control {
         if (event.text().isEmpty()) {
             return false;
         }
-        value.insert(cursor, event.text());
-        cursor += event.text().length();
+        replaceSelection(event.text());
         preedit = "";
         changed();
         return true;
@@ -141,43 +167,142 @@ public final class TextField extends Control {
 
     @Override
     public boolean onKeyDown(KeyEvent event) {
-        switch (event.key()) {
+        boolean control = Modifiers.control(event.modifiers());
+        boolean shift = Modifiers.shift(event.modifiers());
+        int key = event.key();
+
+        if (control) {
+            switch (key) {
+                case Keys.A -> {
+                    anchor = 0;
+                    cursor = value.length();
+                    return true;
+                }
+                case Keys.C -> {
+                    if (!hasSelection()) {
+                        return false;
+                    }
+                    setClipboard(selected());
+                    return true;
+                }
+                case Keys.X -> {
+                    if (!hasSelection()) {
+                        return false;
+                    }
+                    setClipboard(selected());
+                    deleteSelection();
+                    preedit = "";
+                    changed();
+                    return true;
+                }
+                case Keys.V -> {
+                    String pasted = clipboard();
+                    if (pasted.isEmpty()) {
+                        return true;
+                    }
+                    replaceSelection(pasted);
+                    preedit = "";
+                    changed();
+                    return true;
+                }
+                default -> {
+                }
+            }
+        }
+
+        switch (key) {
             case Keys.BACKSPACE -> {
-                if (cursor > 0) {
+                if (deleteSelection()) {
+                    preedit = "";
+                    changed();
+                } else if (cursor > 0) {
                     value.deleteCharAt(cursor - 1);
                     cursor--;
+                    anchor = cursor;
+                    preedit = "";
                     changed();
                 }
-                preedit = "";
                 return true;
             }
             case Keys.DELETE -> {
-                if (cursor < value.length()) {
+                if (deleteSelection()) {
+                    preedit = "";
+                    changed();
+                } else if (cursor < value.length()) {
                     value.deleteCharAt(cursor);
+                    anchor = cursor;
+                    preedit = "";
                     changed();
                 }
-                preedit = "";
                 return true;
             }
             case Keys.LEFT -> {
-                cursor = Math.max(0, cursor - 1);
+                moveCaret(cursor - 1, shift);
                 return true;
             }
             case Keys.RIGHT -> {
-                cursor = Math.min(value.length(), cursor + 1);
-                return true;
-            }
-            case Keys.HOME -> {
-                cursor = 0;
-                return true;
-            }
-            case Keys.END -> {
-                cursor = value.length();
+                moveCaret(cursor + 1, shift);
                 return true;
             }
             default -> {
                 return false;
             }
+        }
+    }
+
+    private void moveCaret(int to, boolean extend) {
+        cursor = Math.max(0, Math.min(value.length(), to));
+        if (!extend) {
+            anchor = cursor;
+        }
+    }
+
+    private boolean hasSelection() {
+        return cursor != anchor;
+    }
+
+    private String selected() {
+        int from = Math.min(cursor, anchor);
+        int to = Math.max(cursor, anchor);
+        return value.substring(from, to);
+    }
+
+    private boolean deleteSelection() {
+        int from = Math.min(cursor, anchor);
+        int to = Math.max(cursor, anchor);
+        if (from == to) {
+            return false;
+        }
+        value.delete(from, to);
+        cursor = from;
+        anchor = from;
+        return true;
+    }
+
+    private void replaceSelection(String insert) {
+        deleteSelection();
+        value.insert(cursor, insert);
+        cursor += insert.length();
+        anchor = cursor;
+    }
+
+    private static String clipboard() {
+        try {
+            String value = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+            return value == null ? "" : value;
+        } catch (RuntimeException e) {
+            return "";
+        }
+    }
+
+    private static void setClipboard(String text) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        try {
+            net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text);
+        } catch (RuntimeException ignored) {
+            // Keep the field usable even if the platform clipboard is unavailable.
         }
     }
 
@@ -207,6 +332,14 @@ public final class TextField extends Control {
             textX += painter.textWidth(label) + 3f;
         }
         painter.pushClip(field);
+        if (focused && hasSelection()) {
+            int from = Math.min(cursor, anchor);
+            int to = Math.max(cursor, anchor);
+            float selectionX = textX + painter.textWidth(shown.substring(0, from));
+            float selectionW = painter.textWidth(shown.substring(from, to));
+            painter.fill(new Rect(selectionX, textY, Math.max(1f, selectionW),
+                    painter.lineHeight()), palette.selection());
+        }
         if (shown.isEmpty() && preedit.isEmpty() && placeholder != null && !placeholder.isEmpty()) {
             painter.text(placeholder, textX, textY, palette.muted());
         } else {
@@ -221,11 +354,16 @@ public final class TextField extends Control {
                     painter.textWidth(preedit), 1f), palette.accent());
             caretX = textX + painter.textWidth(shown) + painter.textWidth(preedit);
         }
-        if (focused && !neutralPaint()) {
+        if (caretVisible()) {
             painter.fill(new Rect(caretX, field.y() + 4f, 1f, field.height() - 8f),
                     palette.text());
         }
         painter.popClip();
+    }
+
+    /** A 500 ms on/off caret keeps cached and non-cached pages visually identical. */
+    private boolean caretVisible() {
+        return focused && !neutralPaint() && (System.currentTimeMillis() / 500L) % 2L == 0L;
     }
 
     private Rect outsideFieldBounds(float labelWidth) {

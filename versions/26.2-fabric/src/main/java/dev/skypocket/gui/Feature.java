@@ -30,6 +30,11 @@ public interface Feature {
 
     Category category();
 
+    /** Whether the feature is meaningful only on Hypixel SkyBlock; used for the SB badge. */
+    default boolean skyBlockOnly() {
+        return false;
+    }
+
     boolean isEnabled();
 
     void setEnabled(boolean value);

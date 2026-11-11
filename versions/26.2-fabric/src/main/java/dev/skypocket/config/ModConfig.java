@@ -66,6 +66,15 @@ public class ModConfig {
     /** Hide other players closer than this many blocks (0..10). */
     public float hideNearbyPlayersRange = 5.0f;
 
+    /** Hide real players standing at the Hub spawn point. */
+    public boolean hideSpawnPointPlayers = false;
+    /** Radius around the Hub spawn point treated as the spawn point. */
+    public float hideSpawnPointRadius = 0.5f;
+    /** Hide real players standing near a SkyBlock NPC. */
+    public boolean hidePlayersNearNpcs = false;
+    /** Radius around an NPC treated as "near the NPC". */
+    public float hidePlayersNearNpcsRange = 2.5f;
+
     // ---- Hide arrows ----
     /** Hide arrows that have landed and are stuck in the ground. */
     public boolean hideLandedArrows = false;
@@ -74,6 +83,14 @@ public class ModConfig {
 
     // ---- Fishing hotspot overlay ----
     public boolean hotspotOverlayEnabled = false;
+    /** Hotspot drawing style: bottomless cylinder, filled circle or hollow circle. */
+    public String hotspotOverlayStyle = "无底圆柱（侧面）";
+
+    // ---- Legendary sea creature warning ----
+    public boolean legendarySeaCreatureWarning = false;
+    public int legendaryWarningColor = ColorUtil.argb(255, 255, 60, 60);
+    public int legendaryWarningDurationMs = 4000;
+
     /** Overlay colour for hotspots whose kind could not be detected. */
     public int hotspotOverlayColor = ColorUtil.argb(60, 0, 220, 255);
     // Per-kind colours (defaults match the stat text colours).
@@ -390,6 +407,16 @@ public class ModConfig {
     public boolean clickGuiTextShadow = false;
     /** Draw HUD text with the SkyPocket atlas font instead of the vanilla font. */
     public boolean hudSkyPocketFont = false;
+
+    // ---- Skill display ----
+    public boolean skillDisplayEnabled = false;
+    /** Show the server percentage instead of current/total XP. */
+    public boolean skillDisplayPercentageOnly = false;
+    public int skillDisplayX = 10;
+    public int skillDisplayY = 130;
+    public float skillDisplayScale = 1.0f;
+    public int skillDisplayColor = 0xFFFFFFFF;
+    public int skillDisplayDurationMs = 4000;
     /**
      * Log panel-cache statistics to the game log every five seconds: frames, bakes, reuse percentage
      * and the average time spent submitting the cached blit. Diagnostic only, off by default.
@@ -408,7 +435,7 @@ public class ModConfig {
      * if opening the panel ever misbehaves: the panel then draws live as before.
      */
     public boolean clickGuiPanelCache = true;
-    /** When true, SkyBlock-category modules only run while on Hypixel SkyBlock. */
+    /** When true, modules marked skyBlockOnly only run while on Hypixel SkyBlock. */
     public boolean skyBlockModulesOnly = true;
 
     // ---- Custom crosshair ----
@@ -704,8 +731,17 @@ public class ModConfig {
         clickGuiWidth = ColorUtil.clamp(clickGuiWidth, 300, 520);
         clickGuiAnimDuration = ColorUtil.clamp(clickGuiAnimDuration, 0, 2000);
         hideNearbyPlayersRange = ColorUtil.clamp(hideNearbyPlayersRange, 0f, 10f);
+        hideSpawnPointRadius = ColorUtil.clamp(hideSpawnPointRadius, 0.1f, 3f);
+        hidePlayersNearNpcsRange = ColorUtil.clamp(hidePlayersNearNpcsRange, 0.5f, 8f);
+        legendaryWarningDurationMs = ColorUtil.clamp(legendaryWarningDurationMs, 500, 10_000);
+        skillDisplayX = ColorUtil.clamp(skillDisplayX, -100000, 100000);
+        skillDisplayY = ColorUtil.clamp(skillDisplayY, -100000, 100000);
+        skillDisplayScale = ColorUtil.clamp(skillDisplayScale, 0.25f, 6f);
+        skillDisplayDurationMs = ColorUtil.clamp(skillDisplayDurationMs, 500, 10_000);
         scrollableTooltipsSensitivity = ColorUtil.clamp(scrollableTooltipsSensitivity, 0.25f, 4.0f);
 
+        hotspotOverlayStyle = dev.skypocket.render.HotspotOverlayStyle
+                .byLabel(hotspotOverlayStyle).label();
         hotspotOverlayHeight = ColorUtil.clamp(hotspotOverlayHeight, 0.25f, 256f);
         hotspotOverlayLineWidth = ColorUtil.clamp(hotspotOverlayLineWidth, 0.5f, 4f);
         hotspotOverlayRange = ColorUtil.clamp(hotspotOverlayRange, 8f, 256f);

@@ -50,6 +50,8 @@ public final class HudPositionSync {
                     c -> c.miningAbilitySubtitleY, (c, v) -> c.miningAbilitySubtitleY = v, 120, 90),
             entry(c -> c.commissionsX, (c, v) -> c.commissionsX = v,
                     c -> c.commissionsY, (c, v) -> c.commissionsY = v, 10, 120),
+            entry(c -> c.skillDisplayX, (c, v) -> c.skillDisplayX = v,
+                    c -> c.skillDisplayY, (c, v) -> c.skillDisplayY = v, 10, 130),
             stat(StatTextHudElement.Kind.DEFENSE, 10, 70),
             stat(StatTextHudElement.Kind.SPEED, 10, 90),
             stat(StatTextHudElement.Kind.VITALITY, 10, 110),
