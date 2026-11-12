@@ -259,6 +259,10 @@ public final class Localization {
     EN.put("设置卡片标题上方的间距", "Gap above a card title");
     EN.put("设置卡片标题行的高度", "Height of the card title row");
     EN.put("卡片和控件圆角半径", "Card and control corner radius");
+    EN.put("卡片、面板和标签页的圆角半径",
+            "Corner radius for cards, panels and tabs");
+    EN.put("按钮、输入框、下拉框和行高亮的圆角半径",
+            "Corner radius for buttons, fields, dropdowns and row highlights");
     EN.put("开关轨道宽度", "Switch track width");
     EN.put("开关轨道高度", "Switch track height");
     EN.put("滑条轨道厚度", "Slider track thickness");
@@ -399,11 +403,17 @@ public final class Localization {
         EN.put("选择音频文件", "Select Audio File");
         EN.put("(留空则用游戏ID)", "(empty = game ID)");
         EN.put("人物发光", "Player Glow");
+        EN.put("掉落物发光", "Dropped Item Glow");
+        EN.put("按物品稀有度给掉落物添加发光轮廓",
+                "Outline dropped items using their SkyBlock rarity colour");
         EN.put("末影龙发光", "Ender Dragon Glow");
         EN.put("发光颜色", "Glow Color");
         EN.put("隐藏附近玩家", "Hide Nearby Players");
         EN.put("隐藏出生点玩家", "Hide Spawn Point Players");
         EN.put("隐藏 NPC 附近玩家", "Hide Players Near NPCs");
+        EN.put("隐藏其他玩家礼物", "Hide Other Players' Presents");
+        EN.put("隐藏既不是给你的、也不是你送出的 Jerry 礼物",
+                "Hide Jerry presents that are neither addressed to you nor sent by you");
         EN.put("出生点范围", "Spawn Point Radius");
         EN.put("NPC 附近范围", "NPC Radius");
         EN.put("隐藏站在 Hub 出生点的真实玩家", "Hide real players standing at the Hub spawn point");
@@ -416,6 +426,20 @@ public final class Localization {
         EN.put("检测传奇/神话海怪刷新并显示中央警告",
                 "Detect Legendary/Mythic sea creature spawns and show a centre warning");
         EN.put("传奇海怪出现!", "Legendary Sea Creature!");
+        EN.put("钻头燃料条", "Drill Fuel Bar");
+        EN.put("显示数字", "Show Number");
+        EN.put("手持钻头时显示燃料条，使用现有条形纹理",
+                "Show the fuel bar while holding a drill using the shared bar artwork");
+        EN.put("手持钻头时显示当前/最大燃料",
+                "Show current/max fuel while holding a drill");
+        EN.put("燃料条颜色", "Fuel Bar Colour");
+        EN.put("宽度", "Width");
+        EN.put("雷瓶显示", "Thunder Bottle Display");
+        EN.put("物品拾取记录", "Item Pickup Log");
+        EN.put("显示最近拾取或失去的物品及数量",
+                "Show recently picked up or lost items and their amounts");
+        EN.put("显示背包中的雷瓶、风暴瓶或飓风瓶充能",
+                "Show the charge of a Thunder, Storm or Hurricane bottle in the inventory");
         EN.put("技能进度显示", "Skill Progress Display");
         EN.put("显示最近获得经验的技能、当前 XP 和下一级需求，图标使用原版物品",
                 "Show the most recently gained skill, current XP and next-level requirement");

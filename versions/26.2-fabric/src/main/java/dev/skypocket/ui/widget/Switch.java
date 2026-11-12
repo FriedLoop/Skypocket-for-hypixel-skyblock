@@ -43,17 +43,17 @@ public final class Switch extends Control {
         paintFocus(painter);
         boolean on = value.getAsBoolean();
         float p = animate(on);
-        float trackWidth = 28f;
-        float trackX = bounds().right() - trackWidth - 4f;
+        float trackWidth = 54f;
+        float trackX = bounds().right() - trackWidth - 8f;
         // Round once and derive both the track and knob from it; rounding them separately is what
         // made some knobs sit one pixel high and others one pixel low.
-        float trackY = Math.round(bounds().y() + (bounds().height() - 12f) / 2f);
-        painter.pill(new dev.skypocket.ui.Rect(trackX, trackY, trackWidth, 12f),
+        float trackY = Math.round(bounds().y() + (bounds().height() - 24f) / 2f);
+        painter.pill(new dev.skypocket.ui.Rect(trackX, trackY, trackWidth, 24f),
                 blend(palette.switchOff(), palette.switchOn(), p), palette.switchOff());
-        float knobX = trackX + 2f + p * (trackWidth - 4f - 8f);
-        painter.fillRounded(new dev.skypocket.ui.Rect(knobX, trackY + 2f, 8f, 8f), 4f,
+        float knobX = trackX + 4f + p * (trackWidth - 8f - 16f);
+        painter.fillRounded(new dev.skypocket.ui.Rect(knobX, trackY + 4f, 16f, 16f), 8f,
                 palette.onAccent());
-        painter.text(label, bounds().x() + 6f,
+        painter.text(label, bounds().x() + 11f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                 on ? palette.text() : palette.muted());
     }

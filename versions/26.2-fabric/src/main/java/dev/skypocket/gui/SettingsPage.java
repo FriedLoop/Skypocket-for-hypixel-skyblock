@@ -65,7 +65,7 @@ public final class SettingsPage {
     private float renderScaleY = 1f;
 
     public SettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
-        this(feature, palette, width, height, Math.min(520f, Math.max(200f, width - 30f)));
+        this(feature, palette, width, height, Math.min(1002f, Math.max(386f, width - 58f)));
     }
 
     public SettingsPage(Feature feature, WidgetPalette palette, float width, float height,
@@ -74,7 +74,7 @@ public final class SettingsPage {
         this.palette = palette;
         this.width = width;
         this.height = height;
-        this.columnWidth = Math.max(200f, Math.min(columnWidth, width - 30f));
+        this.columnWidth = Math.max(386f, Math.min(columnWidth, width - 58f));
         rebuild();
     }
 
@@ -96,11 +96,11 @@ public final class SettingsPage {
                 .build());
         if (feature == null) {
             page.add(new Text(Localization.tr("找不到设置模块"),
-                    Style.builder().height(18f).build()));
+                    Style.builder().height(36f).build()));
         } else {
             Box content = new Box(Style.builder()
                     .direction(Style.Direction.COLUMN)
-                    .gap(4f)
+                    .gap(8f)
                     .build());
             buildSettings(content, feature.settings());
             float columnLeft = (width - columnWidth) / 2f;
@@ -110,16 +110,16 @@ public final class SettingsPage {
                     .top(0f)
                     .width(columnWidth)
                     .height(height)
-                    .padding(2f)
-                    .build(), content, 24f, false, palette);
+                    .padding(4f)
+                    .build(), content, 46f, false, palette);
             page.add(scroll);
             Scrollbar bar = scroll.scrollbar();
             bar.style(Style.builder()
                     .position(Style.Position.ABSOLUTE)
-                    .left(columnLeft + columnWidth + 5f)
-                    .top(4f)
-                    .bottom(4f)
-                    .width(6f)
+                    .left(columnLeft + columnWidth + 10f)
+                    .top(8f)
+                    .bottom(8f)
+                    .width(12f)
                     .build());
             page.add(bar);
         }
@@ -457,7 +457,7 @@ public final class SettingsPage {
                         if (value != group.switchValue()) {
                             group.toggleSwitch();
                         }
-                    }, Style.builder().width(42f).height(20f).build(), palette);
+                    }, Style.builder().width(82f).height(40f).build(), palette);
                     groupSwitch.flat(true);
                 }
                 groupCard.add(headerBlock(Localization.tr(group.label()), description, groupSwitch));
@@ -496,8 +496,8 @@ public final class SettingsPage {
     private Card newCard() {
         return new Card(Style.builder()
                 .width(Dimension.percent(100f))
-                .padding(8f)
-                .gap(2f)
+                .padding(16f)
+                .gap(4f)
                 .direction(Style.Direction.COLUMN)
                 .build(), palette);
     }
@@ -513,27 +513,27 @@ public final class SettingsPage {
      * below the title line, while card children are separated by the card's 2px gap.
      */
     private Box headerBlock(String title, String description, Switch toggle) {
-        float line = Math.max(9f, ClickGuiFonts.lineHeight());
-        float descHeight = Math.max(9f, Math.round(line * 0.82f));
-        float gap = 1f;
-        float right = toggle == null ? 0f : 50f;
+        float line = Math.max(18f, ClickGuiFonts.lineHeight());
+        float descHeight = Math.max(18f, Math.round(line * 0.82f));
+        float gap = 2f;
+        float right = toggle == null ? 0f : 98f;
         Box header = new Box(Style.builder()
                 .width(Dimension.percent(100f))
-                .height(Math.max(toggle == null ? 0f : 20f, line + gap + descHeight))
+                .height(Math.max(toggle == null ? 0f : 39f, line + gap + descHeight))
                 .build());
         header.add(new Text(title, Style.builder()
                 .position(Style.Position.ABSOLUTE)
-                .left(0f).right(right).top(0f).height(line).build(),
+                .left(11f).right(right).top(0f).height(line).build(),
                 1f, TextWeight.SEMIBOLD).color(headerColor(ClickGuiStyle.sectionTitle())));
         header.add(new Text(description, Style.builder()
                 .position(Style.Position.ABSOLUTE)
-                .left(0f).right(right).top(line + gap).height(descHeight).build(),
+                .left(11f).right(right).top(line + gap).height(descHeight).build(),
                 0.82f, TextWeight.REGULAR).color(palette.description()));
         if (toggle != null) {
             toggle.style(Style.builder()
                     .position(Style.Position.ABSOLUTE)
                     .right(0f).top(0f)
-                    .width(42f).height(20f).build());
+                    .width(82f).height(40f).build());
             header.add(toggle);
         }
         return header;
@@ -545,12 +545,12 @@ public final class SettingsPage {
                 if (value != bool.value()) {
                     bool.toggle();
                 }
-            }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+            }, Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette)
                     .flat(true));
         } else if (setting instanceof Setting.SliderSetting slider) {
             parent.add(new Slider(Localization.tr(slider.label()), slider.min(), slider.max(),
                     slider::value, slider::setValue, slider.format(), slider.step(),
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                    Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette)
                     .flat(true));
         } else if (setting instanceof Setting.DropdownSetting dropdownSetting) {
             List<String> raw = dropdownSetting.options();
@@ -570,13 +570,13 @@ public final class SettingsPage {
                             rebuild();
                         }
                     },
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette);
+                    Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette);
             parent.add(dropdown);
             dropdowns.add(dropdown);
         } else if (setting instanceof Setting.ColorSetting color) {
             ColorField field = new ColorField(Localization.tr(color.label()), color::value,
                     color::setValue, Localization.tr("关闭"),
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette);
+                    Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette);
             field.flat(true);
             parent.add(field);
             colorFields.add(field);
@@ -584,13 +584,13 @@ public final class SettingsPage {
             parent.add(new Button(action.text(), () -> {
                 action.run();
                 rebuild();
-            }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
+            }, Style.builder().width(Dimension.percent(100f)).height(46f).build(), palette));
         } else if (setting instanceof Setting.V2CustomSetting custom) {
             Box row = new Box(Style.builder()
                     .width(Dimension.percent(100f))
                     .height(custom.height())
                     .direction(Style.Direction.ROW)
-                    .gap(8f)
+                    .gap(15f)
                     .build());
             custom.layout().layout(row, palette);
             parent.add(row);
@@ -604,18 +604,18 @@ public final class SettingsPage {
                 if (choice.rebuildsPage()) {
                     rebuild();
                 }
-            }, Style.builder().width(Dimension.percent(100f)).height(24f).build(), palette));
+            }, Style.builder().width(Dimension.percent(100f)).height(46f).build(), palette));
         } else if (setting instanceof Setting.GroupSetting group) {
             if (group.hasSwitch()) {
                 parent.add(new Switch(Localization.tr(group.label()), group::switchValue, value -> {
                     if (value != group.switchValue()) {
                         group.toggleSwitch();
                     }
-                }, Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                }, Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette)
                         .flat(true));
             } else {
                 parent.add(new Text(Localization.tr(group.label()),
-                        Style.builder().height(14f).build()));
+                        Style.builder().height(28f).build()));
             }
             for (Setting child : group.children()) {
                 if (child.isVisible()) {
@@ -625,7 +625,7 @@ public final class SettingsPage {
         } else if (setting instanceof Setting.TextFieldSetting textSetting) {
             TextField field = new TextField(Localization.tr(textSetting.placeholder()),
                     Localization.tr(setting.label()),
-                    Style.builder().width(Dimension.percent(100f)).height(20f).build(), palette)
+                    Style.builder().width(Dimension.percent(100f)).height(40f).build(), palette)
                     .labelOutside(true);
             field.text(textSetting.value());
             field.onChange(textSetting::setValue);

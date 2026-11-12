@@ -57,6 +57,9 @@ public class ModConfig {
     public boolean playerGlowEnabled = false;
     public int playerGlowColor = ColorDefaults.PLAYER_GLOW;
 
+    // ---- Dropped item glow ----
+    public boolean itemGlowEnabled = false;
+
     // ---- Dragon glow ----
     public boolean dragonGlowEnabled = false;
     public int dragonGlowColor = ColorDefaults.DRAGON_GLOW;
@@ -74,6 +77,8 @@ public class ModConfig {
     public boolean hidePlayersNearNpcs = false;
     /** Radius around an NPC treated as "near the NPC". */
     public float hidePlayersNearNpcsRange = 2.5f;
+    /** Hide Jerry presents that are neither addressed to nor sent by the local player. */
+    public boolean hideOtherPlayersPresents = false;
 
     // ---- Hide arrows ----
     /** Hide arrows that have landed and are stuck in the ground. */
@@ -392,6 +397,11 @@ public class ModConfig {
      */
     public String clickGuiTheme = "Dark";
     /** ClickGUI's own scale (real-pixel based, independent of the game GUI Scale). */
+    public static final float CLICK_GUI_SCALE_MIN = 0.5f;
+    public static final float CLICK_GUI_SCALE_MAX = 1.5f;
+    public static final float CLICK_GUI_SCALE_STEP = 0.1f;
+    /** One-time legacy config conversion only; never used by rendering. */
+    private static final float LEGACY_SCALE_BASE = 1.75f;
     public float clickGuiScale = 1.0f;
     /** One-time migration marker for the ClickGUI scale baseline change (see sanitize). */
     public int clickGuiScaleVersion = 0;
@@ -407,6 +417,31 @@ public class ModConfig {
     public boolean clickGuiTextShadow = false;
     /** Draw HUD text with the SkyPocket atlas font instead of the vanilla font. */
     public boolean hudSkyPocketFont = false;
+
+    // ---- Drill fuel ----
+    public boolean drillFuelBarEnabled = false;
+    public boolean drillFuelShowNumber = true;
+    public int drillFuelBarX = 10;
+    public int drillFuelBarY = 150;
+    public float drillFuelBarScale = 1.0f;
+    public int drillFuelBarWidth = 160;
+    public int drillFuelBarHeight = 20;
+    public int drillFuelBarColor = ColorUtil.argb(255, 0, 170, 0);
+
+    // ---- Item pickup log ----
+    public boolean pickupLogEnabled = false;
+    public int pickupLogX = 10;
+    public int pickupLogY = 220;
+    public float pickupLogScale = 1.0f;
+    public int pickupLogTextColor = 0xFFFFFFFF;
+    public int pickupLogDurationMs = 5000;
+
+    // ---- Thunder bottle ----
+    public boolean thunderBottleEnabled = false;
+    public int thunderBottleX = 10;
+    public int thunderBottleY = 198;
+    public float thunderBottleScale = 1.0f;
+    public int thunderBottleColor = ColorUtil.argb(255, 0xAA, 0x00, 0xAA);
 
     // ---- Skill display ----
     public boolean skillDisplayEnabled = false;
@@ -723,10 +758,10 @@ public class ModConfig {
         // now matches the old scale = 1.75). Rescale existing values once so the
         // on-screen size is unchanged.
         if (clickGuiScaleVersion < 1) {
-            clickGuiScale = clickGuiScale / 1.75f;
+            clickGuiScale = clickGuiScale / LEGACY_SCALE_BASE;
             clickGuiScaleVersion = 1;
         }
-        clickGuiScale = ColorUtil.clamp(clickGuiScale, 0.5f, 1.5f);
+        clickGuiScale = ColorUtil.clamp(clickGuiScale, CLICK_GUI_SCALE_MIN, CLICK_GUI_SCALE_MAX);
         clickGuiBackgroundAlpha = ColorUtil.clamp(clickGuiBackgroundAlpha, 0, 255);
         clickGuiWidth = ColorUtil.clamp(clickGuiWidth, 300, 520);
         clickGuiAnimDuration = ColorUtil.clamp(clickGuiAnimDuration, 0, 2000);
@@ -734,6 +769,18 @@ public class ModConfig {
         hideSpawnPointRadius = ColorUtil.clamp(hideSpawnPointRadius, 0.1f, 3f);
         hidePlayersNearNpcsRange = ColorUtil.clamp(hidePlayersNearNpcsRange, 0.5f, 8f);
         legendaryWarningDurationMs = ColorUtil.clamp(legendaryWarningDurationMs, 500, 10_000);
+        drillFuelBarX = ColorUtil.clamp(drillFuelBarX, -100000, 100000);
+        drillFuelBarY = ColorUtil.clamp(drillFuelBarY, -100000, 100000);
+        drillFuelBarScale = ColorUtil.clamp(drillFuelBarScale, 0.25f, 6f);
+        drillFuelBarWidth = ColorUtil.clamp(drillFuelBarWidth, 40, 400);
+        drillFuelBarHeight = ColorUtil.clamp(drillFuelBarHeight, 8, 20);
+        pickupLogX = ColorUtil.clamp(pickupLogX, -100000, 100000);
+        pickupLogY = ColorUtil.clamp(pickupLogY, -100000, 100000);
+        pickupLogScale = ColorUtil.clamp(pickupLogScale, 0.25f, 6f);
+        pickupLogDurationMs = ColorUtil.clamp(pickupLogDurationMs, 1000, 15_000);
+        thunderBottleX = ColorUtil.clamp(thunderBottleX, -100000, 100000);
+        thunderBottleY = ColorUtil.clamp(thunderBottleY, -100000, 100000);
+        thunderBottleScale = ColorUtil.clamp(thunderBottleScale, 0.25f, 6f);
         skillDisplayX = ColorUtil.clamp(skillDisplayX, -100000, 100000);
         skillDisplayY = ColorUtil.clamp(skillDisplayY, -100000, 100000);
         skillDisplayScale = ColorUtil.clamp(skillDisplayScale, 0.25f, 6f);

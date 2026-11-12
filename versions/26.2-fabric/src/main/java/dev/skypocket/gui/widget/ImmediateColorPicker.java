@@ -128,6 +128,23 @@ public final class ImmediateColorPicker {
 
     // ---- drawing --------------------------------------------------------------------------
 
+    /** Applies a local text scale to the HEX/RGBA fields; the picker geometry is unchanged. */
+    public ImmediateColorPicker textScale(float scale) {
+        hex.textScale(scale);
+        for (ImmediateTextField channel : channels) {
+            channel.textScale(scale);
+        }
+        return this;
+    }
+
+    public ImmediateColorPicker screenSpace(boolean value) {
+        hex.screenSpace(value);
+        for (ImmediateTextField channel : channels) {
+            channel.screenSpace(value);
+        }
+        return this;
+    }
+
     public void draw(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
         int argb = getter.getAsInt();
         sync(argb, x, y);

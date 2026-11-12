@@ -18,6 +18,11 @@ import java.util.function.Supplier;
 
 /** Declarative description of a single settings row in the Click GUI. UI v2 renders these directly. */
 public abstract class Setting {
+    private static final int ROW_HEIGHT = 52;
+    private static final int CONTROL_HEIGHT = 40;
+    private static final int SECTION_GAP = 16;
+    private static final int SECTION_TITLE_HEIGHT = 28;
+
     /** Fixed row height: 20px widget + 5px spacing. */
     /**
      * Row height, from the theme's measurements.
@@ -26,7 +31,7 @@ public abstract class Setting {
      * and broke the page's rhythm, so hints became hover tooltips and the height is uniform again.
      */
     public static int rowHeight() {
-        return dev.skypocket.gui.widget.GuiMetrics.current().rowHeight();
+        return ROW_HEIGHT;
     }
     protected final String label;
 
@@ -91,7 +96,7 @@ public abstract class Setting {
     /** Fixed height of the widget part of a row, matching what the subclasses build. */
     /** Height of the control a row draws, from the theme's measurements. */
     public static int controlHeight() {
-        return dev.skypocket.gui.widget.GuiMetrics.current().controlHeight();
+        return CONTROL_HEIGHT;
     }
 
     /** Vertical space (px) this setting occupies. */
@@ -325,7 +330,7 @@ public abstract class Setting {
             this.setter = touch(setter);
         }
 
-        private static final int ITEM_H = 16;
+        private static final int ITEM_H = 28;
 
         @Override public int height() {
             return expanded ? rowHeight() * 2 + LIST_ROWS * ITEM_H : rowHeight();
@@ -400,7 +405,7 @@ public abstract class Setting {
         /** The filter box, drawn by the page (no widget: it lives inside the cached panel). */
         private final dev.skypocket.gui.widget.ImmediateTextField search =
                 new dev.skypocket.gui.widget.ImmediateTextField("dropdown",
-                        Localization.tr("搜索"), "", 32, c -> true);
+                        Localization.tr("搜索"), "", 56, c -> true);
 
         public dev.skypocket.gui.widget.ImmediateTextField searchField() {
             return search;
@@ -701,8 +706,7 @@ public abstract class Setting {
          * margin of their own.
          */
         @Override public int height() {
-            return dev.skypocket.gui.widget.GuiMetrics.current().sectionGap()
-                    + dev.skypocket.gui.widget.GuiMetrics.current().sectionTitleHeight();
+            return SECTION_GAP + SECTION_TITLE_HEIGHT;
         }
 
         /** A heading is not a setting: it never matches a search by itself. */

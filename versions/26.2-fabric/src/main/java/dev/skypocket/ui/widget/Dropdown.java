@@ -24,10 +24,10 @@ import java.util.function.IntSupplier;
  */
 public final class Dropdown extends Control {
     private static final int MAX_VISIBLE_ROWS = 8;
-    private static final float ROW_H = 20f;
-    private static final float SEARCH_H = 18f;
-    private static final float GAP = 2f;
-    private static final float PAD = 2f;
+    private static final float ROW_H = 40f;
+    private static final float SEARCH_H = 36f;
+    private static final float GAP = 4f;
+    private static final float PAD = 4f;
 
     private final String label;
     private final List<String> options;
@@ -222,20 +222,24 @@ public final class Dropdown extends Control {
                 maxOptionWidth = Math.max(maxOptionWidth, painter.textWidth(option));
             }
         }
-        float fieldH = Math.min(16f, Math.max(10f, bounds().height() - 4f));
-        float fieldW = Math.min(Math.max(36f, bounds().width() - labelW - 18f),
-                maxOptionWidth + arrowW + 14f);
-        float fieldX = bounds().right() - 6f - fieldW;
+        float fieldH = Math.max(24f, bounds().height() - 8f);
+        // The closed control is one fifth of the row; it grows only when the selected value
+        // (or the widest option while open) does not fit.
+        float minFieldW = bounds().width() / 5f;
+        float available = Math.max(minFieldW, bounds().width() - labelW - 28f);
+        float contentW = maxOptionWidth + arrowW + 24f;
+        float fieldW = Math.min(available, Math.max(minFieldW, contentW));
+        float fieldX = bounds().right() - 10f - fieldW;
         float fieldY = bounds().y() + (bounds().height() - fieldH) / 2f;
         float centreY = bounds().y() + (bounds().height() - painter.lineHeight()) / 2f;
 
-        painter.text(caption, bounds().x() + 6f, centreY, palette.text());
+        painter.text(caption, bounds().x() + 11f, centreY, palette.text());
         int border = focused && !neutralPaint() ? palette.focus() : 0;
-        painter.surface(new dev.skypocket.ui.Rect(fieldX, fieldY, fieldW, fieldH), 3f,
-                palette.field(), border);
-        painter.text(value, fieldX + 4f,
+        painter.surface(new dev.skypocket.ui.Rect(fieldX, fieldY, fieldW, fieldH),
+                palette.radius(), palette.field(), border);
+        painter.text(value, fieldX + 8f,
                 fieldY + (fieldH - painter.lineHeight()) / 2f, palette.text());
-        painter.text(arrow, fieldX + fieldW - 4f - arrowW,
+        painter.text(arrow, fieldX + fieldW - 8f - arrowW,
                 fieldY + (fieldH - painter.lineHeight()) / 2f, palette.muted());
     }
 
@@ -247,7 +251,7 @@ public final class Dropdown extends Control {
                     .height(MAX_VISIBLE_ROWS * ROW_H)
                     .direction(Style.Direction.COLUMN)
                     // Leave a narrow strip for the page indicator; option buttons stay inside it.
-                    .padding(new dev.skypocket.ui.Insets(0f, 5f, 0f, 0f))
+                    .padding(new dev.skypocket.ui.Insets(0f, 10f, 0f, 0f))
                     .build(), popupPalette);
         }
 
@@ -287,7 +291,7 @@ public final class Dropdown extends Control {
             float height = bounds().height() - 4f;
             painter.fill(new dev.skypocket.ui.Rect(x, top, 2f, height), palette.outline());
             int maxStart = Math.max(1, matches.size() - MAX_VISIBLE_ROWS);
-            float thumbH = Math.max(12f, height * MAX_VISIBLE_ROWS / matches.size());
+            float thumbH = Math.max(23f, height * MAX_VISIBLE_ROWS / matches.size());
             float thumbY = top + (height - thumbH) * Math.min(scrollRow, maxStart) / maxStart;
             painter.fill(new dev.skypocket.ui.Rect(x, thumbY, 2f, thumbH), palette.text());
         }

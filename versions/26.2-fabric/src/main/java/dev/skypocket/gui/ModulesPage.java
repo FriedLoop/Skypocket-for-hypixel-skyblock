@@ -124,7 +124,7 @@ final class ModulesPage {
                     () -> host.setSelected(category));
             if (expanded) {
                 for (Category child : category.children()) {
-                    addSidebarRow(sidebar, child, 14f, false, false, child == host.selected(),
+                    addSidebarRow(sidebar, child, 28f, false, false, child == host.selected(),
                             () -> host.setSelected(child));
                 }
             }
@@ -172,7 +172,7 @@ final class ModulesPage {
                     .position(Style.Position.ABSOLUTE)
                     .left(PanelGeometry.SIDEBAR_W).top(CARDS_TOP)
                     .width(PanelGeometry.contentWidth()).height(height - CARDS_TOP)
-                    .build(), grid, 24f, true, palette);
+                    .build(), grid, 46f, true, palette);
             page.add(scroll);
         } else {
             grid = null;
@@ -355,8 +355,8 @@ final class ModulesPage {
         if (!highlightInitialized) {
             return;
         }
-        painter.fillRounded(new Rect(8f, highlightY, PanelGeometry.SIDEBAR_W - 16f,
-                PanelGeometry.SIDEBAR_ITEM_H), 4f,
+        painter.fillRounded(new Rect(16f, highlightY, PanelGeometry.SIDEBAR_W - 32f,
+                PanelGeometry.SIDEBAR_ITEM_H), dev.skypocket.gui.widget.ClickGuiStyle.controlRadius(),
                 dev.skypocket.gui.widget.ClickGuiStyle.sidebarSelected());
     }
 
@@ -578,7 +578,7 @@ final class ModulesPage {
         @Override
         public void paint(dev.skypocket.ui.UiPainter painter) {
             boolean on = enabled.getAsBoolean();
-            painter.surface(bounds(), dev.skypocket.gui.widget.ClickGuiStyle.RADIUS,
+            painter.surface(bounds(), dev.skypocket.gui.widget.ClickGuiStyle.controlRadius(),
                     pressed ? palette.pressed()
                             : hovered && on ? palette.hover() : palette.background(), 0);
             painter.text(glyph, bounds().x() + (bounds().width() - painter.textWidth(glyph)) / 2f,

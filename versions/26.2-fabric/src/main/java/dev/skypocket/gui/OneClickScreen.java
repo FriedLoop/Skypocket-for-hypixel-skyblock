@@ -9,6 +9,7 @@ import dev.skypocket.render.ClickGuiBlur;
 import dev.skypocket.gui.widget.GuiMetrics;
 import dev.skypocket.gui.widget.GuiTheme;
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.render.ClickGuiMetrics;
 import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.input.Modifiers;
@@ -35,7 +36,8 @@ import static dev.skypocket.render.GuiPixels.scissorRow;
  * The Click GUI, styled after modern Lunar/Badlion. Everything is laid out in a fixed
  * "panel-local" coordinate space ({@link #PANEL_W} x {@link #PANEL_H}) and then scaled
  * by {@code clickGuiScale} at render time, so the panel's real size is independent of
- * the game's GUI Scale.
+ * the game's GUI Scale. The design canvas is calibrated directly in current units
+ * (1225 x 735); there is no legacy 1.75 multiplier in rendering.
  *
  * <p>The top bar is a dark main-tab strip: the title on the left, and two tabs
  * ("Modules" / "Settings") on the right. "Settings" hosts the panel settings as a
@@ -119,12 +121,12 @@ public class OneClickScreen extends Screen {
     private void layout() {
         ModConfig cfg = ConfigManager.get();
         float guiScale = minecraft.getWindow().getGuiScale();
-        float target = cfg.clickGuiScale * ClickGuiFonts.SCALE_BASE / guiScale;
-        // The panel is a fixed 700x420 design surface. In a small window it must shrink to fit,
+        float target = ClickGuiMetrics.projectedScale(guiScale);
+        // The panel is a fixed 1225x735 design surface. In a small window it must shrink to fit,
         // otherwise its right/bottom edge (and the content scissor derived from it) can leave the
         // drawable area. Keep the configured scale as the upper bound.
-        float fitX = Math.max(0.05f, (width - 8f) / PANEL_W);
-        float fitY = Math.max(0.05f, (height - 8f) / PANEL_H);
+        float fitX = Math.max(0.05f, (width - 16f) / PANEL_W);
+        float fitY = Math.max(0.05f, (height - 16f) / PANEL_H);
         target = Math.max(0.05f, Math.min(target, Math.min(fitX, fitY)));
         // Snap the panel's on-screen size to whole device pixels. GuiPanelCache bakes the
         // panel into an integer-sized texture and blits it 1:1, so a fractional device size
@@ -133,7 +135,7 @@ public class OneClickScreen extends Screen {
         // off, while a live frame does not. The snap moves the scale by well under 0.1%.
         scaleX = Math.round(PANEL_W * target * guiScale) / (float) (PANEL_W * guiScale);
         scaleY = Math.round(PANEL_H * target * guiScale) / (float) (PANEL_H * guiScale);
-        ClickGuiFonts.setRenderScale(scaleX);
+        ClickGuiMetrics.setEffectiveScale(scaleX);
         // Snap the panel's origin to whole *gui-scaled units*. It has to be a whole
         // gui-scaled unit - not merely a whole device pixel (1/guiScale), and certainly
         // not a 1/(scale * guiScale) grid - for two independent reasons:
@@ -204,7 +206,7 @@ public class OneClickScreen extends Screen {
         if (!modulesPageActive()) {
             return;
         }
-        float pageHeight = Math.max(20f, contentBottom() - TAB_BAR_H);
+        float pageHeight = Math.max(35f, contentBottom() - TAB_BAR_H);
         if (modulesPage == null || modulesPageHeight != pageHeight) {
             modulesPage = new ModulesPage(modulesHost, Ui2Theme.palette(), PANEL_W, pageHeight);
             modulesPageHeight = pageHeight;
@@ -233,7 +235,7 @@ public class OneClickScreen extends Screen {
         if (!moduleChromeActive()) {
             return;
         }
-        float pageHeight = Math.max(20f, contentBottom() - TAB_BAR_H);
+        float pageHeight = Math.max(35f, contentBottom() - TAB_BAR_H);
         if (moduleChrome == null || moduleChromeHeight != pageHeight) {
             moduleChrome = new ModulesPage(modulesHost, Ui2Theme.palette(), PANEL_W, pageHeight, false);
             moduleChromeHeight = pageHeight;
@@ -254,7 +256,7 @@ public class OneClickScreen extends Screen {
     }
 
     private float statsPageTop() {
-        return contentTop() + (settingsTab ? 8f : 18f);
+        return contentTop() + (settingsTab ? 14f : 32f);
     }
 
     private float statsPageWidth() {
@@ -264,7 +266,7 @@ public class OneClickScreen extends Screen {
     }
 
     private float statsPageLeft() {
-        return settingsTab ? 16f : SIDEBAR_W;
+        return settingsTab ? 32f : SIDEBAR_W;
     }
 
     /** Page-cache blit origin snapped to a whole GUI-scaled unit. */
@@ -285,12 +287,12 @@ public class OneClickScreen extends Screen {
         if (target == null) {
             return;
         }
-        float height = Math.max(20f, contentBottom() - statsPageTop());
+        float height = Math.max(35f, contentBottom() - statsPageTop());
         if (statsPage == null || statsPageFeature != target || statsPageHeight != height) {
             float pageWidth = statsPageWidth();
             float columnWidth = settingsTab
                     ? pageWidth - 30f
-                    : Math.min(520f, pageWidth - 30f);
+                    : Math.min(1002f, pageWidth - 58f);
             statsPage = new SettingsPage(target, Ui2Theme.palette(),
                     pageWidth, height, columnWidth);
             statsPageFeature = target;
@@ -416,8 +418,10 @@ public class OneClickScreen extends Screen {
                 new Setting.BooleanSetting("文字阴影", () -> cfg.clickGuiTextShadow, v -> cfg.clickGuiTextShadow = v),
 
                 new Setting.Header("布局与动画", "调整 ClickGUI 缩放和打开/关闭动画"),
-                new Setting.SliderSetting("ClickGUI 缩放", ClickGuiFonts.SCALE_MIN, ClickGuiFonts.SCALE_MAX,
-                        () -> cfg.clickGuiScale, v -> cfg.clickGuiScale = (float) v, "%.1f", ClickGuiFonts.SCALE_STEP),
+                new Setting.SliderSetting("ClickGUI 缩放",
+                        ModConfig.CLICK_GUI_SCALE_MIN, ModConfig.CLICK_GUI_SCALE_MAX,
+                        () -> cfg.clickGuiScale, v -> cfg.clickGuiScale = (float) v, "%.1f",
+                        ModConfig.CLICK_GUI_SCALE_STEP),
                 new Setting.SliderSetting("动画时长", 0, 600, () -> cfg.clickGuiAnimDuration,
                         v -> cfg.clickGuiAnimDuration = (int) Math.round(v), "%.0fms", 10),
                 new Setting.DropdownSetting("缓动曲线", Easing::ids,
@@ -618,8 +622,8 @@ public class OneClickScreen extends Screen {
             }
         } else {
             pose.translate(dx, 0);
-            ClickGuiFonts.drawText(graphics, feature.name(), SIDEBAR_W + 20,
-                    contentTop() - paneScroll + 2,
+            ClickGuiFonts.drawText(graphics, feature.name(), SIDEBAR_W + 35,
+                    contentTop() - paneScroll + 4,
                     dev.skypocket.gui.widget.ClickGuiStyle.text(), true);
             SettingsPage page = feature == transitionPageFeature && transitionPage != null
                     ? transitionPage
@@ -753,8 +757,8 @@ public class OneClickScreen extends Screen {
             if (!settingsTab) {
                 dev.skypocket.ui.mc.McUiPainter titlePainter =
                         new dev.skypocket.ui.mc.McUiPainter(graphics);
-                titlePainter.text(viewingFeature.name(), SIDEBAR_W + 20,
-                        top - scrollY + 2, dev.skypocket.gui.widget.ClickGuiStyle.text());
+                titlePainter.text(viewingFeature.name(), SIDEBAR_W + 35,
+                        top - scrollY + 4, dev.skypocket.gui.widget.ClickGuiStyle.text());
             }
             ensureStatsPage();
             statsPage.layout();
@@ -767,7 +771,18 @@ public class OneClickScreen extends Screen {
         }
 
         // Title sits above the cached shell; the footer is part of the shell slot.
-        ClickGuiFonts.drawTextWeighted(graphics, "SkyPocket", 16, 13,
+        int logoSource = ClickGuiMetrics.nearestLogoSample(46);
+        net.minecraft.resources.Identifier logo = ModuleIcon.logo(logoSource);
+        boolean hasLogo = !Minecraft.getInstance().getResourceManager()
+                .getResourceStack(logo).isEmpty();
+        int titleX = 32;
+        if (hasLogo) {
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, logo,
+                    24, 16, 0, 0, 46, 46, logoSource, logoSource, logoSource, logoSource,
+                    0xFFFFFFFF);
+            titleX = 82;
+        }
+        ClickGuiFonts.drawTextWeighted(graphics, "SkyPocket", titleX, 26,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true,
                 ClickGuiFonts.HEADING_SCALE, dev.skypocket.render.FontLab.Weight.SEMIBOLD);
     }

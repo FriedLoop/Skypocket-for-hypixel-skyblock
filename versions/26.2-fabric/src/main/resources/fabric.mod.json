@@ -4,7 +4,8 @@
   "version": "${version}",
   "name": "SkyPocket",
   "description": "Client-side utility mod for Hypixel SkyBlock: custom crosshair, hand-item animation, block outline, entity hitboxes, and HUD widgets (FPS/TPS/Ping, clock, world day).",
-  "authors": ["SkyPocket"],
+  "authors": ["FriedLoop"],
+  "icon": "assets/skypocket/icon.png",
   "contact": {
     "homepage": "https://github.com/FriedLoop/Skypocket-for-hypixel-skyblock",
     "sources": "https://github.com/FriedLoop/Skypocket-for-hypixel-skyblock",

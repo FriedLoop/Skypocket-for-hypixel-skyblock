@@ -258,7 +258,10 @@ public final class AtlasText {
         if (cached != null) {
             return cached;
         }
-        int baseline = Math.round(7.0f * scale * deviceFactor * oversample);
+        // The old 7px baseline was calibrated for the original 9px design font. ClickGUI now
+        // uses an 18px design font, so keep the same 7/9 ascent ratio instead of pinning the
+        // baseline to 7 design units (which made larger text grow upwards out of its row).
+        int baseline = Math.round(pixelSize * (7.0f / 9.0f));
         float pen = 0.0f;
         List<PlacedGlyph> placed = new ArrayList<>();
         for (int i = 0; i < text.length(); ) {

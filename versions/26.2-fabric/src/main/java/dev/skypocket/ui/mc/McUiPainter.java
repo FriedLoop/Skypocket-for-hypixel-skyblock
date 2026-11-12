@@ -28,7 +28,7 @@ public final class McUiPainter implements UiPainter {
         int y0 = Math.round(rect.y());
         int x1 = Math.max(x0, Math.round(rect.right()));
         int y1 = Math.max(y0, Math.round(rect.bottom()));
-        graphics.fill(x0, y0, x1, y1, color);
+        GuiPixels.fillRect(graphics, x0, y0, x1 - x0, y1 - y0, color);
     }
 
     @Override
@@ -65,7 +65,7 @@ public final class McUiPainter implements UiPainter {
         int y = Math.round(rect.y());
         int w = Math.max(1, Math.round(rect.width()));
         int h = Math.max(1, Math.round(rect.height()));
-        graphics.outline(x, y, w, h, color);
+        GuiPixels.outlineRect(graphics, x, y, w, h, color);
     }
 
     @Override
@@ -184,7 +184,10 @@ public final class McUiPainter implements UiPainter {
 
     @Override
     public float textWidth(String text) {
-        return ClickGuiFonts.width(dev.skypocket.i18n.Localization.auto(text));
+        // text() draws Medium; measuring Regular made centred labels drift right by the
+        // difference between the two faces.
+        return ClickGuiFonts.widthWeighted(dev.skypocket.i18n.Localization.auto(text),
+                dev.skypocket.render.FontLab.Weight.MEDIUM);
     }
 
     @Override

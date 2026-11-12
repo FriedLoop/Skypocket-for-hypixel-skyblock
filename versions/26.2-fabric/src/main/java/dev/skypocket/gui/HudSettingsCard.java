@@ -183,22 +183,29 @@ final class HudSettingsCard {
         GuiPixels.fillRoundedTopRect(graphics, x, y, w, TITLE_H, radius,
                 (0xF0 << 24) | (ClickGuiStyle.cardFloatTitle() & 0xFFFFFF));
 
-        ClickGuiFonts.drawText(graphics, title, x + PAD,
-                y + (TITLE_H - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.text(), true);
-        String close = "x";
-        ClickGuiFonts.drawText(graphics, close, x + w - PAD - ClickGuiFonts.width(close),
-                y + (TITLE_H - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.textDim(), true);
+        // The HUD editor is screen space: use half-size text so the settings page matches the
+        // old 9px HUD UI instead of drawing 18px ClickGUI text at screen scale.
+        ClickGuiFonts.pushScreenTextScale(0.5f);
+        try {
+            ClickGuiFonts.drawText(graphics, title, x + PAD,
+                    y + (TITLE_H - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.text(), true);
+            String close = "x";
+            ClickGuiFonts.drawText(graphics, close, x + w - PAD - ClickGuiFonts.width(close),
+                    y + (TITLE_H - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.textDim(), true);
 
-        int clipTop = pageY();
-        int clipBottom = y + TITLE_H + bodyH;
-        graphics.enableScissor(x, clipTop, x + w, clipBottom);
-        page.layout();
-        Matrix3x2fStack pose = graphics.pose();
-        pose.pushMatrix();
-        pose.translate(pageX(), pageY());
-        page.draw(graphics, 1f, 1f, false);
-        pose.popMatrix();
-        graphics.disableScissor();
+            int clipTop = pageY();
+            int clipBottom = y + TITLE_H + bodyH;
+            graphics.enableScissor(x, clipTop, x + w, clipBottom);
+            page.layout();
+            Matrix3x2fStack pose = graphics.pose();
+            pose.pushMatrix();
+            pose.translate(pageX(), pageY());
+            page.draw(graphics, 1f, 1f, false);
+            pose.popMatrix();
+            graphics.disableScissor();
+        } finally {
+            ClickGuiFonts.popScreenTextScale();
+        }
     }
 
     // ---- interaction ----------------------------------------------------------------------

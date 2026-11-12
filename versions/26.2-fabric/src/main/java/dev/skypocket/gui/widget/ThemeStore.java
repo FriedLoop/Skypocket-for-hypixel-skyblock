@@ -77,18 +77,9 @@ public final class ThemeStore {
             Map.entry("switchOff", "开关关闭时的轨道颜色")
     );
 
-    private static final Map<String, String> METRIC_DESCRIPTIONS = Map.ofEntries(
-            Map.entry("rowHeight", "每一行设置项的高度"),
-            Map.entry("controlHeight", "行内控件的高度"),
-            Map.entry("labelInset", "标签距离行左侧的距离"),
-            Map.entry("controlWidth", "滑条和下拉框的控件列宽度"),
-            Map.entry("sectionGap", "设置卡片标题上方的间距"),
-            Map.entry("sectionTitleHeight", "设置卡片标题行的高度"),
-            Map.entry("cardRadius", "卡片和控件圆角半径"),
-            Map.entry("switchWidth", "开关轨道宽度"),
-            Map.entry("switchHeight", "开关轨道高度"),
-            Map.entry("sliderTrackHeight", "滑条轨道厚度"),
-            Map.entry("knobSize", "滑条圆点直径")
+    private static final Map<String, String> METRIC_DESCRIPTIONS = Map.of(
+            "cardRadius", "卡片、面板和标签页的圆角半径",
+            "controlRadius", "按钮、输入框、下拉框和行高亮的圆角半径"
     );
 
     private ThemeStore() {
@@ -101,15 +92,10 @@ public final class ThemeStore {
         GuiTheme.use(colors);
         GuiMetrics.use(metrics);
         JsonObject root = read(name);
-        // Says what was actually resolved, not what the file claims: with the debug log on, editing
-        // rowHeight in the JSON and restarting shows the new number here - which is the only way to
-        // check that the file was read while the measurements are still unconsumed (they are wired into
-        // the layout later). Silent when the debug log is off, because INFO is filtered at that level.
-        LOGGER.info("theme {} ({}): {} colours, rowHeight={} controlWidth={} sectionGap={}"
-                        + " switch={}x{}", name, root == null ? "built-in" : "file",
-                GuiTheme.class.getRecordComponents().length, metrics.rowHeight(),
-                metrics.controlWidth(), metrics.sectionGap(), metrics.switchWidth(),
-                metrics.switchHeight());
+        LOGGER.info("theme {} ({}): {} colours, cardRadius={} controlRadius={}",
+                name, root == null ? "built-in" : "file",
+                GuiTheme.class.getRecordComponents().length,
+                metrics.cardRadius(), metrics.controlRadius());
     }
 
     /** Built-in names followed by the files found on disk (sorted). */

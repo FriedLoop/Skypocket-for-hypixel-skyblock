@@ -130,7 +130,7 @@ public final class TextField extends Control {
 
     private float textStartX() {
         if (!labelOutside) {
-            float x = bounds().x() + 6f;
+            float x = bounds().x() + 11f;
             if (label != null && !label.isEmpty()) {
                 x += ClickGuiFonts.width(label) + 3f;
             }
@@ -138,7 +138,7 @@ public final class TextField extends Control {
         }
         float labelWidth = label == null || label.isEmpty()
                 ? 0f : ClickGuiFonts.width(label);
-        return outsideFieldBounds(labelWidth).x() + 6f;
+        return outsideFieldBounds(labelWidth).x() + 11f;
     }
 
     @Override
@@ -323,9 +323,9 @@ public final class TextField extends Control {
         }
         String shown = value.toString();
         float textY = field.y() + (field.height() - painter.lineHeight()) / 2f;
-        float textX = field.x() + 6f;
+        float textX = field.x() + 11f;
         if (labelOutside && label != null && !label.isEmpty()) {
-            painter.text(label, bounds().x() + 6f,
+            painter.text(label, bounds().x() + 11f,
                     bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.text());
         } else if (label != null && !label.isEmpty()) {
             painter.text(label, textX, textY, palette.muted());
@@ -355,7 +355,7 @@ public final class TextField extends Control {
             caretX = textX + painter.textWidth(shown) + painter.textWidth(preedit);
         }
         if (caretVisible()) {
-            painter.fill(new Rect(caretX, field.y() + 4f, 1f, field.height() - 8f),
+            painter.fill(new Rect(caretX, field.y() + 8f, 1f, field.height() - 15f),
                     palette.text());
         }
         painter.popClip();
@@ -367,9 +367,9 @@ public final class TextField extends Control {
     }
 
     private Rect outsideFieldBounds(float labelWidth) {
-        float fieldH = Math.min(16f, Math.max(10f, bounds().height() - 4f));
-        float fieldX = bounds().x() + 6f + labelWidth + 8f;
-        float fieldW = Math.max(40f, bounds().right() - 6f - fieldX);
+        float fieldH = Math.min(31f, Math.max(20f, bounds().height() - 8f));
+        float fieldX = bounds().x() + 11f + labelWidth + 15f;
+        float fieldW = Math.max(77f, bounds().right() - 11f - fieldX);
         return new Rect(fieldX, bounds().y() + (bounds().height() - fieldH) / 2f,
                 fieldW, fieldH);
     }

@@ -38,7 +38,7 @@ public final class PanelRenderer {
      * cards and the bar.
      */
     public static void drawBackground(GuiGraphicsExtractor graphics, PanelView view) {
-        fillRoundedTopRect(graphics, 0, 0, PANEL_W, TAB_BAR_H, ROUND, tabBarColor());
+        fillRoundedTopRect(graphics, 0, 0, PANEL_W, TAB_BAR_H, ClickGuiStyle.cardRadius(), tabBarColor());
         int bodyY = TAB_BAR_H;
         int footerRow = contentBottomRow();
         int bodyColor = panelBackgroundColor();
@@ -59,7 +59,7 @@ public final class PanelRenderer {
         } else {
             fillDeviceToRow(graphics, 0, bodyY, PANEL_W, footerRow, bodyColor);
         }
-        fillRoundedBottomToRow(graphics, 0, PANEL_W, ROUND, tabBarColor(), footerRow, PANEL_H);
+        fillRoundedBottomToRow(graphics, 0, PANEL_W, ClickGuiStyle.cardRadius(), tabBarColor(), footerRow, PANEL_H);
     }
 
     /** The two main tabs, top right. */
@@ -75,10 +75,10 @@ public final class PanelRenderer {
         boolean hover = mouseX >= FOOTER_BTN_X && mouseX <= FOOTER_BTN_X + FOOTER_BTN_W
                 && mouseY >= btnY && mouseY <= btnY + FOOTER_BTN_H;
         painter.surface(new Rect(FOOTER_BTN_X, btnY, FOOTER_BTN_W, FOOTER_BTN_H),
-                ClickGuiStyle.RADIUS,
+                ClickGuiStyle.controlRadius(),
                 hover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
         painter.text(Localization.tr("HUD 位置调整"),
-                FOOTER_BTN_X + 8, btnY + 5, ClickGuiStyle.text());
+                FOOTER_BTN_X + 14, btnY + 9, ClickGuiStyle.text());
     }
 
     // ---- internals -------------------------------------------------------------------------
@@ -95,7 +95,7 @@ public final class PanelRenderer {
         McUiPainter painter = new McUiPainter(graphics);
         boolean hover = !selected && mouseX >= x && mouseX <= x + TAB_W && mouseY >= y && mouseY <= y + TAB_H;
         int bg = selected ? ClickGuiStyle.tabSelected() : (hover ? ClickGuiStyle.tabHover() : ClickGuiStyle.tab());
-        painter.surface(new Rect(x, y, TAB_W, TAB_H), ClickGuiStyle.RADIUS, bg, 0);
+        painter.surface(new Rect(x, y, TAB_W, TAB_H), ClickGuiStyle.controlRadius(), bg, 0);
         painter.text(label, x + (TAB_W - painter.textWidth(label)) / 2,
                 y + (TAB_H - painter.lineHeight()) / 2,
                 selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());

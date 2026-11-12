@@ -2,6 +2,7 @@ package dev.skypocket.mixin;
 
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.net.SkyBlockDetector;
+import dev.skypocket.skyblock.JerryPresentTracker;
 import dev.skypocket.skyblock.PlayerLookalike;
 import dev.skypocket.skyblock.SkyBlockNpcTracker;
 import dev.skypocket.config.ModConfig;
@@ -67,6 +68,20 @@ public abstract class EntityRendererMixin {
 
         double range = cfg.hideNearbyPlayersRange;
         if (nearby && entity.distanceToSqr(mc.player) < range * range) {
+            cir.setReturnValue(false);
+        }
+    }
+
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    private void sky$hideOtherPresents(Entity entity, Frustum frustum, double x, double y, double z,
+//#if MC>=260300
+                                       float partialTick,
+//#endif
+                                       CallbackInfoReturnable<Boolean> cir) {
+        ModConfig cfg = ConfigManager.get();
+        if (cfg.hideOtherPlayersPresents && SkyBlockDetector.isActive()
+                && entity instanceof net.minecraft.world.entity.decoration.ArmorStand stand
+                && JerryPresentTracker.shouldHide(stand)) {
             cir.setReturnValue(false);
         }
     }

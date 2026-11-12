@@ -33,18 +33,14 @@ import java.util.Map;
  */
 public final class ClickGuiFonts {
     /** Design text size in px; a text's raster size = DESIGN_SIZE × scale × pxPerUnit. */
-    private static final int DESIGN_SIZE = 9;
-    /** Panel scale baseline: the design size is scaled by scale × SCALE_BASE / guiScale. */
-    public static final float SCALE_BASE = 1.75f;
-    /** Scale slider range/step (the sizes reachable here are the ones we pre-build). */
-    public static final float SCALE_MIN = 0.5f;
-    public static final float SCALE_MAX = 1.5f;
-    public static final float SCALE_STEP = 0.1f;
+    private static final int DESIGN_SIZE = 18;
+    /** HUD text keeps its own design size; it is not part of the ClickGUI canvas. */
+    private static final int HUD_DESIGN_SIZE = 9;
     /** Extra size factor for the panel heading (drawn at 1.3 × design size). */
     public static final float HEADING_SCALE = 1.3f;
 
-    private static final int BAKE_1X = 9;
-    private static final int BAKE_2X = 18;
+    private static final int BAKE_1X = 18;
+    private static final int BAKE_2X = 36;
     /** Click GUI scales above this use the 2x bake (fallback path only). */
     private static final float TWO_X_MIN_SCALE = 1.25f;
 
@@ -68,6 +64,8 @@ public final class ClickGuiFonts {
     /** Bumped whenever a lab option changes the raster, so an in-flight build is not published. */
     private static int experimentGeneration;
     private static float renderScale = 1.0f;
+    /** Non-zero while a screen-space overlay (HUD settings) is drawing. */
+    private static float screenTextScale = 0f;
     private static int currentPixelSize = -1;
     /** Cached font for the common scale = 1 case (avoids per-draw map lookups). */
     private static VectorFont currentVector;
@@ -200,7 +198,7 @@ public final class ClickGuiFonts {
         if (guiScale <= 0f) {
             return false;
         }
-        float panelScale = ConfigManager.get().clickGuiScale * SCALE_BASE / guiScale;
+        float panelScale = ClickGuiMetrics.projectedScale(guiScale);
         synchronized (FONTS) {
             for (float factor : new float[]{1.0f, HEADING_SCALE}) {
                 int size = pixelSize(panelScale * factor);
@@ -299,7 +297,7 @@ public final class ClickGuiFonts {
         if (vector != null) {
             return vector.font;
         }
-        return ConfigManager.get().clickGuiScale > TWO_X_MIN_SCALE ? font2x() : font1x();
+        return ClickGuiMetrics.configuredScale() > TWO_X_MIN_SCALE ? font2x() : font1x();
     }
 
     /**
@@ -318,14 +316,26 @@ public final class ClickGuiFonts {
         if (vectorFor(scale) != null) {
             return vectorGlyphScale();
         }
-        float base = ConfigManager.get().clickGuiScale > TWO_X_MIN_SCALE
+        float base = ClickGuiMetrics.configuredScale() > TWO_X_MIN_SCALE
                 ? (float) DESIGN_SIZE / BAKE_2X
                 : (float) DESIGN_SIZE / BAKE_1X;
         return base * scale;
     }
 
+    /** Enters screen-space overlay text (HUD editor), where one GUI unit is one screen unit. */
+    public static void pushScreenTextScale(float scale) {
+        screenTextScale = Math.max(0.05f, scale);
+    }
+
+    public static void popScreenTextScale() {
+        screenTextScale = 0f;
+    }
+
     /** Text width in design (panel) units, memoized per active pixel size. */
     public static int width(String text) {
+        if (screenTextScale > 0f) {
+            return widthScreen(text, screenTextScale, FontLab.weight());
+        }
         if (FontLab.atlasText()) {
             return AtlasText.width(text, 1.0f, deviceFactor(),
                     atlasPixelSize(1.0f), FontLab.oversample());
@@ -343,9 +353,12 @@ public final class ClickGuiFonts {
         return width;
     }
 
-    /** Line height in design units. */
+    /** Line height in design units. Vanilla Font.lineHeight is fixed at 9, which is wrong for
+     * the enlarged ClickGUI design size; use the design font size directly. */
     public static int lineHeight() {
-        return fontFor(1.0f).lineHeight;
+        return screenTextScale > 0f
+                ? Math.max(1, Math.round(DESIGN_SIZE * screenTextScale))
+                : DESIGN_SIZE;
     }
 
     /**
@@ -372,7 +385,7 @@ public final class ClickGuiFonts {
     }
 
     private static int hudPixelSize(float scale) {
-        int size = Math.round(DESIGN_SIZE * Math.max(0.01f, scale) * guiScale());
+        int size = Math.round(HUD_DESIGN_SIZE * Math.max(0.01f, scale) * guiScale());
         return Math.max(4, Math.min(256, size));
     }
 
@@ -413,6 +426,10 @@ public final class ClickGuiFonts {
     public static void drawTextWeighted(GuiGraphicsExtractor graphics, String text, float x, float y,
                                         int color, boolean shadow, float scale,
                                         FontLab.Weight weight) {
+        if (screenTextScale > 0f) {
+            drawScreenText(graphics, text, x, y, color, shadow, screenTextScale * scale, weight);
+            return;
+        }
         if (FontLab.atlasText()) {
             AtlasText.draw(graphics, text, x, y, color, shadow, scale, deviceFactor(),
                     atlasPixelSize(scale), FontLab.oversample(), weight);
@@ -422,6 +439,9 @@ public final class ClickGuiFonts {
     }
 
     public static int widthWeighted(String text, FontLab.Weight weight) {
+        if (screenTextScale > 0f) {
+            return widthScreen(text, screenTextScale, weight);
+        }
         if (FontLab.atlasText()) {
             return AtlasText.width(text, 1.0f, deviceFactor(), atlasPixelSize(1.0f),
                     FontLab.oversample(), weight);
@@ -429,9 +449,55 @@ public final class ClickGuiFonts {
         return width(text);
     }
 
+    /**
+     * Text drawn in raw GUI/screen space rather than inside the panel pose. The raster size must
+     * use the window GUI scale as its device factor; otherwise a 0.5 design scale is rasterized at
+     * half the final device size and then stretched by the screen pose.
+     */
+    public static void drawScreenText(GuiGraphicsExtractor graphics, String text, float x, float y,
+                                      int color, boolean shadow, float scale,
+                                      FontLab.Weight weight) {
+        if (FontLab.atlasText()) {
+            float factor = guiScale();
+            int pixelSize = Math.round(DESIGN_SIZE * scale * factor * FontLab.oversample());
+            AtlasText.draw(graphics, text, x, y, color, shadow, 1.0f, factor,
+                    Math.max(4, Math.min(256, pixelSize)), FontLab.oversample(), weight);
+            return;
+        }
+        float saved = screenTextScale;
+        screenTextScale = 0f;
+        try {
+            drawTextWeighted(graphics, text, x, y, color, shadow, scale, weight);
+        } finally {
+            screenTextScale = saved;
+        }
+    }
+
+    /** Width in raw GUI/screen units for {@link #drawScreenText}. */
+    public static int widthScreen(String text, float scale, FontLab.Weight weight) {
+        if (FontLab.atlasText()) {
+            float factor = guiScale();
+            int pixelSize = Math.round(DESIGN_SIZE * scale * factor * FontLab.oversample());
+            return AtlasText.width(text, 1.0f, factor, Math.max(4, Math.min(256, pixelSize)),
+                    FontLab.oversample(), weight);
+        }
+        float saved = screenTextScale;
+        screenTextScale = 0f;
+        try {
+            return Math.round(widthWeighted(text, weight) * scale);
+        } finally {
+            screenTextScale = saved;
+        }
+    }
+
     /** Draws text at {@code scale} × the panel design size (e.g. headings). */
     public static void drawTextScaled(GuiGraphicsExtractor graphics, String text, float x, float y,
                                       int color, boolean shadow, float scale) {
+        if (screenTextScale > 0f) {
+            drawScreenText(graphics, text, x, y, color, shadow, screenTextScale * scale,
+                    FontLab.weight());
+            return;
+        }
         if (FontLab.atlasText()) {
             AtlasText.draw(graphics, text, x, y, color, shadow, scale, deviceFactor(),
                     atlasPixelSize(scale), FontLab.oversample());

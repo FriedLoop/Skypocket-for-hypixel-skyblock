@@ -20,7 +20,7 @@ public final class ConfigManager {
             FabricLoader.getInstance().getConfigDir().resolve("skypocket.json");
 
     /** Shape version this build writes. Bump it together with a new entry in {@link #MIGRATIONS}. */
-    public static final int CURRENT_VERSION = 3;
+    public static final int CURRENT_VERSION = 8;
 
     /**
      * Ordered upgrade steps: entry {@code i} turns a v{i} file into v{i+1}.
@@ -42,6 +42,21 @@ public final class ConfigManager {
             cfg -> {
             },
             // v2 -> v3: spawn/NPC hiding and the legendary warning were added; defaults are off.
+            cfg -> {
+            },
+            // v3 -> v4: drill fuel and thunder bottle HUD fields were added; defaults are off.
+            cfg -> {
+            },
+            // v4 -> v5: reserved version step; no persisted field shape changed.
+            cfg -> {
+            },
+            // v5 -> v6: hide-other-players-presents was added; default is off.
+            cfg -> {
+            },
+            // v6 -> v7: item pickup log was added; default is off.
+            cfg -> {
+            },
+            // v7 -> v8: dropped-item glow was restored; default is off.
             cfg -> {
             });
 

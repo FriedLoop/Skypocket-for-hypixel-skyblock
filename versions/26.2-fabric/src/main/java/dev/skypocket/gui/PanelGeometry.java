@@ -16,29 +16,30 @@ import static dev.skypocket.render.GuiPixels.scissorRow;
  */
 public final class PanelGeometry {
     // ---- panel ----
-    public static final int PANEL_W = 700;
-    /** Panel height; the panel is a 5:3 rectangle (700 x 420). */
-    public static final int PANEL_H = PANEL_W * 3 / 5;
-    public static final int ROUND = 8;
+    // The design canvas is calibrated directly in new design units: 700 x 420
+    // was the old 1.75 baseline, so it is 1225 x 735 here.
+    public static final int PANEL_W = 1348;
+    public static final int PANEL_H = 810;
+    public static final int ROUND = 16;
 
     // ---- tab bar and its two main tabs ----
-    public static final int TAB_BAR_H = 40;
-    public static final int TAB_W = 76;
-    public static final int TAB_H = 22;
+    public static final int TAB_BAR_H = 78;
+    public static final int TAB_W = 146;
+    public static final int TAB_H = 44;
     /** Top edge of the main tabs. */
-    public static final int TAB_Y = 9;
+    public static final int TAB_Y = 18;
     /** Gap between the two main tabs. */
-    public static final int TAB_GAP = 8;
+    public static final int TAB_GAP = 16;
     /** Distance from the panel's right edge to the last tab. */
-    public static final int TAB_MARGIN = 16;
+    public static final int TAB_MARGIN = 32;
 
     // ---- cards ----
-    public static final int CARD_W = 160;
-    public static final int CARD_H = 100;
-    public static final int CARD_GAP = 12;
-    public static final int ICON_SIZE = 32;
+    public static final int CARD_W = 308;
+    public static final int CARD_H = 194;
+    public static final int CARD_GAP = 24;
+    public static final int ICON_SIZE = 62;
     /** Horizontal padding of the card grid inside the content pane. */
-    private static final int CARD_GRID_PAD = 20;
+    private static final int CARD_GRID_PAD = 40;
 
     /**
      * Card contents, in panel-local units relative to the card's top-left.
@@ -48,50 +49,50 @@ public final class PanelGeometry {
      * hard-coding the same offsets in both places meant that changing one silently broke the other
      * (the interaction area drifting away from what is drawn).
      */
-    public static final int CARD_PAD = 10;
+    public static final int CARD_PAD = 20;
     public static final int CARD_TITLE_X = CARD_PAD + ICON_SIZE + CARD_PAD;
-    public static final int CARD_TITLE_Y = 16;
+    public static final int CARD_TITLE_Y = 32;
     /** Title width: up to the card's right padding. */
     public static final int CARD_TITLE_MAX_W = CARD_W - CARD_TITLE_X - CARD_PAD;
     public static final int CARD_BTN_X = CARD_PAD;
-    public static final int CARD_BTN_Y = 48;
+    public static final int CARD_BTN_Y = 92;
     public static final int CARD_BTN_W = CARD_W - CARD_PAD * 2;
-    public static final int CARD_BTN_H = 18;
+    public static final int CARD_BTN_H = 36;
     public static final int CARD_STATUS_X = CARD_PAD;
-    public static final int CARD_STATUS_Y = 72;
+    public static final int CARD_STATUS_Y = 140;
     public static final int CARD_STATUS_W = CARD_W - CARD_PAD * 2;
-    public static final int CARD_STATUS_H = 16;
+    public static final int CARD_STATUS_H = 32;
 
     // ---- sidebar ----
-    public static final int SIDEBAR_W = 150;
-    public static final int SIDEBAR_ITEM_H = 22;
+    public static final int SIDEBAR_W = 290;
+    public static final int SIDEBAR_ITEM_H = 44;
     /** Top of the first sidebar row (below the tab bar). */
-    public static final int SIDEBAR_TOP = TAB_BAR_H + 8;
+    public static final int SIDEBAR_TOP = TAB_BAR_H + 16;
 
     // ---- search box (after SIDEBAR_W: SEARCH_X/W are derived from it) ----
-    public static final int SEARCH_Y = 48;
+    public static final int SEARCH_Y = 92;
     /** Back/forward buttons sit where the search box used to start. */
-    public static final int NAV_SIZE = 18;
-    public static final int NAV_GAP = 4;
-    public static final int NAV_X = SIDEBAR_W + 16;
+    public static final int NAV_SIZE = 36;
+    public static final int NAV_GAP = 8;
+    public static final int NAV_X = SIDEBAR_W + 32;
     public static final int SEARCH_X = NAV_X + (NAV_SIZE + NAV_GAP) * 2;
-    public static final int SEARCH_W = PANEL_W - SIDEBAR_W - 32 - (NAV_SIZE + NAV_GAP) * 2;
-    public static final int SEARCH_H = 18;
+    public static final int SEARCH_W = PANEL_W - SIDEBAR_W - 64 - (NAV_SIZE + NAV_GAP) * 2;
+    public static final int SEARCH_H = 36;
 
     /** Top of the content area on the modules tab (below the search box). */
-    public static final int CONTENT_TOP_MODULES = 76;
+    public static final int CONTENT_TOP_MODULES = 146;
     /** Top of the content area on the settings tab / a feature's detail page. */
-    public static final int CONTENT_TOP_SETTINGS = 52;
+    public static final int CONTENT_TOP_SETTINGS = 100;
 
     // ---- footer ----
-    public static final int FOOTER_H = 36;
+    public static final int FOOTER_H = 70;
     /** The content scissor ends exactly at the footer's top edge, so cards are cut there. */
     public static final int CONTENT_BOTTOM = FOOTER_H;
     /** Footer entry button (opens the unified HUD position editor): 3/4 of the sidebar width,
      *  centred under the sidebar. */
-    public static final int FOOTER_BTN_W = SIDEBAR_W * 3 / 4;
+    public static final int FOOTER_BTN_W = 218;
     public static final int FOOTER_BTN_X = (SIDEBAR_W - FOOTER_BTN_W) / 2;
-    public static final int FOOTER_BTN_H = 18;
+    public static final int FOOTER_BTN_H = 36;
 
     private PanelGeometry() {
     }

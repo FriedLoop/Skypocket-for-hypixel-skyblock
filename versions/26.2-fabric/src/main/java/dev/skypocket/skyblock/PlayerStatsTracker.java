@@ -46,8 +46,13 @@ public final class PlayerStatsTracker {
      * Defence. The anchor is the colour, not the glyph: the symbol after the number is resource-pack
      * art, and keying on a specific codepoint fails the moment the pack draws a different one. A green
      * number that is not a percentage, a decimal, a fraction or a timer is defence.
+     *
+     * <p>The number is possessive and must be followed by a non-number/non-separator. Without that,
+     * the dark-green {@code §2} prefix of a drill line (for example {@code §246,921/50,000 Drill})
+     * backtracked into {@code 46} and overwrote the defence stat.
      */
-    private static final Pattern DEFENSE = Pattern.compile("§[a2]([\\d,]+)(?![\\.\\d%/s])");
+    private static final Pattern DEFENSE = Pattern.compile(
+            "§[a2](\\d[\\d,]*+)(?![\\d,./%s])");
     /** Vitality as a pair; the trailing symbol is pack art and therefore optional. */
     private static final Pattern VITALITY = Pattern.compile("§4([\\d.,]+)/([\\d.,]+)");
 

@@ -26,7 +26,7 @@ public final class Ui2Theme {
                 ClickGuiStyle.scrollbarTrack(),
                 ClickGuiStyle.scrollbarThumb(),
                 ClickGuiStyle.selection(),
-                ClickGuiStyle.RADIUS,
+                ClickGuiStyle.controlRadius(),
                 ClickGuiStyle.PILL);
     }
 }

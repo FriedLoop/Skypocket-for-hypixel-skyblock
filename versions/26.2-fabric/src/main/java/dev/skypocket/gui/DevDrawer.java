@@ -34,13 +34,15 @@ final class DevDrawer {
      * The picker is drawn at 75% here: at full size it forced the drawer wider than the gap beside the
      * panel. Only this host scales it - the settings page and the card keep it at 1:1.
      */
-    private static final float PICKER_SCALE = 0.75f;
-    private static final int WIDTH = 248;
-    private static final int PAD = 8;
-    private static final int ROW = 18;
-    private static final int TITLE_H = 20;
+    private static final float PICKER_SCALE = 1.0f;
+    private static final int WIDTH = 340;
+    private static final int PAD = 12;
+    private static final int ROW = 24;
+    private static final int TITLE_H = 28;
     /** Height of the theme row under the title: «‹ name ›» plus the "new" button. */
-    private static final int THEME_ROW = 18;
+    private static final int THEME_ROW = 26;
+    /** Caption + slider + knob; ROW is only the token list row height. */
+    private static final int METRIC_EDITOR_H = 44;
 
     private final List<String> tokens = new ArrayList<>();
     private final List<Boolean> isColor = new ArrayList<>();
@@ -100,7 +102,9 @@ final class DevDrawer {
             snapshotName = ConfigManager.get().clickGuiTheme;
             target = snapshotName;
             scroll = 0;
-            selected = tokens.isEmpty() ? null : tokens.get(0);
+            // Open with nothing selected: a selected colour token with picker == null used to
+            // draw the metric slider and still reserve the colour-picker height.
+            selected = null;
             // Re-read the list: theme files may have been added or removed since last time.
             themes.clear();
             themes.addAll(ThemeStore.names());
@@ -208,7 +212,7 @@ final class DevDrawer {
                     value -> {
                         ThemeStore.setColor(token, value);
                         ConfigManager.touch();
-                    }, new PickerMemory());
+                    }, new PickerMemory()).textScale(textScale()).screenSpace(true);
         } else {
             picker = null;
             pickerToken = "";
@@ -227,16 +231,16 @@ final class DevDrawer {
     }
 
     private int x(int screenW) {
-        int docked = screenW - WIDTH - 8;
+        int docked = screenW - WIDTH - 12;
         int value = left >= 0 ? left : docked;
         // Clamped on read as well as on write: a window resize can leave a dragged position outside.
-        return Math.max(8, Math.min(docked, value));
+        return Math.max(12, Math.min(docked, value));
     }
 
     private int y(int screenH) {
-        int docked = Math.max(8, (screenH - height(screenH)) / 2);
+        int docked = Math.max(12, (screenH - height(screenH)) / 2);
         int value = top >= 0 ? top : docked;
-        return Math.max(8, Math.min(screenH - height(screenH) - 8, value));
+        return Math.max(12, Math.min(screenH - height(screenH) - 12, value));
     }
 
     private int pickerWidth() {
@@ -254,18 +258,18 @@ final class DevDrawer {
             return top + pickerHeight() + description + PAD;
         }
         if (selected != null) {
-            return top + ROW + description + PAD;
+            return top + METRIC_EDITOR_H + description + PAD;
         }
         return top;
     }
 
     /** Two lines are enough for every token explanation at this drawer width. */
     private int descriptionHeight() {
-        return ClickGuiFonts.lineHeight() * 2 + 2;
+        return smallLineHeight() * 2 + 2;
     }
 
     private int listTop(int screenW, int screenH) {
-        return editorBottom(screenW, screenH) + 4;
+        return editorBottom(screenW, screenH) + 6;
     }
 
     private int listHeight(int screenW, int screenH) {
@@ -281,7 +285,7 @@ final class DevDrawer {
         int x = x(screenW);
         int y = y(screenH);
         int h = height(screenH);
-        int radius = Math.max(6, GuiMetrics.current().cardRadius());
+        int radius = Math.max(0, GuiMetrics.current().cardRadius());
         ClickGuiStyle.shadow(graphics, x, y, WIDTH, h, radius);
         GuiPixels.fillRoundedRect(graphics, x, y, WIDTH, h, radius,
                 (0xF4 << 24) | (ClickGuiStyle.cardFloat() & 0xFFFFFF));
@@ -289,17 +293,23 @@ final class DevDrawer {
                 (0xF4 << 24) | (ClickGuiStyle.cardFloatTitle() & 0xFFFFFF));
 
         // The drawer got narrower; keep the title from running under the buttons.
-        String title = fit(Localization.tr("主题") + " · " + target, WIDTH - 140);
-        ClickGuiFonts.drawText(graphics, title, x + PAD,
-                y + (TITLE_H - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.text(), true);
-        drawButton(graphics, x + WIDTH - 130, y + 2, 38, Localization.tr("保存"), mouseX, mouseY);
-        drawButton(graphics, x + WIDTH - 88, y + 2, 38, Localization.tr("还原"), mouseX, mouseY);
-        drawButton(graphics, x + WIDTH - 46, y + 2, 38, "×", mouseX, mouseY);
+        String title = fit(Localization.tr("主题") + " · " + target, WIDTH - 188);
+        drawSmallText(graphics, title, x + PAD,
+                y + (TITLE_H - smallLineHeight()) / 2, ClickGuiStyle.text(), true);
+        drawButton(graphics, x + WIDTH - 176, y + 2, 52, Localization.tr("保存"), mouseX, mouseY);
+        drawButton(graphics, x + WIDTH - 120, y + 2, 52, Localization.tr("还原"), mouseX, mouseY);
+        drawButton(graphics, x + WIDTH - 64, y + 2, 52, "×", mouseX, mouseY);
 
         drawThemeRow(graphics, x, y + TITLE_H, mouseX, mouseY);
 
         // Editor for the selected token.
         int top = y + TITLE_H + THEME_ROW + PAD;
+        if (picker != null) {
+            picker.textScale(textScale());
+        }
+        if (nameField != null) {
+            nameField.textScale(textScale());
+        }
         if (selected != null && isColorToken(selected) && picker != null) {
             // Scaled draw: the picker keeps its own 1:1 geometry, the pose shrinks it. Its hit tests are
             // called with the inverse transform (see mouseClicked).
@@ -317,7 +327,7 @@ final class DevDrawer {
             drawMetricEditor(graphics, x + PAD, top, mouseX, mouseY);
         }
         if (selected != null) {
-            int descY = top + (isColorToken(selected) ? pickerHeight() : ROW) + 2;
+            int descY = top + (isColorToken(selected) ? pickerHeight() : METRIC_EDITOR_H) + 2;
             drawWrappedText(graphics, Localization.tr(ThemeStore.tokenDescription(selected)),
                     x + PAD, descY, WIDTH - PAD * 2, 2, ClickGuiStyle.textMuted(), false);
         }
@@ -340,16 +350,16 @@ final class DevDrawer {
             } else if (hovered) {
                 graphics.fill(x + 1, rowY, x + WIDTH - 1, rowY + ROW, ClickGuiStyle.listRowHover());
             }
-            int textY = rowY + (ROW - ClickGuiFonts.lineHeight()) / 2;
-            ClickGuiFonts.drawText(graphics, token, x + PAD, textY,
+            int textY = rowY + (ROW - smallLineHeight()) / 2;
+            drawSmallText(graphics, token, x + PAD, textY,
                     rowSelected ? ClickGuiStyle.text() : ClickGuiStyle.textDim(), false);
             if (isColorToken(token)) {
-                ClickGuiStyle.surface(graphics, x + WIDTH - PAD - 16, rowY + 4, 14, 10,
+                ClickGuiStyle.surface(graphics, x + WIDTH - PAD - 24, rowY + 6, 20, 14,
                         ThemeStore.color(token), 0);
             } else {
                 String value = format(ThemeStore.metric(token));
-                ClickGuiFonts.drawText(graphics, value,
-                        x + WIDTH - PAD - ClickGuiFonts.width(value), textY,
+                drawSmallText(graphics, value,
+                        x + WIDTH - PAD - smallWidth(value), textY,
                         ClickGuiStyle.textMuted(), false);
             }
             rowY += ROW;
@@ -358,7 +368,7 @@ final class DevDrawer {
         drawScrollbar(graphics, x, listTop, listH);
 
         if (System.currentTimeMillis() <= statusUntil && !status.isEmpty()) {
-            ClickGuiFonts.drawText(graphics, status, x + PAD, y + h - PAD - ClickGuiFonts.lineHeight(),
+            drawSmallText(graphics, status, x + PAD, y + h - PAD - smallLineHeight(),
                     ClickGuiStyle.textMuted(), false);
         }
         // The confirmation covers the drawer: it is the only thing that can be clicked while it shows.
@@ -374,52 +384,53 @@ final class DevDrawer {
         int lineY = y;
         for (int line = 0; line < maxLines && !remaining.isEmpty(); line++) {
             int cut = remaining.length();
-            while (cut > 0 && ClickGuiFonts.width(remaining.substring(0, cut)) > maxWidth) {
+            while (cut > 0 && smallWidth(remaining.substring(0, cut)) > maxWidth) {
                 cut--;
             }
             if (cut <= 0) {
                 cut = 1;
             }
             String part = remaining.substring(0, cut);
-            ClickGuiFonts.drawText(graphics, part, x, lineY, color, shadow);
+            drawSmallText(graphics, part, x, lineY, color, shadow);
             remaining = remaining.substring(cut);
-            lineY += ClickGuiFonts.lineHeight();
+            lineY += smallLineHeight();
         }
     }
 
     private void drawButton(GuiGraphicsExtractor graphics, int x, int y, int w, String text,
                             int mouseX, int mouseY) {
-        boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 16;
-        ClickGuiStyle.button(graphics, x, y, w, 16, hovered, false);
-        ClickGuiFonts.drawText(graphics, text, x + (w - ClickGuiFonts.width(text)) / 2,
-                y + (16 - ClickGuiFonts.lineHeight()) / 2, ClickGuiStyle.text(), false);
+        boolean hovered = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + 24;
+        ClickGuiStyle.button(graphics, x, y, w, 24, hovered, false);
+        drawSmallText(graphics, text, x + (w - smallWidth(text)) / 2,
+                y + (24 - smallLineHeight()) / 2, ClickGuiStyle.text(), false);
     }
 
     /** The theme row: «‹ name ›» on the left, "new" on the right. */
     private void drawThemeRow(GuiGraphicsExtractor graphics, int x, int y, int mouseX, int mouseY) {
-        boolean hoverLeft = inside(mouseX, mouseY, x + PAD, y + 2, 14, 14);
-        boolean hoverRight = inside(mouseX, mouseY, x + PAD + 18, y + 2, 14, 14);
-        boolean hoverNew = inside(mouseX, mouseY, x + WIDTH - PAD - 16, y + 2, 16, 14);
-        boolean hoverDelete = inside(mouseX, mouseY, x + WIDTH - PAD - 34, y + 2, 16, 14)
+        boolean hoverLeft = inside(mouseX, mouseY, x + PAD, y + 4, 24, 24);
+        boolean hoverRight = inside(mouseX, mouseY, x + PAD + 30, y + 4, 24, 24);
+        boolean hoverNew = inside(mouseX, mouseY, x + WIDTH - PAD - 28, y + 4, 28, 24);
+        boolean hoverDelete = inside(mouseX, mouseY, x + WIDTH - PAD - 60, y + 4, 28, 24)
                 && deletable();
-        ClickGuiStyle.button(graphics, x + PAD, y + 2, 14, 14, hoverLeft, false);
-        ClickGuiFonts.drawText(graphics, "<", x + PAD + 5, y + 3, ClickGuiStyle.text(), false);
-        ClickGuiStyle.button(graphics, x + PAD + 18, y + 2, 14, 14, hoverRight, false);
-        ClickGuiFonts.drawText(graphics, ">", x + PAD + 23, y + 3, ClickGuiStyle.text(), false);
-        int nameX = x + PAD + 36;
-        int nameW = WIDTH - PAD * 2 - 36 - 40;
+        float rowTextY = y + 4 + (24 - smallLineHeight()) / 2f;
+        ClickGuiStyle.button(graphics, x + PAD, y + 4, 24, 24, hoverLeft, false);
+        drawSmallText(graphics, "<", x + PAD + 8, rowTextY, ClickGuiStyle.text(), false);
+        ClickGuiStyle.button(graphics, x + PAD + 30, y + 4, 24, 24, hoverRight, false);
+        drawSmallText(graphics, ">", x + PAD + 38, rowTextY, ClickGuiStyle.text(), false);
+        int nameX = x + PAD + 60;
+        int nameW = WIDTH - PAD * 2 - 60 - 64;
         if (naming && nameField != null) {
-            nameField.draw(graphics, nameX, y + 2, nameW, 14);
+            nameField.draw(graphics, nameX, y + 4, nameW, 24);
         } else {
-            ClickGuiFonts.drawText(graphics, fit(target, nameW), nameX, y + 3, ClickGuiStyle.text(),
+            drawSmallText(graphics, fit(target, nameW), nameX, y + 7, ClickGuiStyle.text(),
                     true);
         }
         // Delete sits next to "new"; greyed out for the built-ins, which are code rather than files.
-        ClickGuiStyle.button(graphics, x + WIDTH - PAD - 34, y + 2, 16, 14, hoverDelete, false);
-        ClickGuiFonts.drawText(graphics, "-", x + WIDTH - PAD - 30, y + 3,
+        ClickGuiStyle.button(graphics, x + WIDTH - PAD - 60, y + 4, 28, 24, hoverDelete, false);
+        drawSmallText(graphics, "-", x + WIDTH - PAD - 50, rowTextY,
                 deletable() ? ClickGuiStyle.text() : ClickGuiStyle.textMuted(), false);
-        ClickGuiStyle.button(graphics, x + WIDTH - PAD - 16, y + 2, 16, 14, hoverNew, false);
-        ClickGuiFonts.drawText(graphics, "+", x + WIDTH - PAD - 11, y + 3, ClickGuiStyle.text(),
+        ClickGuiStyle.button(graphics, x + WIDTH - PAD - 28, y + 4, 28, 24, hoverNew, false);
+        drawSmallText(graphics, "+", x + WIDTH - PAD - 19, rowTextY, ClickGuiStyle.text(),
                 false);
     }
 
@@ -432,18 +443,18 @@ final class DevDrawer {
     private void drawDeleteConfirm(GuiGraphicsExtractor graphics, int x, int y, int h, int mouseX,
                                    int mouseY) {
         graphics.fill(x, y, x + WIDTH, y + h, 0x99000000);
-        int mw = WIDTH - 40;
-        int mh = 66;
+        int mw = WIDTH - 48;
+        int mh = 96;
         int mx0 = x + (WIDTH - mw) / 2;
         int my0 = y + (h - mh) / 2;
-        GuiPixels.fillRoundedRect(graphics, mx0, my0, mw, mh, 6,
+        GuiPixels.fillRoundedRect(graphics, mx0, my0, mw, mh, 8,
                 (0xFF << 24) | (ClickGuiStyle.cardFloat() & 0xFFFFFF));
-        ClickGuiFonts.drawText(graphics,
-                fit(Localization.tr("删除主题 ") + target, mw - 20), mx0 + 10, my0 + 10,
+        drawSmallText(graphics,
+                fit(Localization.tr("删除主题 ") + target, mw - 24), mx0 + 12, my0 + 12,
                 ClickGuiStyle.text(), true);
-        drawButton(graphics, mx0 + mw - 96, my0 + mh - 24, 42, Localization.tr("删除"), mouseX,
+        drawButton(graphics, mx0 + mw - 140, my0 + mh - 34, 60, Localization.tr("删除"), mouseX,
                 mouseY);
-        drawButton(graphics, mx0 + mw - 50, my0 + mh - 24, 42, Localization.tr("取消"), mouseX,
+        drawButton(graphics, mx0 + mw - 70, my0 + mh - 34, 60, Localization.tr("取消"), mouseX,
                 mouseY);
     }
 
@@ -479,14 +490,14 @@ final class DevDrawer {
         double min = minMetric(selected);
         double max = maxMetric(selected);
         String caption = selected + " = " + format(value);
-        ClickGuiFonts.drawText(graphics, caption, x, y + 2, ClickGuiStyle.text(), true);
-        int barY = y + 16;
+        drawSmallText(graphics, caption, x, y + 2, ClickGuiStyle.text(), true);
+        int barY = y + 24;
         int barW = WIDTH - PAD * 2;
-        ClickGuiStyle.pill(graphics, x, barY, barW, 4, ClickGuiStyle.fieldInner());
+        ClickGuiStyle.pill(graphics, x, barY, barW, 6, ClickGuiStyle.fieldInner());
         double t = (value - min) / Math.max(0.0001, max - min);
         int filled = (int) Math.round(barW * Math.max(0, Math.min(1, t)));
-        ClickGuiStyle.pill(graphics, x, barY, Math.max(1, filled), 4, ClickGuiStyle.accent());
-        GuiPixels.fillRoundedRect(graphics, x + filled - 3, barY - 4, 6, 12, 3,
+        ClickGuiStyle.pill(graphics, x, barY, Math.max(1, filled), 6, ClickGuiStyle.accent());
+        GuiPixels.fillRoundedRect(graphics, x + filled - 4, barY - 6, 8, 18, 4,
                 ClickGuiStyle.text());
     }
 
@@ -495,12 +506,12 @@ final class DevDrawer {
         if (content <= viewH) {
             return;
         }
-        int barX = x + WIDTH - 4;
-        graphics.fill(barX, top, barX + 2, top + viewH, 0x30FFFFFF);
-        int thumb = Math.max(16, viewH * viewH / content);
+        int barX = x + WIDTH - 8;
+        graphics.fill(barX, top, barX + 4, top + viewH, 0x30FFFFFF);
+        int thumb = Math.max(32, viewH * viewH / content);
         int maxScroll = Math.max(1, content - viewH);
         int thumbY = top + (viewH - thumb) * Math.min(scroll, maxScroll) / maxScroll;
-        graphics.fill(barX, thumbY, barX + 2, thumbY + thumb, ClickGuiStyle.textDim());
+        graphics.fill(barX, thumbY, barX + 4, thumbY + thumb, ClickGuiStyle.textDim());
     }
 
     // ---- input ----------------------------------------------------------------------------
@@ -516,16 +527,16 @@ final class DevDrawer {
             return false;
         }
         if (confirmingDelete) {
-            int mw = WIDTH - 40;
-            int mh = 66;
+            int mw = WIDTH - 48;
+            int mh = 96;
             int m0x = x + (WIDTH - mw) / 2;
             int m0y = y + (height(screenH) - mh) / 2;
-            if (my >= m0y + mh - 24 && my < m0y + mh - 8) {
-                if (mx >= m0x + mw - 96 && mx < m0x + mw - 54) {
+            if (my >= m0y + mh - 34 && my < m0y + mh - 10) {
+                if (mx >= m0x + mw - 140 && mx < m0x + mw - 80) {
                     deleteTheme();
                     return true;
                 }
-                if (mx >= m0x + mw - 50 && mx < m0x + mw - 8) {
+                if (mx >= m0x + mw - 70 && mx < m0x + mw - 10) {
                     confirmingDelete = false;
                     return true;
                 }
@@ -533,11 +544,11 @@ final class DevDrawer {
             return true;
         }
         if (my < y + TITLE_H) {
-            if (mx >= x + WIDTH - 130 && mx < x + WIDTH - 92) {
+            if (mx >= x + WIDTH - 176 && mx < x + WIDTH - 124) {
                 save();
-            } else if (mx >= x + WIDTH - 88 && mx < x + WIDTH - 50) {
+            } else if (mx >= x + WIDTH - 120 && mx < x + WIDTH - 68) {
                 restore();
-            } else if (mx >= x + WIDTH - 46) {
+            } else if (mx >= x + WIDTH - 64) {
                 close();
             } else {
                 // Drag by the title bar: the drawer is wider than the space beside the panel on small
@@ -550,23 +561,24 @@ final class DevDrawer {
         }
         int themeY = y + TITLE_H;
         if (my >= themeY && my < themeY + THEME_ROW) {
-            if (mx >= x + PAD && mx < x + PAD + 14) {
+            if (mx >= x + PAD && mx < x + PAD + 24) {
                 cycleTheme(-1);
-            } else if (mx >= x + PAD + 18 && mx < x + PAD + 32) {
+            } else if (mx >= x + PAD + 30 && mx < x + PAD + 54) {
                 cycleTheme(1);
-            } else if (mx >= x + WIDTH - PAD - 34 && mx < x + WIDTH - PAD - 18) {
+            } else if (mx >= x + WIDTH - PAD - 60 && mx < x + WIDTH - PAD - 32) {
                 if (deletable()) {
                     confirmingDelete = true;
                 } else {
                     hint(Localization.tr("内置主题不能删除"));
                 }
-            } else if (mx >= x + WIDTH - PAD - 16) {
+            } else if (mx >= x + WIDTH - PAD - 28) {
                 naming = true;
-                nameField = new ImmediateTextField("theme.name", "", "", 16, c -> true);
+                nameField = new ImmediateTextField("theme.name", "", "", 24, c -> true)
+                        .textScale(textScale()).screenSpace(true);
                 nameField.focus();
             } else if (naming && nameField != null) {
-                nameField.mouseClicked(mx, my, x + PAD + 36, themeY + 2,
-                        WIDTH - PAD * 2 - 56, 14, shift);
+                nameField.mouseClicked(mx, my, x + PAD + 60, themeY + 4,
+                        WIDTH - PAD * 2 - 124, 24, shift);
             }
             return true;
         }
@@ -577,7 +589,7 @@ final class DevDrawer {
                     (my - editorTop) / PICKER_SCALE, 0, 0, shift);
             return true;
         }
-        if (selected != null && !isColorToken(selected) && my < editorTop + 28) {
+        if (selected != null && !isColorToken(selected) && my < editorTop + METRIC_EDITOR_H) {
             dragging = true;
             setMetricAt(mx - (x + PAD));
             return true;
@@ -629,7 +641,7 @@ final class DevDrawer {
         int content = tokens.size() * ROW;
         int viewH = listHeight(screenW, screenH);
         int max = Math.max(0, content - viewH);
-        scroll = Math.max(0, Math.min(max, scroll - (int) Math.round(amount * 18)));
+        scroll = Math.max(0, Math.min(max, scroll - (int) Math.round(amount * 36)));
         return true;
     }
 
@@ -684,13 +696,33 @@ final class DevDrawer {
         ConfigManager.touch();
     }
 
+    /** Theme Studio draws in screen space, while ClickGUI body text is inside the panel pose. */
+    private static float textScale() {
+        return Math.max(0.05f, dev.skypocket.render.ClickGuiMetrics.effectiveScale());
+    }
+
+    private static void drawSmallText(GuiGraphicsExtractor graphics, String text, float x, float y,
+                                      int color, boolean shadow) {
+        ClickGuiFonts.drawScreenText(graphics, text, x, y, color, shadow, textScale(),
+                dev.skypocket.render.FontLab.Weight.MEDIUM);
+    }
+
+    private static int smallWidth(String text) {
+        return ClickGuiFonts.widthScreen(text, textScale(),
+                dev.skypocket.render.FontLab.Weight.MEDIUM);
+    }
+
+    private static int smallLineHeight() {
+        return Math.max(1, Math.round(ClickGuiFonts.lineHeight() * textScale()));
+    }
+
     /** Truncates with an ellipsis so a label fits {@code maxW}. */
     private static String fit(String text, int maxW) {
-        if (ClickGuiFonts.width(text) <= maxW) {
+        if (smallWidth(text) <= maxW) {
             return text;
         }
         String cut = text;
-        while (cut.length() > 1 && ClickGuiFonts.width(cut + "…") > maxW) {
+        while (cut.length() > 1 && smallWidth(cut + "…") > maxW) {
             cut = cut.substring(0, cut.length() - 1);
         }
         return cut + "…";
@@ -707,14 +739,8 @@ final class DevDrawer {
 
     private static double maxMetric(String name) {
         return switch (name) {
-            case "rowHeight" -> 40;
-            case "controlHeight" -> 40;
-            case "controlWidth" -> 260;
-            case "switchWidth" -> 64;
-            case "switchHeight" -> 24;
-            case "knobSize" -> 24;
-            case "cardRadius" -> 12;
-            default -> 64;
+            case "cardRadius", "controlRadius" -> 24;
+            default -> 24;
         };
     }
 }

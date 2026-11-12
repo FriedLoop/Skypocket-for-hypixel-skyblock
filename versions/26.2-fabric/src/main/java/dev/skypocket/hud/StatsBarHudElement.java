@@ -158,7 +158,29 @@ public final class StatsBarHudElement {
         // Icon to the left of the bar, vertically centred. Drawn in the bar's own coordinate space, so it
         // follows the bar's position, height and scale automatically.
         drawIcon(graphics, cfg, kind, -iconWidth(cfg, kind), (height - iconSize(cfg, kind)) / 2);
-        bar(graphics, cfg, width, height, fraction, color, overlay, overlayColor, label);
+        bar(graphics, cfg, width, height, fraction, color, overlay, overlayColor, label,
+                cfg.statsBarShowValues);
+        pose.popMatrix();
+    }
+
+    /**
+     * Draws the shared bar artwork without a vanilla-stat icon or value label. Used by
+     * the drill fuel bar, which has its own position and scale.
+     */
+    public static void drawPlainBar(GuiGraphicsExtractor graphics, ModConfig cfg,
+                                    int x, int y, int width, int height,
+                                    float fraction, int color) {
+        drawPlainBar(graphics, cfg, x, y, width, height, fraction, color, null, false);
+    }
+
+    /** Shared artwork with an optional centred value label. */
+    public static void drawPlainBar(GuiGraphicsExtractor graphics, ModConfig cfg,
+                                    int x, int y, int width, int height,
+                                    float fraction, int color, String label, boolean showValue) {
+        Matrix3x2fStack pose = graphics.pose();
+        pose.pushMatrix();
+        pose.translate(x, y);
+        bar(graphics, cfg, width, height, fraction, color, 0f, 0, label, showValue);
         pose.popMatrix();
     }
 
@@ -194,7 +216,7 @@ public final class StatsBarHudElement {
         int width = width(cfg, kind);
         int height = height(cfg, kind);
         drawIcon(graphics, cfg, kind, -iconWidth(cfg, kind), (height - iconSize(cfg, kind)) / 2);
-        bar(graphics, cfg, width, height, 0.7f, color(cfg, kind), 0f, 0, null);
+        bar(graphics, cfg, width, height, 0.7f, color(cfg, kind), 0f, 0, null, false);
     }
 
     /**
@@ -202,7 +224,8 @@ public final class StatsBarHudElement {
      * the screen only through the position: everything else comes from the shared geometry.
      */
     private static void bar(GuiGraphicsExtractor graphics, ModConfig cfg, int width, int height,
-                            float fraction, int color, float overlay, int overlayColor, String label) {
+                            float fraction, int color, float overlay, int overlayColor, String label,
+                            boolean showValue) {
         // The frame texture is the whole bar (border + track) at the bar's own rect - no 1 px outset:
         // the old code expanded it because it was drawing a 1 px outline, but the artwork already
         // contains its border. Without the file, fall back to the stepped rectangles that were here
@@ -215,7 +238,7 @@ public final class StatsBarHudElement {
         if (overlay > 0f && overlayColor != 0) {
             fill(graphics, 0, 0, width, height, overlay, overlayColor);
         }
-        if (cfg.statsBarShowValues && label != null) {
+        if (showValue && label != null) {
             value(graphics, cfg, label, 0, 0, width, height, color);
         }
     }

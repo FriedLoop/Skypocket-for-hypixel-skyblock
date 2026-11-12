@@ -227,14 +227,14 @@ public final class ColorField extends Control {
     public void paint(UiPainter painter) {
         paintRowBackground(painter);
         paintFocus(painter);
-        painter.text(label, bounds().x() + 6f,
+        painter.text(label, bounds().x() + 11f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.text());
         int argb = value.getAsInt();
-        float sx = bounds().right() - 24f;
-        float sy = bounds().y() + 4f;
-        painter.fillRounded(new Rect(sx, sy, 18f, bounds().height() - 8f), 3f, argb);
+        float sx = bounds().right() - 46f;
+        float sy = bounds().y() + 8f;
+        painter.fillRounded(new Rect(sx, sy, 36f, bounds().height() - 16f), palette.radius(), argb);
         String hexText = String.format("#%08X", argb);
-        painter.text(hexText, sx - painter.textWidth(hexText) - 6f,
+        painter.text(hexText, sx - painter.textWidth(hexText) - 11f,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f, palette.muted());
     }
 }

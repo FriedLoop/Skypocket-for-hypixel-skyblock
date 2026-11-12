@@ -11,6 +11,8 @@
 | 技能累计 XP | `skyblock/SkillXpTable.java` | 静态累计 XP 数组 | Hypixel 调整技能等级上限或 XP 曲线 |
 | 技能 TabList 等级 | `skyblock/SkillLevelTracker.java` | 正则 | TabList 技能行格式变化 |
 | 传奇/神话海怪消息 | `skyblock/SeaCreatureMessages.java` | 精确字符串集合 | 新增/修改海怪刷新文案 |
+| SkyBlock 物品字段 | `skyblock/SkyBlockItem.java` | `ExtraAttributes` 读取 | 新增物品字段/组件变更 |
+| 雷瓶容量 | `skyblock/ThunderBottleTracker.java` | 固定容量表 | Hypixel 调整容量或新瓶种 |
 | 矿物伪装强度 | `skyblock/MiningBlocks.java` | 精确值 / 候选值 / 类别 | 新增矿物、区域或伪装方块 |
 | 矿物强度校准 | `skyblock/MiningStrengthTable.java` | 运行时投票 + 常量 | 服务器破块规则或校准策略变化 |
 | 采矿工具白名单 | `skyblock/MiningTools.java` | `Set<Item>` | 新钻头/新工具材质 |
@@ -51,6 +53,16 @@
 - 不做关键词匹配，不做 trim/lowercase；`Legendary`/`Sea Creature` 等词通常根本不在消息里
 - 更新场景：Hypixel 新增/改写传奇或神话海怪刷新消息
 - 更新时直接从游戏聊天原文复制整句，保留 Unicode 标点，并在 `LegendarySeaCreatureWarningHudElement` 只做消息表匹配
+
+## 2.2 SkyBlock 物品字段与雷瓶容量
+
+- `SkyBlockItem` 从 `custom_data` → `ExtraAttributes` 读取 `id`、`drill_fuel`、`thunder_charge` 等字段；当前只读，不写回物品。
+- 雷瓶容量表：
+  - `THUNDER_IN_A_BOTTLE_EMPTY` = 50,000
+  - `STORM_IN_A_BOTTLE_EMPTY` = 500,000
+  - `HURRICANE_IN_A_BOTTLE_EMPTY` = 5,000,000
+- 更新场景：Hypixel 新增瓶种、调整容量或改写 ExtraAttributes 字段名。
+- Drill Fuel 的当前/最大值来自 ActionBar 的 `x/y Drill Fuel` 段，主手必须存在 `drill_fuel` 字段。
 
 ## 3. 矿物伪装强度
 

@@ -6,6 +6,7 @@ import dev.skypocket.net.SkyBlockDetector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+import net.minecraft.world.entity.item.ItemEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -37,4 +38,13 @@ public abstract class EntityMixin {
             cir.setReturnValue(true);
         }
     }
+
+    @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true)
+    private void sky$glowDroppedItem(CallbackInfoReturnable<Boolean> cir) {
+        ModConfig cfg = ConfigManager.get();
+        if (cfg.itemGlowEnabled && (Object) this instanceof ItemEntity && SkyBlockDetector.isActive()) {
+            cir.setReturnValue(true);
+        }
+    }
+
 }

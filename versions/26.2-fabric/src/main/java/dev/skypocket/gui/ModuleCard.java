@@ -28,7 +28,7 @@ import static dev.skypocket.gui.PanelGeometry.CARD_TITLE_X;
 import static dev.skypocket.gui.PanelGeometry.CARD_TITLE_Y;
 import static dev.skypocket.gui.PanelGeometry.CARD_W;
 import static dev.skypocket.gui.PanelGeometry.ICON_SIZE;
-import static dev.skypocket.gui.PanelGeometry.ROUND;
+import dev.skypocket.gui.widget.GuiMetrics;
 
 /** One module card in the v2 homepage grid. */
 final class ModuleCard extends Control {
@@ -90,14 +90,17 @@ final class ModuleCard extends Control {
         return lx >= rx && lx < rx + rw && ly >= ry && ly < ry + rh;
     }
 
+    private static final int MARKER_SIZE = 40;
+
     @Override
     public void paint(UiPainter painter) {
         McUiPainter mc = (McUiPainter) painter;
         int cardColor = hovered ? ClickGuiStyle.cardHover() : ClickGuiStyle.card();
-        painter.shadow(bounds(), ROUND);
+        int cardRadius = GuiMetrics.current().cardRadius();
+        painter.shadow(bounds(), cardRadius);
         // Close the antialiased mask edge so the shadow cannot show as a dark 1px line.
-        painter.fillRounded(bounds(), ROUND, cardColor);
-        painter.fillRounded(bounds(), ROUND, cardColor);
+        painter.fillRounded(bounds(), cardRadius, cardColor);
+        painter.fillRounded(bounds(), cardRadius, cardColor);
 
         Identifier tex = ModuleIcon.texture(feature.id());
         if (!Minecraft.getInstance().getResourceManager().getResourceStack(tex).isEmpty()) {
@@ -114,13 +117,25 @@ final class ModuleCard extends Control {
                     ClickGuiStyle.text());
         }
 
-        float titleMax = feature.skyBlockOnly() ? CARD_TITLE_MAX_W - 16f : CARD_TITLE_MAX_W;
+        float markerX = bounds().x() + CARD_W - CARD_PAD - MARKER_SIZE;
+        float markerY = bounds().y() + CARD_TITLE_Y - (MARKER_SIZE - painter.lineHeight()) / 2f;
+        float titleMax = feature.skyBlockOnly()
+                ? markerX - (bounds().x() + CARD_TITLE_X) - 3f
+                : CARD_TITLE_MAX_W;
         painter.text(fitTitle(feature.name(), titleMax),
                 bounds().x() + CARD_TITLE_X, bounds().y() + CARD_TITLE_Y,
                 ClickGuiStyle.text());
         if (feature.skyBlockOnly()) {
-            painter.text("SB", bounds().x() + CARD_TITLE_X + titleMax + 3f,
-                    bounds().y() + CARD_TITLE_Y, ClickGuiStyle.accent());
+            Identifier marker = ModuleIcon.marker();
+            if (!Minecraft.getInstance().getResourceManager().getResourceStack(marker).isEmpty()) {
+                mc.graphics().blit(RenderPipelines.GUI_TEXTURED, marker,
+                        (int) markerX, (int) markerY, 0, 0,
+                        MARKER_SIZE, MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
+            } else {
+                painter.text("SB", markerX + (MARKER_SIZE - painter.textWidth("SB")) / 2f,
+                        markerY + (MARKER_SIZE - painter.lineHeight()) / 2f,
+                        ClickGuiStyle.accent());
+            }
         }
 
         float btnX = bounds().x() + CARD_BTN_X;
@@ -129,23 +144,23 @@ final class ModuleCard extends Control {
         String options = dev.skypocket.i18n.Localization.tr(configurable ? "设置" : "无设置");
         if (configurable) {
             painter.surface(new Rect(btnX, btnY, CARD_BTN_W, CARD_BTN_H),
-                    ClickGuiStyle.RADIUS,
+                    ClickGuiStyle.controlRadius(),
                     hovered ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
         } else {
             painter.surface(new Rect(btnX, btnY, CARD_BTN_W, CARD_BTN_H),
-                    ClickGuiStyle.RADIUS, ClickGuiStyle.disabled(), 0);
+                    ClickGuiStyle.controlRadius(), ClickGuiStyle.disabled(), 0);
         }
         painter.text(options, btnX + (CARD_BTN_W - painter.textWidth(options)) / 2f,
-                btnY + 5f, configurable ? ClickGuiStyle.text() : ClickGuiStyle.disabledText());
+                btnY + 9f, configurable ? ClickGuiStyle.text() : ClickGuiStyle.disabledText());
 
         float stX = bounds().x() + CARD_STATUS_X;
         float stY = bounds().y() + CARD_STATUS_Y;
         painter.surface(new Rect(stX, stY, CARD_STATUS_W, CARD_STATUS_H),
-                ClickGuiStyle.RADIUS,
+                ClickGuiStyle.controlRadius(),
                 feature.isEnabled() ? ClickGuiStyle.accent() : ClickGuiStyle.button(), 0);
         String status = feature.isEnabled() ? "ENABLED" : "DISABLED";
         painter.text(status, stX + (CARD_STATUS_W - painter.textWidth(status)) / 2f,
-                stY + 4f, feature.isEnabled() ? ClickGuiStyle.text() : ClickGuiStyle.textMuted());
+                stY + 7f, feature.isEnabled() ? ClickGuiStyle.text() : ClickGuiStyle.textMuted());
     }
 
     private static String fitTitle(String text, float maxWidth) {

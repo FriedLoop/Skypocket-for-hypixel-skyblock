@@ -9,7 +9,10 @@ import dev.skypocket.hud.DayCountHudElement;
 import dev.skypocket.hud.FpsTpsPingHudElement;
 import dev.skypocket.hud.HeldItemNameHudElement;
 import dev.skypocket.hud.MiningAbilityHudElement;
+import dev.skypocket.hud.DrillFuelBarHudElement;
+import dev.skypocket.hud.ItemPickupLogHudElement;
 import dev.skypocket.hud.SkillDisplayHudElement;
+import dev.skypocket.hud.ThunderBottleHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
@@ -55,7 +58,7 @@ public class HudPositionEditorScreen extends Screen {
         CLOCK, DAY_COUNT, FPS_TPS_PING, MINING_ABILITY, MINING_ABILITY_SUBTITLE, COMMISSION,
         /** Text rows: the classic readouts and the three values that never become icons. */
         STAT_HEALTH, STAT_MANA, STAT_DEFENSE, STAT_SPEED, STAT_VITALITY,
-        SKILL_DISPLAY,
+        SKILL_DISPLAY, DRILL_FUEL_BAR, THUNDER_BOTTLE, ITEM_PICKUP_LOG,
         /**
          * Vanilla's held item tooltip. Stored as an offset from its own vanilla baseline rather than as
          * a position (it belongs to the hotbar and must keep following it), so its box is recomputed on
@@ -113,6 +116,15 @@ public class HudPositionEditorScreen extends Screen {
         put(Target.SKILL_DISPLAY, c -> c.skillDisplayX, (c, v) -> c.skillDisplayX = v,
                 c -> c.skillDisplayY, (c, v) -> c.skillDisplayY = v,
                 c -> c.skillDisplayScale, (c, v) -> c.skillDisplayScale = (float) v);
+        put(Target.DRILL_FUEL_BAR, c -> c.drillFuelBarX, (c, v) -> c.drillFuelBarX = v,
+                c -> c.drillFuelBarY, (c, v) -> c.drillFuelBarY = v,
+                c -> c.drillFuelBarScale, (c, v) -> c.drillFuelBarScale = (float) v);
+        put(Target.THUNDER_BOTTLE, c -> c.thunderBottleX, (c, v) -> c.thunderBottleX = v,
+                c -> c.thunderBottleY, (c, v) -> c.thunderBottleY = v,
+                c -> c.thunderBottleScale, (c, v) -> c.thunderBottleScale = (float) v);
+        put(Target.ITEM_PICKUP_LOG, c -> c.pickupLogX, (c, v) -> c.pickupLogX = v,
+                c -> c.pickupLogY, (c, v) -> c.pickupLogY = v,
+                c -> c.pickupLogScale, (c, v) -> c.pickupLogScale = (float) v);
         // Stored as an offset from the hotbar anchor: shift it by however far the requested position is
         // from where it currently lands, so the writer stays right no matter how the box is computed.
         put(Target.HELD_ITEM_NAME, c -> heldItemNameBox(c)[0],
@@ -327,6 +339,9 @@ public class HudPositionEditorScreen extends Screen {
             case STAT_HEALTH -> !cfg.statsModernStyle && cfg.statsHealthTextEnabled;
             case STAT_MANA -> !cfg.statsModernStyle && cfg.statsManaTextEnabled;
             case SKILL_DISPLAY -> cfg.skillDisplayEnabled;
+            case DRILL_FUEL_BAR -> cfg.drillFuelBarEnabled;
+            case THUNDER_BOTTLE -> cfg.thunderBottleEnabled;
+            case ITEM_PICKUP_LOG -> cfg.pickupLogEnabled;
             case HELD_ITEM_NAME -> cfg.heldItemNameEnabled;
             // Bars are handled above; anything new defaults to visible rather than disappearing silently.
             default -> true;
@@ -378,6 +393,9 @@ public class HudPositionEditorScreen extends Screen {
             case STAT_HEALTH -> List.of(statLine(StatTextHudElement.Kind.HEALTH, cfg));
             case STAT_MANA -> List.of(statLine(StatTextHudElement.Kind.MANA, cfg));
             case SKILL_DISPLAY -> SkillDisplayHudElement.previewLines();
+            case DRILL_FUEL_BAR -> DrillFuelBarHudElement.previewLines();
+            case THUNDER_BOTTLE -> ThunderBottleHudElement.previewLines();
+            case ITEM_PICKUP_LOG -> ItemPickupLogHudElement.previewLines();
             case HELD_ITEM_NAME -> List.of(
                     HeldItemNameHudElement.previewName(mc, Localization.tr("物品名")));
             case BAR_HEALTH, BAR_MANA, BAR_DEFENSE, BAR_SPEED, BAR_VITALITY, BAR_AIR -> List.of();
@@ -437,6 +455,24 @@ public class HudPositionEditorScreen extends Screen {
             out[3] = Math.round(SkillDisplayHudElement.ICON_SIZE * s);
             return;
         }
+        if (t == Target.DRILL_FUEL_BAR) {
+            float s = scale(t, cfg);
+            out[0] = x(t, cfg);
+            out[1] = y(t, cfg);
+            out[2] = DrillFuelBarHudElement.width(cfg, s);
+            out[3] = DrillFuelBarHudElement.height(cfg, s);
+            return;
+        }
+        if (t == Target.THUNDER_BOTTLE) {
+            String line = lines(t, mc, cfg).get(0);
+            float s = scale(t, cfg);
+            int text = (int) Math.ceil(HudText.width(cfg, line, s) * s);
+            out[0] = x(t, cfg);
+            out[1] = y(t, cfg);
+            out[2] = Math.round(ThunderBottleHudElement.TEXT_GAP * s) + text;
+            out[3] = Math.round(ThunderBottleHudElement.ICON_SIZE * s);
+            return;
+        }
         if (t == Target.HELD_ITEM_NAME) {
             // The one target whose box is not a stored position: see heldItemNameBox.
             System.arraycopy(heldItemNameBox(cfg), 0, out, 0, 4);
@@ -490,6 +526,9 @@ public class HudPositionEditorScreen extends Screen {
             case STAT_HEALTH -> StatTextHudElement.label(StatTextHudElement.Kind.HEALTH);
             case STAT_MANA -> StatTextHudElement.label(StatTextHudElement.Kind.MANA);
             case SKILL_DISPLAY -> Localization.tr("技能进度显示");
+            case DRILL_FUEL_BAR -> Localization.tr("钻头燃料条");
+            case THUNDER_BOTTLE -> Localization.tr("雷瓶显示");
+            case ITEM_PICKUP_LOG -> Localization.tr("物品拾取记录");
             case HELD_ITEM_NAME -> Localization.tr("手持物品名");
             case BAR_HEALTH -> StatsBarHudElement.label(StatsBarHudElement.Kind.HEALTH);
             case BAR_MANA -> StatsBarHudElement.label(StatsBarHudElement.Kind.MANA);
@@ -550,6 +589,10 @@ public class HudPositionEditorScreen extends Screen {
                 StatsBarHudElement.preview(graphics, cfg, bar);
             } else if (t == Target.SKILL_DISPLAY) {
                 SkillDisplayHudElement.preview(graphics, cfg);
+            } else if (t == Target.DRILL_FUEL_BAR) {
+                DrillFuelBarHudElement.preview(graphics, cfg);
+            } else if (t == Target.THUNDER_BOTTLE) {
+                ThunderBottleHudElement.preview(graphics, cfg);
             } else {
                 int lineH = lineHeight(t, mc, cfg);
                 int ly = 0;
@@ -569,7 +612,7 @@ public class HudPositionEditorScreen extends Screen {
                 // transform: width, height, both); everything else gets the one corner that scales it.
                 int right = b[0] + b[2];
                 int bottom = b[1] + b[3];
-                if (StatsBarHudElement.kindOf(t.name()) != null) {
+                if (StatsBarHudElement.kindOf(t.name()) != null || t == Target.DRILL_FUEL_BAR) {
                     handle(graphics, right, b[1] + b[3] / 2, HANDLE_DOT);
                     handle(graphics, b[0] + b[2] / 2, bottom, HANDLE_DOT);
                 }
@@ -642,11 +685,16 @@ public class HudPositionEditorScreen extends Screen {
         rows.add(String.format(Localization.tr("位置 X=%d Y=%d"), x(selected, cfg),
                 y(selected, cfg)));
         StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(selected.name());
-        rows.add(bar == null
-                ? String.format(Localization.tr("缩放 %.2f"), scale(selected, cfg))
-                : String.format(Localization.tr("尺寸 %d×%d  缩放 %.2f"),
-                        StatsBarHudElement.width(cfg, bar), StatsBarHudElement.height(cfg, bar),
-                        scale(selected, cfg)));
+        if (selected == Target.DRILL_FUEL_BAR) {
+            rows.add(String.format(Localization.tr("尺寸 %d×%d  缩放 %.2f"),
+                    cfg.drillFuelBarWidth, cfg.drillFuelBarHeight, scale(selected, cfg)));
+        } else {
+            rows.add(bar == null
+                    ? String.format(Localization.tr("缩放 %.2f"), scale(selected, cfg))
+                    : String.format(Localization.tr("尺寸 %d×%d  缩放 %.2f"),
+                            StatsBarHudElement.width(cfg, bar), StatsBarHudElement.height(cfg, bar),
+                            scale(selected, cfg)));
+        }
         rows.add(Localization.tr("拖动移动 · 把手改尺寸"));
         rows.add(Localization.tr("方向键微调 · ESC 退出"));
         return rows;
@@ -801,14 +849,15 @@ public class HudPositionEditorScreen extends Screen {
             bounds(best, mc, cfg, b);
             // Anchored on the element's own origin rather than the box: a bar's box now starts at its
             // icon, but dragging must keep writing the bar's x, or the first drag jumps by the icon width.
-            boolean barTarget = StatsBarHudElement.kindOf(best.name()) != null;
+            boolean barTarget = StatsBarHudElement.kindOf(best.name()) != null
+                    || best == Target.DRILL_FUEL_BAR;
             dragOffsetX = event.x() - (barTarget ? x(best, cfg) : b[0]);
             dragOffsetY = event.y() - (barTarget ? y(best, cfg) : b[1]);
             // Grabbing one of the bar's handles resizes it - the two-axis counterpart of the wheel, which
             // scales both at once.
             resizeMode = 0;
             StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(best.name());
-            int mode = wasSelected ? handleAt(b, event.x(), event.y(), bar != null) : 0;
+            int mode = wasSelected ? handleAt(b, event.x(), event.y(), barTarget) : 0;
             if (mode != 0) {
                 resizeMode = mode;
                 resizeBar = bar;
@@ -880,6 +929,9 @@ public class HudPositionEditorScreen extends Screen {
             case COMMISSION -> "commissions";
             case STAT_HEALTH, STAT_MANA, STAT_DEFENSE, STAT_SPEED, STAT_VITALITY -> "stats_display";
             case SKILL_DISPLAY -> "skill_display";
+            case DRILL_FUEL_BAR -> "drill_fuel_bar";
+            case THUNDER_BOTTLE -> "thunder_bottle";
+            case ITEM_PICKUP_LOG -> "item_pickup_log";
             case HELD_ITEM_NAME -> "held_item_name";
             // The six bars return early above; listing them again keeps the switch exhaustive.
             default -> "stats_display";
@@ -978,6 +1030,18 @@ public class HudPositionEditorScreen extends Screen {
                 setScale(resizeTarget, cfg, s);
                 // Read-after-write, like the bar handles: a silent no-op would look like a dead handle.
                 verify(resizeTarget, Math.abs(scale(resizeTarget, cfg) - s) < 0.001f, "scale");
+                return true;
+            }
+            if (resizeMode != 0 && resizeTarget == Target.DRILL_FUEL_BAR) {
+                float s = Math.max(0.01f, scale(resizeTarget, cfg));
+                int w = (resizeMode & 1) != 0
+                        ? Math.round((float) ((event.x() - resizeOriginX) / s))
+                        : cfg.drillFuelBarWidth;
+                int h = (resizeMode & 2) != 0
+                        ? Math.round((float) ((event.y() - resizeOriginY) / s))
+                        : cfg.drillFuelBarHeight;
+                cfg.drillFuelBarWidth = Math.max(40, Math.min(400, w));
+                cfg.drillFuelBarHeight = Math.max(8, Math.min(20, h));
                 return true;
             }
             if (resizeMode != 0 && resizeBar != null) {

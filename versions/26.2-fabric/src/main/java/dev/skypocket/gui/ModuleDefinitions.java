@@ -43,15 +43,18 @@ final class ModuleDefinitions {
         registerChatCompact(cfg);
         registerSplashCompact(cfg);
         registerPlayerGlow(cfg);
+        registerItemGlow(cfg);
         registerDragonGlow(cfg);
         registerHidePlayers(cfg);
         registerHideSpawnPointPlayers(cfg);
         registerHidePlayersNearNpcs(cfg);
+        registerHideOtherPlayersPresents(cfg);
         registerHitbox(cfg);
         registerHideLandedArrows(cfg);
         registerHideStuckArrows(cfg);
         registerFishingHotspotOverlay(cfg);
         registerLegendarySeaCreatureWarning(cfg);
+        registerDrillFuel(cfg);
         registerMiningAbilityReminder(cfg);
         registerMiningBreakPredict(cfg);
         registerCommissions(cfg);
@@ -63,6 +66,8 @@ final class ModuleDefinitions {
         registerHeldItemName(cfg);
         registerStatsDisplay(cfg);
         registerSkillDisplay(cfg);
+        registerThunderBottle(cfg);
+        registerItemPickupLog(cfg);
         registerAutoSprint(cfg);
         registerScrollableTooltips(cfg);
     }
@@ -443,6 +448,14 @@ final class ModuleDefinitions {
                 )));
     }
 
+    private static void registerItemGlow(ModConfig cfg) {
+        ModuleRegistry.register(new Module("item_glow", "掉落物发光", Category.ESP,
+                () -> cfg.itemGlowEnabled, v -> cfg.itemGlowEnabled = v,
+                List.of(
+                        new Setting.Header("外观", "按物品稀有度给掉落物添加发光轮廓")
+                )).markSkyBlockOnly());
+    }
+
     private static void registerDragonGlow(ModConfig cfg) {
         ModuleRegistry.register(new Module("dragon_glow", "末影龙发光", Category.ESP,
                 () -> cfg.dragonGlowEnabled, v -> cfg.dragonGlowEnabled = v,
@@ -481,6 +494,15 @@ final class ModuleDefinitions {
                         new Setting.SliderSetting("NPC 附近范围", 0.5, 8.0,
                                 () -> cfg.hidePlayersNearNpcsRange,
                                 v -> cfg.hidePlayersNearNpcsRange = (float) v, "%.1f", 0.5)
+                )).markSkyBlockOnly());
+    }
+
+    private static void registerHideOtherPlayersPresents(ModConfig cfg) {
+        ModuleRegistry.register(new Module("hide_other_players_presents", "隐藏其他玩家礼物",
+                Category.ESP,
+                () -> cfg.hideOtherPlayersPresents, v -> cfg.hideOtherPlayersPresents = v,
+                List.of(
+                        new Setting.Header("行为", "隐藏既不是给你的、也不是你送出的 Jerry 礼物")
                 )).markSkyBlockOnly());
     }
 
@@ -533,6 +555,24 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("fishing_hotspot_overlay", "钓鱼热点覆盖层", Category.FISHING,
                 () -> cfg.hotspotOverlayEnabled, v -> cfg.hotspotOverlayEnabled = v, settings)
                 .markSkyBlockOnly());
+    }
+
+    private static void registerDrillFuel(ModConfig cfg) {
+        ModuleRegistry.register(new Module("drill_fuel_bar", "钻头燃料条", Category.MINING,
+                () -> cfg.drillFuelBarEnabled, v -> cfg.drillFuelBarEnabled = v,
+                List.of(
+                        new Setting.Header("显示", "手持钻头时显示燃料条，使用现有条形纹理"),
+                        new Setting.BooleanSetting("显示数字", () -> cfg.drillFuelShowNumber,
+                                v -> cfg.drillFuelShowNumber = v),
+                        new Setting.ColorSetting("燃料条颜色", () -> cfg.drillFuelBarColor,
+                                v -> cfg.drillFuelBarColor = v),
+                        new Setting.SliderSetting("宽度", 40, 400,
+                                () -> cfg.drillFuelBarWidth, v -> cfg.drillFuelBarWidth = (int) v,
+                                "%.0f", 1),
+                        new Setting.SliderSetting("高度", 8, 20,
+                                () -> cfg.drillFuelBarHeight, v -> cfg.drillFuelBarHeight = (int) v,
+                                "%.0f", 1)
+                )).markSkyBlockOnly());
     }
 
     private static void registerLegendarySeaCreatureWarning(ModConfig cfg) {
@@ -843,6 +883,30 @@ final class ModuleDefinitions {
                         new Setting.SliderSetting("显示时长", 1, 8,
                                 () -> cfg.skillDisplayDurationMs / 1000.0,
                                 v -> cfg.skillDisplayDurationMs = (int) Math.round(v * 1000),
+                                "%.0fs", 1)
+                )).markSkyBlockOnly());
+    }
+
+    private static void registerThunderBottle(ModConfig cfg) {
+        ModuleRegistry.register(new Module("thunder_bottle", "雷瓶显示", Category.HUD,
+                () -> cfg.thunderBottleEnabled, v -> cfg.thunderBottleEnabled = v,
+                List.of(
+                        new Setting.Header("显示", "显示背包中的雷瓶、风暴瓶或飓风瓶充能"),
+                        new Setting.ColorSetting("文字颜色", () -> cfg.thunderBottleColor,
+                                v -> cfg.thunderBottleColor = v)
+                )).markSkyBlockOnly());
+    }
+
+    private static void registerItemPickupLog(ModConfig cfg) {
+        ModuleRegistry.register(new Module("item_pickup_log", "物品拾取记录", Category.HUD,
+                () -> cfg.pickupLogEnabled, v -> cfg.pickupLogEnabled = v,
+                List.of(
+                        new Setting.Header("显示", "显示最近拾取或失去的物品及数量"),
+                        new Setting.ColorSetting("文字颜色", () -> cfg.pickupLogTextColor,
+                                v -> cfg.pickupLogTextColor = v),
+                        new Setting.SliderSetting("显示时长", 1, 15,
+                                () -> cfg.pickupLogDurationMs / 1000.0,
+                                v -> cfg.pickupLogDurationMs = (int) Math.round(v * 1000),
                                 "%.0fs", 1)
                 )).markSkyBlockOnly());
     }

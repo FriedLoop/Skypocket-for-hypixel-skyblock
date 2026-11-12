@@ -25,6 +25,10 @@ public final class ImmediateTextField {
     private static final int PAD = 4;
     private static final long BLINK_MS = 500;
 
+    /** Local text scale; Theme Studio uses the panel effective scale in screen space. */
+    private float textScale = 1.0f;
+    private boolean screenSpace;
+
     /** Identity used for focus, so two fields cannot both think they are focused. */
     private final String id;
     private final int maxLength;
@@ -55,9 +59,42 @@ public final class ImmediateTextField {
         this.anchor = this.caret;
     }
 
+    public ImmediateTextField textScale(float scale) {
+        textScale = Math.max(0.05f, scale);
+        return this;
+    }
+
+    public ImmediateTextField screenSpace(boolean value) {
+        screenSpace = value;
+        return this;
+    }
+
+    private int scaledWidth(String value) {
+        return screenSpace
+                ? ClickGuiFonts.widthScreen(value, textScale,
+                        dev.skypocket.render.FontLab.Weight.MEDIUM)
+                : Math.round(ClickGuiFonts.widthWeighted(value,
+                        dev.skypocket.render.FontLab.Weight.MEDIUM) * textScale);
+    }
+
+    private int scaledLineHeight() {
+        return Math.max(1, Math.round(ClickGuiFonts.lineHeight() * textScale));
+    }
+
+    private void drawScaledText(GuiGraphicsExtractor graphics, String value, int x, int y,
+                                int color, boolean shadow) {
+        if (screenSpace) {
+            ClickGuiFonts.drawScreenText(graphics, value, x, y, color, shadow, textScale,
+                    dev.skypocket.render.FontLab.Weight.MEDIUM);
+        } else {
+            ClickGuiFonts.drawTextWeighted(graphics, value, x, y, color, shadow, textScale,
+                    dev.skypocket.render.FontLab.Weight.MEDIUM);
+        }
+    }
+
     /** X where the value starts, i.e. after the padding and the label. */
     private int textLeft(int x) {
-        int labelW = label.isEmpty() ? 0 : ClickGuiFonts.width(label) + 3;
+        int labelW = label.isEmpty() ? 0 : scaledWidth(label) + 3;
         return x + PAD + labelW;
     }
 
@@ -96,27 +133,27 @@ public final class ImmediateTextField {
 
     public void draw(GuiGraphicsExtractor graphics, int x, int y, int w, int h) {
         ClickGuiStyle.field(graphics, x, y, w, h, focused, false);
-        int textY = y + (h - ClickGuiFonts.lineHeight()) / 2;
+        int textY = y + (h - scaledLineHeight()) / 2;
         if (!label.isEmpty()) {
-            ClickGuiFonts.drawText(graphics, label, x + PAD, textY, ClickGuiStyle.textDim(), true);
+            drawScaledText(graphics, label, x + PAD, textY, ClickGuiStyle.textDim(), true);
         }
         int left = textLeft(x);
 
         int selFrom = Math.min(caret, anchor);
         int selTo = Math.max(caret, anchor);
         if (focused && selFrom != selTo) {
-            int fromX = left + ClickGuiFonts.width(text.substring(0, selFrom));
-            int toX = left + ClickGuiFonts.width(text.substring(0, selTo));
+            int fromX = left + scaledWidth(text.substring(0, selFrom));
+            int toX = left + scaledWidth(text.substring(0, selTo));
             graphics.fill(fromX, y + 2, toX, y + h - 2, ClickGuiStyle.selection());
         }
-        ClickGuiFonts.drawText(graphics, text, left, textY, ClickGuiStyle.text(), true);
+        drawScaledText(graphics, text, left, textY, ClickGuiStyle.text(), true);
 
         if (focused) {
             // Blink only while nothing is being typed at this instant; a caret that flickers off right
             // when you start typing reads as a glitch.
             long phase = (System.currentTimeMillis() - focusedAt) % (BLINK_MS * 2);
             if (phase < BLINK_MS) {
-                int caretX = left + ClickGuiFonts.width(text.substring(0, caret));
+                int caretX = left + scaledWidth(text.substring(0, caret));
                 graphics.fill(caretX, y + 3, caretX + 1, y + h - 3, ClickGuiStyle.text());
             }
         }
@@ -314,9 +351,9 @@ public final class ImmediateTextField {
             return 0;
         }
         for (int i = 1; i <= text.length(); i++) {
-            int width = ClickGuiFonts.width(text.substring(0, i));
+            int width = scaledWidth(text.substring(0, i));
             if (target < width) {
-                int previous = ClickGuiFonts.width(text.substring(0, i - 1));
+                int previous = scaledWidth(text.substring(0, i - 1));
                 return target - previous < (width - previous) / 2 ? i - 1 : i;
             }
         }

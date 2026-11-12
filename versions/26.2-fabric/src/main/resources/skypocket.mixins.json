@@ -19,6 +19,7 @@
     "EntityMixin",
     "LivingEntityRendererMixin",
     "EnderDragonRendererMixin",
+    "ItemEntityRendererMixin",
     "EntityRendererMixin",
     "AbstractArrowAccessor",
     "StuckInBodyLayerMixin",

@@ -14,8 +14,8 @@ import java.util.function.IntSupplier;
 
 /** Mutually exclusive segmented choice with an animated selection indicator. */
 public final class Segmented extends Control {
-    private static final float GAP = 2f;
-    private static final float INNER = 2f;
+    private static final float GAP = 4f;
+    private static final float INNER = 4f;
     private static final long ANIM_NANOS = 140_000_000L;
 
     private final List<String> options;
@@ -94,8 +94,8 @@ public final class Segmented extends Control {
         float segH = bounds().height() - INNER * 2f;
         // The accent is one continuous pill, so it can slide through the gap between segments.
         float accentX = bounds().x() + INNER + position * (segW + GAP);
-        painter.fillRounded(new Rect(accentX, bounds().y() + INNER, segW, segH), 3f,
-                palette.accent());
+        painter.fillRounded(new Rect(accentX, bounds().y() + INNER, segW, segH),
+                palette.radius(), palette.accent());
 
         for (int i = 0; i < count; i++) {
             float x = bounds().x() + INNER + i * (segW + GAP);

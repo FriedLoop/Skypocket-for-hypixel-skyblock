@@ -218,8 +218,11 @@ public final class GuiPanelCache {
                             PanelContent content, int mouseX, int mouseY, float delta) {
             try {
                 float guiScale = Math.max(1.0f, Minecraft.getInstance().getWindow().getGuiScale());
-                int width = Math.max(1, Math.round(panelWidth * scaleX * guiScale));
-                int height = Math.max(1, Math.round(panelHeight * scaleY * guiScale));
+                // Floor the target so a fractional device edge cannot leave an unpainted last
+                // column that CLAMP_TO_EDGE would smear into a black line. Padding the texture
+                // changed the content origin and made live overlays jitter against the cache.
+                int width = Math.max(1, (int) Math.floor(panelWidth * scaleX * guiScale));
+                int height = Math.max(1, (int) Math.floor(panelHeight * scaleY * guiScale));
                 GuiGraphicsExtractor recorder =
                         new GuiGraphicsExtractor(Minecraft.getInstance(), recordedState, mouseX, mouseY);
                 recordedState.reset();

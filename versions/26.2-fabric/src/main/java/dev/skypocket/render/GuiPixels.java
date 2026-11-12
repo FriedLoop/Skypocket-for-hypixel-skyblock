@@ -146,6 +146,39 @@ public final class GuiPixels {
         popDeviceSpace(g);
     }
 
+    /** Snapped solid rectangle in design space. */
+    public static void fillRect(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
+        float step = deviceStep();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        int dx = Math.round(x * step);
+        int dy = Math.round(y * step);
+        int dw = snapSize(x, w, step);
+        int dh = snapSize(y, h, step);
+        pushDeviceSpace(g);
+        g.fill(dx, dy, dx + dw, dy + dh, color);
+        popDeviceSpace(g);
+    }
+
+    /** Snapped one-device-pixel outline in design space. */
+    public static void outlineRect(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
+        float step = deviceStep();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        int dx = Math.round(x * step);
+        int dy = Math.round(y * step);
+        int dw = snapSize(x, w, step);
+        int dh = snapSize(y, h, step);
+        pushDeviceSpace(g);
+        g.fill(dx, dy, dx + dw, dy + 1, color);
+        g.fill(dx, dy + dh - 1, dx + dw, dy + dh, color);
+        g.fill(dx, dy, dx + 1, dy + dh, color);
+        g.fill(dx + dw - 1, dy, dx + dw, dy + dh, color);
+        popDeviceSpace(g);
+    }
+
     /** Rounded rect (all four corners). */
     public static void fillRoundedRect(GuiGraphicsExtractor g, int x, int y, int w, int h, int r, int color) {
         fillRoundedBlit(g, x, y, w, h, r, color, true, true);

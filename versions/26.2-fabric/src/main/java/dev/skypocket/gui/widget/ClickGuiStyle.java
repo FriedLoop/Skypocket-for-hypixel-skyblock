@@ -12,12 +12,20 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * because callers already read naturally; they now delegate to a much smaller palette.
  */
 public final class ClickGuiStyle {
-    /** Corner radius of a small control; the same value the cards' buttons use. */
-    public static final int RADIUS = 4;
-    /** Corner radius of a rounded pill (the slider track). */
+    /** Corner radius of a rounded pill (slider track and similar). */
     public static final int PILL = 2;
 
     private ClickGuiStyle() {
+    }
+
+    /** Large-surface radius: cards, panel chrome, tabs and the studio drawer. */
+    public static int cardRadius() {
+        return Math.max(0, GuiMetrics.current().cardRadius());
+    }
+
+    /** Small-control radius: buttons, fields, dropdowns and row highlights. */
+    public static int controlRadius() {
+        return Math.max(0, GuiMetrics.current().controlRadius());
     }
 
     // ---- Panel chrome ----
@@ -199,7 +207,7 @@ public final class ClickGuiStyle {
      * whose right border is thinner than its left is exactly that bug.
      */
     public static void surface(GuiGraphicsExtractor g, int x, int y, int w, int h, int fill, int border) {
-        GuiPixels.fillRoundedBorderedRect(g, x, y, w, h, RADIUS, fill, border);
+        GuiPixels.fillRoundedBorderedRect(g, x, y, w, h, controlRadius(), fill, border);
     }
 
     /**

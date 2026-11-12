@@ -9,20 +9,25 @@ import dev.skypocket.sound.MentionSoundManager;
 import dev.skypocket.hud.ClockHudElement;
 import dev.skypocket.hud.CommissionHudElement;
 import dev.skypocket.hud.CrosshairHudElement;
+import dev.skypocket.hud.DrillFuelBarHudElement;
 import dev.skypocket.hud.DayCountHudElement;
 import dev.skypocket.hud.FpsTpsPingHudElement;
 import dev.skypocket.hud.HeldItemNameHudElement;
+import dev.skypocket.hud.ItemPickupLogHudElement;
 import dev.skypocket.hud.LegendarySeaCreatureWarningHudElement;
 import dev.skypocket.hud.MiningAbilityHudElement;
 import dev.skypocket.hud.MiningBreakHudElement;
 import dev.skypocket.hud.SkillDisplayHudElement;
 import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
+import dev.skypocket.hud.ThunderBottleHudElement;
 import dev.skypocket.skyblock.MiningAbilityTracker;
 import dev.skypocket.skyblock.MiningSpeedBoostTracker;
 import dev.skypocket.skyblock.PlayerStatsTracker;
+import dev.skypocket.skyblock.ItemPickupTracker;
 import dev.skypocket.skyblock.SkillDisplayTracker;
 import dev.skypocket.skyblock.SkyBlockNpcTracker;
+import dev.skypocket.skyblock.ThunderBottleTracker;
 import dev.skypocket.net.PingMonitor;
 import dev.skypocket.render.BlockOutlineRenderer;
 import dev.skypocket.render.ClickGuiFonts;
@@ -34,6 +39,7 @@ import dev.skypocket.render.MiningBreakRenderer;
 import dev.skypocket.render.StatsBarTexture;
 import dev.skypocket.render.SwingSpeedAnimator;
 import dev.skypocket.skyblock.DamageSplashCompactor;
+import dev.skypocket.skyblock.DrillFuelTracker;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -83,6 +89,9 @@ public final class SkyPocketMod implements ClientModInitializer {
         DamageSplashRenderer.init();
         MiningAbilityHudElement.register();
         MiningBreakHudElement.register();
+        DrillFuelBarHudElement.register();
+        ThunderBottleHudElement.register();
+        ItemPickupLogHudElement.register();
         CommissionHudElement.register();
         LegendarySeaCreatureWarningHudElement.register();
         // The live post chains (colour grade, bloom) hold objects the device rebuilds on a resource
@@ -91,6 +100,7 @@ public final class SkyPocketMod implements ClientModInitializer {
         MiningAbilityTracker.init();
         MiningSpeedBoostTracker.init();
         PlayerStatsTracker.init();
+        DrillFuelTracker.init();
         SkillDisplayTracker.init();
         MentionSoundManager.init();
         MentionAlert.init();
@@ -104,6 +114,8 @@ public final class SkyPocketMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> ClickGuiFonts.tick());
         ClientTickEvents.END_CLIENT_TICK.register(client -> GuiCornerTextures.tick());
         ClientTickEvents.END_CLIENT_TICK.register(SkyBlockNpcTracker::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(ThunderBottleTracker::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(ItemPickupTracker::tick);
     }
 
     public static KeyMapping getClickGuiKey() {

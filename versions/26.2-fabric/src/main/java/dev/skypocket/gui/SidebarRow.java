@@ -61,20 +61,20 @@ final class SidebarRow extends Control {
         // The selected pill is drawn by ModulesPage so it can slide between rows. Keep this row's
         // hover surface inset horizontally only; no vertical padding, no accent stripe.
         if (!selected && hovered) {
-            float hx = bounds().x() + 8f;
-            float hw = bounds().width() - 16f;
+            float hx = bounds().x() + 16f;
+            float hw = bounds().width() - 32f;
             painter.fillRounded(new dev.skypocket.ui.Rect(hx, bounds().y(), hw,
-                    bounds().height()), 4f, ClickGuiStyle.sidebarHover());
+                    bounds().height()), ClickGuiStyle.controlRadius(), ClickGuiStyle.sidebarHover());
         }
 
         String label = category == null ? Localization.tr("全部")
                 : Localization.tr(category.label());
-        painter.text(label, bounds().x() + 16f + indent,
+        painter.text(label, bounds().x() + 28f + indent,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                 selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
         if (container) {
             String arrow = expanded ? "▼" : "►";
-            painter.text(arrow, bounds().right() - 14f - painter.textWidth(arrow),
+            painter.text(arrow, bounds().right() - 25f - painter.textWidth(arrow),
                     bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                     selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
         }
