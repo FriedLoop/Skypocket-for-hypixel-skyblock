@@ -43,23 +43,23 @@ if (-not $before) {
 
 # Every Module("id", "name", Category.X, ...) block still in the old file, with its settings text.
 #
-# The block runs from the Module( call to the semicolon that ends its registration statement, and
-# ALSO includes the enclosing register method's earlier lines: several registrations build a
-# `List<Setting> settings = new ArrayList<>(); ... settings.add(...);` first and pass the list in,
-# so a block that starts at Module( misses every setting it declares (chat_compact is one).
+# The captured text must span the whole enclosing register method. Two earlier attempts were wrong:
+# stopping at the first ";\n" cut a block short inside a multi-line lambda (block_outline writes four
+# colour channels in a `v -> { ... }` body, so the first channel's semicolon ended the capture and
+# its sliders vanished), and stopping at the next Module( swallowed the following feature instead.
+# A register method always ends with a line containing exactly "    }", which is unambiguous here.
 $oldBlocks = @{}
 $rx = [regex]'new Module\("([a-z_]+)",\s*"([^"]+)"'
 foreach ($m in $rx.Matches($before)) {
     $id = $m.Groups[1].Value
-    $start = $m.Index
-    $end = $before.IndexOf(";`n", $start)
-    if ($end -lt 0) { $end = $before.Length } else { $end += 1 }
 
-    # Widen backwards to the start of the enclosing "private static void register..." method.
-    $methodStart = $before.LastIndexOf('private static void register', $start)
-    if ($methodStart -lt 0) { $methodStart = $start }
+    # Backwards to the enclosing method's signature, forwards to that method's closing brace.
+    $methodStart = $before.LastIndexOf('private static void register', $m.Index)
+    if ($methodStart -lt 0) { $methodStart = $m.Index }
+    $methodEnd = $before.IndexOf("`n    }`n", $m.Index)
+    if ($methodEnd -lt 0) { $methodEnd = $before.Length } else { $methodEnd += "`n    }".Length }
 
-    $oldBlocks[$id] = $before.Substring($methodStart, $end - $methodStart)
+    $oldBlocks[$id] = $before.Substring($methodStart, $methodEnd - $methodStart)
 }
 
 # "After": each migrated feature class.

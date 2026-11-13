@@ -36,7 +36,7 @@ final class ModuleDefinitions {
     static void registerAll() {
         ModConfig cfg = ConfigManager.get();
         registerCrosshair(cfg);
-        registerBlockOutline(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.BlockOutlineFeature());
         // Phase 1 of the feature SPI: these three migrated off the hand-written registrations.
         // They still register into the same ModuleRegistry the panel reads, so nothing visible
         // changes - see dev.skypocket.feature.ModuleAdapter.
@@ -56,12 +56,12 @@ final class ModuleDefinitions {
         registerHitbox(cfg);
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideLandedArrowsFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideStuckArrowsFeature());
-        registerFishingHotspotOverlay(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.FishingHotspotOverlayFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.LegendarySeaCreatureWarningFeature());
-        registerDrillFuel(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DrillFuelFeature());
         registerMiningAbilityReminder(cfg);
         registerMiningBreakPredict(cfg);
-        registerCommissions(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.CommissionsFeature());
         registerPostProcess(cfg);
         registerHandItem(cfg);
         // Phase 2: these two also own a HUD element, so their HudSpec replaces the editor's
@@ -111,28 +111,6 @@ final class ModuleDefinitions {
                                 new Setting.ColorSetting("敌对颜色", () -> cfg.crosshairHostileColor, v -> cfg.crosshairHostileColor = v),
                                 new Setting.ColorSetting("箱子颜色", () -> cfg.crosshairContainerColor, v -> cfg.crosshairContainerColor = v)))
                                 .subtitle("按目标类型切换准星颜色")
-                )));
-    }
-
-    private static void registerBlockOutline(ModConfig cfg) {
-        ModuleRegistry.register(new Module("block_outline", "方块描边", Category.RENDER,
-                () -> cfg.blockOutlineEnabled, v -> cfg.blockOutlineEnabled = v,
-                List.of(
-                        new Setting.Header("外观", "调整描边颜色、厚度与方块面填充"),
-                        new Setting.ColorSetting("描边颜色", cfg::getBlockOutlineColorARGB, v -> {
-                            cfg.blockOutlineRed = ColorUtil.red(v);
-                            cfg.blockOutlineGreen = ColorUtil.green(v);
-                            cfg.blockOutlineBlue = ColorUtil.blue(v);
-                            cfg.blockOutlineAlpha = ColorUtil.alpha(v);
-                        }, true),
-                        new Setting.SliderSetting("描边厚度", 0.5, 6.0, () -> cfg.blockOutlineThickness, v -> cfg.blockOutlineThickness = (float) v, "%.2f", 0.1),
-                        new Setting.BooleanSetting("方块面调色", () -> cfg.blockOutlineFaceTint, v -> cfg.blockOutlineFaceTint = v),
-                        new Setting.ColorSetting("面颜色", cfg::getBlockOutlineFaceColorARGB, v -> {
-                            cfg.blockOutlineFaceRed = ColorUtil.red(v);
-                            cfg.blockOutlineFaceGreen = ColorUtil.green(v);
-                            cfg.blockOutlineFaceBlue = ColorUtil.blue(v);
-                            cfg.blockOutlineFaceAlpha = ColorUtil.alpha(v);
-                        }, true)
                 )));
     }
 
@@ -361,27 +339,6 @@ final class ModuleDefinitions {
         });
     }
 
-    private static void registerCommissions(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("显示", "调整委托列表的排序、缩放与颜色"));
-        settings.add(new Setting.BooleanSetting("隐藏已完成的委托", () -> cfg.commissionsHideDone,
-                v -> cfg.commissionsHideDone = v));
-        settings.add(new Setting.BooleanSetting("未完成的置顶", () -> cfg.commissionsPendingFirst,
-                v -> cfg.commissionsPendingFirst = v));
-        settings.add(new Setting.SliderSetting("缩放", 0.25, 6.0,
-                () -> cfg.commissionsScale, v -> cfg.commissionsScale = (float) v,
-                "%.2f", ModConfig.SCALE_GRID));
-        settings.add(new Setting.ColorSetting("标题颜色", () -> cfg.commissionsHeaderColor,
-                v -> cfg.commissionsHeaderColor = v));
-        settings.add(new Setting.ColorSetting("未完成颜色", () -> cfg.commissionsStartColor,
-                v -> cfg.commissionsStartColor = v));
-        settings.add(new Setting.ColorSetting("完成颜色", () -> cfg.commissionsDoneColor,
-                v -> cfg.commissionsDoneColor = v));
-        ModuleRegistry.register(new Module("commissions", "挖矿委托", Category.MINING,
-                () -> cfg.commissionsEnabled, v -> cfg.commissionsEnabled = v, settings)
-                .markSkyBlockOnly());
-    }
-
     private static void registerMiningBreakPredict(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.Header("提醒", "调整方块轮廓、提示偏移与提醒音效"));
@@ -446,42 +403,6 @@ final class ModuleDefinitions {
                         new Setting.BooleanSetting("不限距离", () -> cfg.hitboxUnlimitedRange, v -> cfg.hitboxUnlimitedRange = v),
                         new Setting.SliderSetting("范围", 1.0, 128.0, () -> cfg.hitboxRange, v -> cfg.hitboxRange = (float) v, "%.0f", 1)
                 )));
-    }
-
-    private static void registerFishingHotspotOverlay(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("显示", "调整热点样式、颜色、高度、线宽与显示距离"));
-        settings.add(new Setting.DropdownSetting("样式", HotspotOverlayStyle::labels,
-                () -> cfg.hotspotOverlayStyle, v -> cfg.hotspotOverlayStyle = v));
-        for (HotspotType t : HotspotType.values()) {
-            settings.add(new Setting.ColorSetting(t.label, () -> t.color(cfg), v -> t.setColor(cfg, v)));
-        }
-        settings.add(new Setting.ColorSetting("未知类型", () -> cfg.hotspotOverlayColor, v -> cfg.hotspotOverlayColor = v));
-        settings.add(new Setting.SliderSetting("高度", 0.25, 256.0, () -> cfg.hotspotOverlayHeight, v -> cfg.hotspotOverlayHeight = (float) v, "%.2f", 0.05)
-                .visibleWhen(() -> HotspotOverlayStyle.byLabel(cfg.hotspotOverlayStyle).isCylinder()));
-        settings.add(new Setting.SliderSetting("线宽", 0.5, 4.0, () -> cfg.hotspotOverlayLineWidth, v -> cfg.hotspotOverlayLineWidth = (float) v, "%.1f", 0.5));
-        settings.add(new Setting.SliderSetting("显示距离", 8.0, 256.0, () -> cfg.hotspotOverlayRange, v -> cfg.hotspotOverlayRange = (float) v, "%.0f", 1.0));
-        ModuleRegistry.register(new Module("fishing_hotspot_overlay", "钓鱼热点覆盖层", Category.FISHING,
-                () -> cfg.hotspotOverlayEnabled, v -> cfg.hotspotOverlayEnabled = v, settings)
-                .markSkyBlockOnly());
-    }
-
-    private static void registerDrillFuel(ModConfig cfg) {
-        ModuleRegistry.register(new Module("drill_fuel_bar", "钻头燃料条", Category.MINING,
-                () -> cfg.drillFuelBarEnabled, v -> cfg.drillFuelBarEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "手持钻头时显示燃料条，使用现有条形纹理"),
-                        new Setting.BooleanSetting("显示数字", () -> cfg.drillFuelShowNumber,
-                                v -> cfg.drillFuelShowNumber = v),
-                        new Setting.ColorSetting("燃料条颜色", () -> cfg.drillFuelBarColor,
-                                v -> cfg.drillFuelBarColor = v),
-                        new Setting.SliderSetting("宽度", 40, 400,
-                                () -> cfg.drillFuelBarWidth, v -> cfg.drillFuelBarWidth = (int) v,
-                                "%.0f", 1),
-                        new Setting.SliderSetting("高度", 8, 20,
-                                () -> cfg.drillFuelBarHeight, v -> cfg.drillFuelBarHeight = (int) v,
-                                "%.0f", 1)
-                )).markSkyBlockOnly());
     }
 
     private static void registerHandItem(ModConfig cfg) {
@@ -724,6 +645,7 @@ final class ModuleDefinitions {
     }
 
 }
+
 
 
 
