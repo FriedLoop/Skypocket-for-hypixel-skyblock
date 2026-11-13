@@ -238,7 +238,7 @@ public final class ThemeStore {
     public static int color(GuiTheme theme, String name) {
         for (RecordComponent component : GuiTheme.class.getRecordComponents()) {
             if (component.getName().equals(name)) {
-                return (Integer) invoke(component.getAccessor(), theme);
+                return (Integer) invoke(component.getAccessor(), theme, 0);
             }
         }
         return 0;
@@ -251,7 +251,7 @@ public final class ThemeStore {
     public static double metric(GuiMetrics metrics, String name) {
         for (RecordComponent component : GuiMetrics.class.getRecordComponents()) {
             if (component.getName().equals(name)) {
-                Object value = invoke(component.getAccessor(), metrics);
+                Object value = invoke(component.getAccessor(), metrics, 0);
                 return value instanceof Float f ? f : (Integer) value;
             }
         }
@@ -267,28 +267,41 @@ public final class ThemeStore {
     public static GuiTheme withColor(GuiTheme base, String name, int value) {
         RecordComponent[] components = GuiTheme.class.getRecordComponents();
         Object[] args = new Object[components.length];
-        for (int i = 0; i < components.length; i++) {
-            args[i] = components[i].getName().equals(name) ? value
-                    : invoke(components[i].getAccessor(), base);
+        try {
+            for (int i = 0; i < components.length; i++) {
+                args[i] = components[i].getName().equals(name) ? value
+                        : components[i].getAccessor().invoke(base);
+            }
+            return (GuiTheme) GuiTheme.class.getDeclaredConstructors()[0].newInstance(args);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            // Returning `base` unchanged is the only safe answer: a partial copy would blank the
+            // colours we could not read. The edit is lost, the game keeps running.
+            reportReflectionFailure("withColor", name, e);
+            return base;
         }
-        return (GuiTheme) instantiate(GuiTheme.class, args);
     }
 
     /** A copy of {@code base} with one measurement replaced, keeping its own type (int or float). */
     public static GuiMetrics withMetric(GuiMetrics base, String name, double value) {
         RecordComponent[] components = GuiMetrics.class.getRecordComponents();
         Object[] args = new Object[components.length];
-        for (int i = 0; i < components.length; i++) {
-            RecordComponent component = components[i];
-            if (!component.getName().equals(name)) {
-                args[i] = invoke(component.getAccessor(), base);
-            } else if (component.getType() == float.class) {
-                args[i] = (float) value;
-            } else {
-                args[i] = (int) Math.round(value);
+        try {
+            for (int i = 0; i < components.length; i++) {
+                RecordComponent component = components[i];
+                if (!component.getName().equals(name)) {
+                    args[i] = component.getAccessor().invoke(base);
+                } else if (component.getType() == float.class) {
+                    args[i] = (float) value;
+                } else {
+                    args[i] = (int) Math.round(value);
+                }
             }
+            return (GuiMetrics) GuiMetrics.class.getDeclaredConstructors()[0].newInstance(args);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            // See withColor: an all-or-nothing copy, never a half-blank one.
+            reportReflectionFailure("withMetric", name, e);
+            return base;
         }
-        return (GuiMetrics) instantiate(GuiMetrics.class, args);
     }
 
     /** Replaces one colour in the live palette. */
@@ -339,21 +352,28 @@ public final class ThemeStore {
         }
         RecordComponent[] components = GuiTheme.class.getRecordComponents();
         Object[] args = new Object[components.length];
-        for (int i = 0; i < components.length; i++) {
-            String name = components[i].getName();
-            int def = (Integer) invoke(components[i].getAccessor(), fallback);
-            JsonElement value = colors.get(name);
-            if (value == null) {
-                for (String legacy : LEGACY_KEYS.getOrDefault(name, new String[0])) {
-                    value = colors.get(legacy);
-                    if (value != null) {
-                        break;
+        try {
+            for (int i = 0; i < components.length; i++) {
+                String name = components[i].getName();
+                int def = (Integer) components[i].getAccessor().invoke(fallback);
+                JsonElement value = colors.get(name);
+                if (value == null) {
+                    for (String legacy : LEGACY_KEYS.getOrDefault(name, new String[0])) {
+                        value = colors.get(legacy);
+                        if (value != null) {
+                            break;
+                        }
                     }
                 }
+                args[i] = value == null ? def : parseColor(value.getAsString(), def);
             }
-            args[i] = value == null ? def : parseColor(value.getAsString(), def);
+            return (GuiTheme) GuiTheme.class.getDeclaredConstructors()[0].newInstance(args);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            // A theme file that cannot be applied must not take the game down; the caller's
+            // fallback (normally the built-in Dark/Light palette) is what it would have used anyway.
+            reportReflectionFailure("colors", "GuiTheme", e);
+            return fallback;
         }
-        return (GuiTheme) instantiate(GuiTheme.class, args);
     }
 
     private static GuiMetrics metrics(JsonObject root, GuiMetrics fallback) {
@@ -363,18 +383,23 @@ public final class ThemeStore {
         }
         RecordComponent[] components = GuiMetrics.class.getRecordComponents();
         Object[] args = new Object[components.length];
-        for (int i = 0; i < components.length; i++) {
-            Object def = invoke(components[i].getAccessor(), fallback);
-            JsonElement value = metrics.get(components[i].getName());
-            if (value == null) {
-                args[i] = def;
-            } else if (def instanceof Float) {
-                args[i] = value.getAsFloat();
-            } else {
-                args[i] = value.getAsInt();
+        try {
+            for (int i = 0; i < components.length; i++) {
+                Object def = components[i].getAccessor().invoke(fallback);
+                JsonElement value = metrics.get(components[i].getName());
+                if (value == null) {
+                    args[i] = def;
+                } else if (def instanceof Float) {
+                    args[i] = value.getAsFloat();
+                } else {
+                    args[i] = value.getAsInt();
+                }
             }
+            return (GuiMetrics) GuiMetrics.class.getDeclaredConstructors()[0].newInstance(args);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            reportReflectionFailure("metrics", "GuiMetrics", e);
+            return fallback;
         }
-        return (GuiMetrics) instantiate(GuiMetrics.class, args);
     }
 
     // ---- writing --------------------------------------------------------------------------
@@ -382,7 +407,7 @@ public final class ThemeStore {
     private static JsonObject toJson(GuiTheme theme) {
         JsonObject out = new JsonObject();
         for (RecordComponent component : GuiTheme.class.getRecordComponents()) {
-            int value = (Integer) invoke(component.getAccessor(), theme);
+            int value = (Integer) invoke(component.getAccessor(), theme, 0);
             out.addProperty(component.getName(), String.format("#%08X", value));
         }
         return out;
@@ -391,7 +416,7 @@ public final class ThemeStore {
     private static JsonObject toJson(GuiMetrics metrics) {
         JsonObject out = new JsonObject();
         for (RecordComponent component : GuiMetrics.class.getRecordComponents()) {
-            Object value = invoke(component.getAccessor(), metrics);
+            Object value = invoke(component.getAccessor(), metrics, 0);
             if (value instanceof Float f) {
                 out.addProperty(component.getName(), f);
             } else {
@@ -402,21 +427,38 @@ public final class ThemeStore {
     }
 
     // ---- small reflection helpers ---------------------------------------------------------
+    //
+    // Both helpers used to throw IllegalStateException. That reached the click handler
+    // (OneClickScreen.mouseClicked -> DevDrawer.mouseClicked, neither wraps in try), so a
+    // reflection failure while editing a theme took the whole game down instead of breaking one
+    // colour row. They are now total: a failure is logged once and the caller gets its fallback.
 
-    private static Object invoke(java.lang.reflect.Method accessor, Object target) {
+    /** True once a reflection failure has been logged, so a broken record does not spam the log. */
+    private static boolean reflectionFailureLogged;
+
+    /**
+     * Reads one record component, or {@code fallback} when reflection fails.
+     *
+     * <p>Never throws: see the note above this section. The read paths that build a whole record
+     * ({@code colors}, {@code metrics}, {@code withColor}, {@code withMetric}) call the accessor
+     * directly instead, so they can abandon the copy as a unit rather than mix fallbacks in.
+     */
+    private static Object invoke(java.lang.reflect.Method accessor, Object target, Object fallback) {
         try {
             return accessor.invoke(target);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("theme record accessor failed: " + accessor.getName(), e);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            reportReflectionFailure("accessor", accessor.getName(), e);
+            return fallback;
         }
     }
 
-    private static Object instantiate(Class<?> type, Object[] args) {
-        try {
-            return type.getDeclaredConstructors()[0].newInstance(args);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("theme record construction failed: " + type.getSimpleName(), e);
+    private static void reportReflectionFailure(String what, String name, Throwable cause) {
+        if (reflectionFailureLogged) {
+            return;
         }
+        reflectionFailureLogged = true;
+        LOGGER.error("theme {} failed for {}; theme edits fall back to the current values", what, name,
+                cause);
     }
 
     private static int parseColor(String text, int fallback) {
