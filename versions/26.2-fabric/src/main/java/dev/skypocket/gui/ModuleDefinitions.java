@@ -42,9 +42,9 @@ final class ModuleDefinitions {
         // changes - see dev.skypocket.feature.ModuleAdapter.
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThirdPersonFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.NoHurtCameraFeature());
-        registerMentionAlert(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.MentionAlertFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ChatCompactFeature());
-        registerSplashCompact(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DamageSplashFeature());
         // Phase 4 batch 1: the ESP family, all toggle + zero-or-one setting.
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.PlayerGlowFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ItemGlowFeature());
@@ -112,57 +112,6 @@ final class ModuleDefinitions {
                                 new Setting.ColorSetting("箱子颜色", () -> cfg.crosshairContainerColor, v -> cfg.crosshairContainerColor = v)))
                                 .subtitle("按目标类型切换准星颜色")
                 )));
-    }
-
-    private static void registerMentionAlert(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("提醒", "设置提及音效、文本与 ID 匹配长度"));
-        settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
-                () -> cfg.mentionAlertSound, v -> cfg.mentionAlertSound = v));
-        settings.add(new Setting.SliderSetting("音量", 0, 200, () -> cfg.mentionAlertVolume * 100,
-                v -> cfg.mentionAlertVolume = (float) (v / 100.0), "%.0f%%", 1));
-        settings.add(new Setting.SliderSetting("音高", 0.5, 2.0, () -> cfg.mentionAlertPitch,
-                v -> cfg.mentionAlertPitch = (float) v, "%.2f", 0.05));
-        settings.add(new Setting.ActionSetting("快捷上传自定义音频", MentionSoundManager::pickAndImport));
-        settings.add(new Setting.TextFieldSetting("自定义提醒文本", () -> cfg.mentionAlertCustomText,
-                v -> cfg.mentionAlertCustomText = v, "在此输入文本"));
-        settings.add(new Setting.SliderSetting("ID 检索长度", 1, 16, () -> cfg.mentionAlertNameLength,
-                v -> cfg.mentionAlertNameLength = (int) Math.round(v), "%.0f", 1));
-        ModuleRegistry.register(new Module("mention_alert", "聊天提及提醒", Category.NOTIFICATION,
-                () -> cfg.mentionAlertEnabled, v -> cfg.mentionAlertEnabled = v, settings));
-    }
-
-    private static void registerSplashCompact(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("行为", "控制伤害飘字的合并、归属与显示次数"));
-        settings.add(new Setting.BooleanSetting("合并", () -> cfg.damageSplashCompactEnabled,
-                v -> cfg.damageSplashCompactEnabled = v));
-        settings.add(new Setting.BooleanSetting("大写格式化", () -> cfg.damageSplashUppercase,
-                v -> cfg.damageSplashUppercase = v));
-        settings.add(new Setting.BooleanSetting("显示次数", () -> cfg.damageSplashShowCount,
-                v -> cfg.damageSplashShowCount = v));
-        settings.add(new Setting.SliderSetting("归属半径", 0.5, 3.0,
-                () -> cfg.damageSplashRadius,
-                v -> cfg.damageSplashRadius = v, "%.1f", 0.1));
-        settings.add(new Setting.SliderSetting("合并窗口(毫秒)", 200, 3000,
-                () -> cfg.damageSplashWindowMs,
-                v -> cfg.damageSplashWindowMs = (int) Math.round(v), "%.0f", 100));
-        settings.add(new Setting.Header("显示", "控制伤害飘字的显示时长、淡出与排版"));
-        settings.add(new Setting.SliderSetting("显示时长(毫秒)", 300, 5000,
-                () -> cfg.damageSplashLifetimeMs,
-                v -> cfg.damageSplashLifetimeMs = (int) Math.round(v), "%.0f", 100));
-        settings.add(new Setting.SliderSetting("淡出(毫秒)", 0, 1500,
-                () -> cfg.damageSplashFadeMs,
-                v -> cfg.damageSplashFadeMs = (int) Math.round(v), "%.0f", 50));
-        settings.add(new Setting.SliderSetting("右侧偏移", 0.0, 2.0,
-                () -> cfg.damageSplashRightOffset,
-                v -> cfg.damageSplashRightOffset = v, "%.1f", 0.1));
-        settings.add(new Setting.SliderSetting("行高", 0.1, 0.8,
-                () -> cfg.damageSplashRowHeight,
-                v -> cfg.damageSplashRowHeight = v, "%.1f", 0.05));
-        ModuleRegistry.register(new Module("damage_splash_compact", "伤害飘字", Category.COMBAT,
-                () -> cfg.damageSplashEnabled, v -> cfg.damageSplashEnabled = v, settings)
-                .markSkyBlockOnly());
     }
 
     private static void registerMiningAbilityReminder(ModConfig cfg) {
@@ -645,6 +594,7 @@ final class ModuleDefinitions {
     }
 
 }
+
 
 
 
