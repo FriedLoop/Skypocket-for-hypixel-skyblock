@@ -48,7 +48,7 @@ gradlew.bat build
 ├─ versions/
 │  ├─ mainProject         # 纯文本：主编辑版本目录名
 │  ├─ 26.2-fabric/        # 主版本：源码手写在这里
-│  └─ 26.3-fabric/        # 由主版本经预处理器 + Bloom 规则生成
+│  └─ 26.3-fabric/        # 构建时由 26.2 预处理生成到 build/preprocessed
 ├─ docs/
 │  ├─ DEVELOPMENT.md      # 架构与开发约定（改代码前先读）
 │  ├─ SKYBLOCK_STATS.md   # SkyBlock 数据来源与解析语义
@@ -58,6 +58,9 @@ gradlew.bat build
 
 源码只在 `versions/<mainProject>/src` 中手写，其他版本由预处理器与 `build.gradle.kts` 的
 Bloom 替换规则生成，因此**不要直接改非主版本目录**（会被覆盖）。
+
+`26.3-fabric/src` 不参与构建，仓库中不保留这份生成快照；26.3 的实际源码位于
+`26.3-fabric/build/preprocessed`。
 
 ## 开发约定（摘要）
 

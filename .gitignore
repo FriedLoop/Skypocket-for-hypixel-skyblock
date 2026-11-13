@@ -7,6 +7,9 @@ build/
 loom-cache/
 .preprocessed/
 
+# 26.3 sources are generated into build/preprocessed from 26.2; never track a checked-in copy.
+versions/26.3-fabric/src/
+
 # ---------------------------------------------------------------------------
 # Dev runtime (fabric-loom creates run/ with worlds, configs, logs)
 # ---------------------------------------------------------------------------
