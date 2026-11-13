@@ -43,7 +43,7 @@ final class ModuleDefinitions {
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThirdPersonFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.NoHurtCameraFeature());
         registerMentionAlert(cfg);
-        registerChatCompact(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ChatCompactFeature());
         registerSplashCompact(cfg);
         // Phase 4 batch 1: the ESP family, all toggle + zero-or-one setting.
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.PlayerGlowFeature());
@@ -72,10 +72,10 @@ final class ModuleDefinitions {
         registerHeldItemName(cfg);
         registerStatsDisplay(cfg);
         registerSkillDisplay(cfg);
-        registerThunderBottle(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThunderBottleFeature());
         registerItemPickupLog(cfg);
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.AutoSprintFeature());
-        registerScrollableTooltips(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ScrollableTooltipsFeature());
     }
 
     private static void registerCrosshair(ModConfig cfg) {
@@ -185,16 +185,6 @@ final class ModuleDefinitions {
         ModuleRegistry.register(new Module("damage_splash_compact", "伤害飘字", Category.COMBAT,
                 () -> cfg.damageSplashEnabled, v -> cfg.damageSplashEnabled = v, settings)
                 .markSkyBlockOnly());
-    }
-
-    private static void registerChatCompact(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("行为", "设置重复聊天消息的合并窗口"));
-        settings.add(new Setting.SliderSetting("压缩窗口(秒)", 1, 120,
-                () -> cfg.chatCompactTimeoutSeconds,
-                v -> cfg.chatCompactTimeoutSeconds = (int) Math.round(v), "%.0f", 1));
-        ModuleRegistry.register(new Module("chat_compact", "聊天消息压缩", Category.NOTIFICATION,
-                () -> cfg.chatCompactEnabled, v -> cfg.chatCompactEnabled = v, settings));
     }
 
     private static void registerMiningAbilityReminder(ModConfig cfg) {
@@ -508,17 +498,6 @@ final class ModuleDefinitions {
                 )).markSkyBlockOnly());
     }
 
-    private static void registerScrollableTooltips(ModConfig cfg) {
-        ModuleRegistry.register(new Module("scrollable_tooltips", "滚动提示框", Category.RENDER,
-                () -> cfg.scrollableTooltipsEnabled, v -> cfg.scrollableTooltipsEnabled = v,
-                List.of(
-                        new Setting.Header("行为", "设置提示框的滚动方式与灵敏度"),
-                        new Setting.BooleanSetting("始终可滚动", () -> cfg.scrollableTooltipsAlwaysScroll, v -> cfg.scrollableTooltipsAlwaysScroll = v),
-                        new Setting.SliderSetting("滚动灵敏度", 0.25, 4.0, () -> cfg.scrollableTooltipsSensitivity,
-                                v -> cfg.scrollableTooltipsSensitivity = (float) v, "%.2fx", 0.05)
-                )));
-    }
-
     private static void registerHandItem(ModConfig cfg) {
         ModuleRegistry.register(new Module("hand_item", "手持物品动画", Category.RENDER,
                 () -> cfg.handItemEnabled, v -> cfg.handItemEnabled = v,
@@ -787,16 +766,6 @@ final class ModuleDefinitions {
                 )).markSkyBlockOnly());
     }
 
-    private static void registerThunderBottle(ModConfig cfg) {
-        ModuleRegistry.register(new Module("thunder_bottle", "雷瓶显示", Category.HUD,
-                () -> cfg.thunderBottleEnabled, v -> cfg.thunderBottleEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "显示背包中的雷瓶、风暴瓶或飓风瓶充能"),
-                        new Setting.ColorSetting("文字颜色", () -> cfg.thunderBottleColor,
-                                v -> cfg.thunderBottleColor = v)
-                )).markSkyBlockOnly());
-    }
-
     private static void registerItemPickupLog(ModConfig cfg) {
         ModuleRegistry.register(new Module("item_pickup_log", "物品拾取记录", Category.HUD,
                 () -> cfg.pickupLogEnabled, v -> cfg.pickupLogEnabled = v,
@@ -812,4 +781,5 @@ final class ModuleDefinitions {
     }
 
 }
+
 
