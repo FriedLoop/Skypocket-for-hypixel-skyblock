@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -85,6 +86,42 @@ public class HudPositionEditorScreen extends Screen {
 
     /** One spec per target, filled once at class load. */
     private static final Map<Target, Spec> SPECS = new EnumMap<>(Target.class);
+
+    /**
+     * Targets whose spec has been supplied by the feature SPI, keyed by target name.
+     *
+     * <p>Keyed by {@code String} rather than the (private) {@code Target} enum so the SPI side can
+     * attach a spec without depending on editor internals: it passes the target's name, which is
+     * the stable identifier already used by {@code StatsBarHudElement.kindOf}.
+     */
+    private static final Map<String, dev.skypocket.feature.HudSpec> DERIVED_BY_NAME =
+            new HashMap<>();
+
+    /** The derived spec for this target, or {@code null} when it still uses the hand-written tables. */
+    private static dev.skypocket.feature.HudSpec derived(Target t) {
+        return DERIVED_BY_NAME.get(t.name());
+    }
+
+    /**
+     * Attaches a migrated {@link dev.skypocket.feature.HudSpec} to a target by name.
+     *
+     * <p>Called from the SPI registration path. Unknown names are ignored rather than throwing:
+     * the name comes from a feature's own declaration, and a typo there should not take the editor
+     * down - it just means that element keeps using its hand-written entry.
+     */
+    public static void derive(String targetName, dev.skypocket.feature.HudSpec spec) {
+        if (targetName == null || spec == null) {
+            return;
+        }
+        for (Target t : Target.values()) {
+            if (t.name().equals(targetName)) {
+                DERIVED_BY_NAME.put(targetName, spec);
+                return;
+            }
+        }
+        dev.skypocket.SkyPocketLog.of("hudEditor")
+                .warn("no HUD target named '{}'; its spec was ignored", targetName);
+    }
 
     static {
         put(Target.CLOCK, c -> c.clockX, (c, v) -> c.clockX = v,
@@ -163,8 +200,7 @@ public class HudPositionEditorScreen extends Screen {
     }
 
     private final Screen parent;
-    private Target selected = Target.CLOCK;
-    /** Right-click settings card: the selected element's module settings (see {@link HudSettingsCard}). */
+    private Target selected = Target.CLOCK;    /** Right-click settings card: the selected element's module settings (see {@link HudSettingsCard}). */
     private final HudSettingsCard settingsCard = new HudSettingsCard();
     private boolean dragging;
     /**
@@ -261,6 +297,26 @@ public class HudPositionEditorScreen extends Screen {
             LOGGER.warn("HUD position editor: {} of {} targets have a spec - the missing one cannot be "
                     + "moved or resized", SPECS.size(), Target.values().length);
         }
+        // Migrated elements read their facts from the SPI instead. Registering features happens when
+        // the Click GUI is first constructed, and this screen is only reachable from that GUI's
+        // footer - but a future entry point could open it earlier, in which case the derived map
+        // would still be empty and every migrated element would silently fall back to its
+        // hand-written entry. Saying so is cheaper than debugging it.
+        if (derivedCount() == 0 && dev.skypocket.feature.FeatureRegistry.registeredCount() > 0) {
+            LOGGER.warn("HUD position editor opened before feature registration; migrated elements "
+                    + "use their hand-written specs for this session");
+        }
+    }
+
+    /** How many targets currently read their facts from a {@code HudSpec}. */
+    private static int derivedCount() {
+        int count = 0;
+        for (Target t : Target.values()) {
+            if (DERIVED_BY_NAME.containsKey(t.name())) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
@@ -271,29 +327,47 @@ public class HudPositionEditorScreen extends Screen {
     // --- per-target config access ---
 
     private int x(Target t, ModConfig cfg) {
-        return SPECS.get(t).x().applyAsInt(cfg);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        return spec != null ? spec.x(cfg) : SPECS.get(t).x().applyAsInt(cfg);
     }
 
     private void setX(Target t, ModConfig cfg, int v) {
-        SPECS.get(t).setX().accept(cfg, v);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            spec.setX(cfg, v);
+        } else {
+            SPECS.get(t).setX().accept(cfg, v);
+        }
         verify(t, x(t, cfg) == v, "X");
     }
 
     private int y(Target t, ModConfig cfg) {
-        return SPECS.get(t).y().applyAsInt(cfg);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        return spec != null ? spec.y(cfg) : SPECS.get(t).y().applyAsInt(cfg);
     }
 
     private void setY(Target t, ModConfig cfg, int v) {
-        SPECS.get(t).setY().accept(cfg, v);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            spec.setY(cfg, v);
+        } else {
+            SPECS.get(t).setY().accept(cfg, v);
+        }
         verify(t, y(t, cfg) == v, "Y");
     }
 
     private float scale(Target t, ModConfig cfg) {
-        return (float) SPECS.get(t).scale().applyAsDouble(cfg);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        return spec != null ? (float) spec.scale(cfg) : (float) SPECS.get(t).scale().applyAsDouble(cfg);
     }
 
     private void setScale(Target t, ModConfig cfg, float v) {
-        SPECS.get(t).setScale().accept(cfg, v);
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            spec.setScale(cfg, v);
+        } else {
+            SPECS.get(t).setScale().accept(cfg, v);
+        }
         verify(t, Math.abs(scale(t, cfg) - v) < 0.001f, "scale");
     }
 
@@ -318,6 +392,11 @@ public class HudPositionEditorScreen extends Screen {
      * an enabled one that happens to be idle stays visible.
      */
     private static boolean visible(Target t, ModConfig cfg) {
+        // A migrated element answers for itself; its spec may omit visibility (always shown).
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            return spec.visible(cfg);
+        }
         StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(t.name());
         if (bar != null) {
             // The bars are the modern style's readout: the classic style never draws them.
@@ -379,6 +458,10 @@ public class HudPositionEditorScreen extends Screen {
     }
 
     private List<String> computeLines(Target t, Minecraft mc, ModConfig cfg) {
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            return spec.lines();
+        }
         return switch (t) {
             case CLOCK -> List.of(ClockHudElement.formatTime(cfg));
             case DAY_COUNT -> List.of(DayCountHudElement.format(cfg));
@@ -513,6 +596,10 @@ public class HudPositionEditorScreen extends Screen {
     }
 
     private String label(Target t) {
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            return Localization.tr(spec.label());
+        }
         return switch (t) {
             case CLOCK -> Localization.tr("时钟");
             case DAY_COUNT -> Localization.tr("世界天数");
@@ -918,6 +1005,11 @@ public class HudPositionEditorScreen extends Screen {
     }
 
     private static String moduleId(Target t) {
+        dev.skypocket.feature.HudSpec spec = derived(t);
+        if (spec != null) {
+            // The spec carries the owning feature's id, which is what the settings card opens.
+            return spec.moduleId();
+        }
         if (StatsBarHudElement.kindOf(t.name()) != null) {
             return "stats_display";
         }

@@ -37,8 +37,11 @@ final class ModuleDefinitions {
         ModConfig cfg = ConfigManager.get();
         registerCrosshair(cfg);
         registerBlockOutline(cfg);
-        registerThirdPerson(cfg);
-        registerNoHurtCamera(cfg);
+        // Phase 1 of the feature SPI: these three migrated off the hand-written registrations.
+        // They still register into the same ModuleRegistry the panel reads, so nothing visible
+        // changes - see dev.skypocket.feature.ModuleAdapter.
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThirdPersonFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.NoHurtCameraFeature());
         registerMentionAlert(cfg);
         registerChatCompact(cfg);
         registerSplashCompact(cfg);
@@ -60,15 +63,17 @@ final class ModuleDefinitions {
         registerCommissions(cfg);
         registerPostProcess(cfg);
         registerHandItem(cfg);
-        registerClock(cfg);
-        registerDayCount(cfg);
+        // Phase 2: these two also own a HUD element, so their HudSpec replaces the editor's
+        // hand-written entry for that target.
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ClockFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DayCountFeature());
         registerFpsTpsPing(cfg);
         registerHeldItemName(cfg);
         registerStatsDisplay(cfg);
         registerSkillDisplay(cfg);
         registerThunderBottle(cfg);
         registerItemPickupLog(cfg);
-        registerAutoSprint(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.AutoSprintFeature());
         registerScrollableTooltips(cfg);
     }
 
@@ -128,11 +133,6 @@ final class ModuleDefinitions {
                             cfg.blockOutlineFaceAlpha = ColorUtil.alpha(v);
                         }, true)
                 )));
-    }
-
-    private static void registerThirdPerson(ModConfig cfg) {
-        ModuleRegistry.register(new Module("third_person", "第三人称穿墙", Category.RENDER,
-                () -> cfg.thirdPersonThroughWalls, v -> cfg.thirdPersonThroughWalls = v, List.of()));
     }
 
     private static void registerMentionAlert(ModConfig cfg) {
@@ -434,11 +434,6 @@ final class ModuleDefinitions {
                 .markSkyBlockOnly());
     }
 
-    private static void registerNoHurtCamera(ModConfig cfg) {
-        ModuleRegistry.register(new Module("no_hurt_camera", "受伤镜头不抖动", Category.RENDER,
-                () -> cfg.noHurtCameraEnabled, v -> cfg.noHurtCameraEnabled = v, List.of()));
-    }
-
     private static void registerPlayerGlow(ModConfig cfg) {
         ModuleRegistry.register(new Module("player_glow", "人物发光", Category.ESP,
                 () -> cfg.playerGlowEnabled, v -> cfg.playerGlowEnabled = v,
@@ -618,25 +613,6 @@ final class ModuleDefinitions {
                         new Setting.SliderSetting("旋转 X", -180.0, 180.0, () -> cfg.handItemRotateX, v -> cfg.handItemRotateX = (float) v, "%.0f", 1),
                         new Setting.SliderSetting("旋转 Y", -180.0, 180.0, () -> cfg.handItemRotateY, v -> cfg.handItemRotateY = (float) v, "%.0f", 1),
                         new Setting.SliderSetting("旋转 Z", -180.0, 180.0, () -> cfg.handItemRotateZ, v -> cfg.handItemRotateZ = (float) v, "%.0f", 1)
-                )));
-    }
-
-    private static void registerClock(ModConfig cfg) {
-        ModuleRegistry.register(new Module("clock", "时钟", Category.HUD,
-                () -> cfg.clockEnabled, v -> cfg.clockEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "设置时间制式与时钟大小"),
-                        new Setting.BooleanSetting("24 小时制", () -> cfg.clockFormat24h, v -> cfg.clockFormat24h = v),
-                        new Setting.SliderSetting("时钟大小", 0.25, 6.0, () -> cfg.clockScale, v -> cfg.clockScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                )));
-    }
-
-    private static void registerDayCount(ModConfig cfg) {
-        ModuleRegistry.register(new Module("day_count", "世界天数", Category.HUD,
-                () -> cfg.dayCountEnabled, v -> cfg.dayCountEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "调整世界天数文字大小"),
-                        new Setting.SliderSetting("大小", 0.25, 6.0, () -> cfg.dayCountScale, v -> cfg.dayCountScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
                 )));
     }
 
@@ -911,8 +887,4 @@ final class ModuleDefinitions {
                 )).markSkyBlockOnly());
     }
 
-    private static void registerAutoSprint(ModConfig cfg) {
-        ModuleRegistry.register(new Module("auto_sprint", "自动疾跑", Category.MOVEMENT,
-                () -> cfg.autoSprintEnabled, v -> cfg.autoSprintEnabled = v, List.of()));
-    }
 }
