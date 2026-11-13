@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(EntityRenderer.class)
 public abstract class EntityRendererMixin {
 
-    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$hideNearbyPlayers(Entity entity, Frustum frustum, double x, double y, double z,
 //#if MC>=260300
                                        float partialTick,
@@ -72,7 +72,7 @@ public abstract class EntityRendererMixin {
         }
     }
 
-    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$hideOtherPresents(Entity entity, Frustum frustum, double x, double y, double z,
 //#if MC>=260300
                                        float partialTick,
@@ -86,7 +86,7 @@ public abstract class EntityRendererMixin {
         }
     }
 
-    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "shouldRender", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$hideLandedArrows(Entity entity, Frustum frustum, double x, double y, double z,
 //#if MC>=260300
                                       float partialTick,

@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemEntityRenderer.class)
 public abstract class ItemEntityRendererMixin {
 
-    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
     private void sky$rarityOutline(ItemEntity entity, ItemEntityRenderState state, float partialTick,
                                    CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();

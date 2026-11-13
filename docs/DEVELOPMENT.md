@@ -19,32 +19,65 @@
 ```
 dev.skypocket/
 ├─ SkyPocketMod          客户端入口：加载配置、注册 HUD/渲染器、命令、按键、tick
-├─ config/               ConfigManager（Gson JSON ↔ config/skypocket.json）+ ModConfig
-├─ gui/                  Feature(契约) / Module(实现) / ModuleRegistry / ModuleDefinitions /
-│                        Category / OneClickScreen(ClickGUI 屏幕：生命周期+事件) /
-│                        PanelGeometry(布局常量+命中检测) / PanelRenderer(面板绘制) /
-│                        PanelView(几何输入快照) / ModMenuIntegration / *EditorScreen
-│   ├─ setting/          Setting 抽象 + Boolean/Slider/Color/Dropdown/Group/Choice/Action/TextField/V2Custom/Header
-│   └─ widget/           ClickGuiStyle / GuiMetrics / GuiTheme / ThemeStore / ToggleAnimation /
-│                        MouseButtons / PickerMemory / ImmediateColorPicker / ImmediateTextField
-├─ ui/                   UI v2 元素树：UiElement / Box / Style / LayoutEngine / ScrollView /
-│                        UiPainter / Text / TextMeasurer / Painted / Rect / Insets / Size / Dimension
-│   ├─ input/            InputRouter / KeyEvent / Keys / Modifiers / PointerEvent / PreeditEvent /
-│   │                    TextInputEvent / WheelEvent
-│   ├─ mc/               McUiPainter（唯一的 MC painter）
-│   └─ widget/           Control（交互基类）+ Switch/Slider/Button/Card/ColorField/
-│                        ColorPickerPanel/Dropdown/Segmented/TextField/Scrollbar/
-│                        CrosshairGrid/CrosshairPreview/WidgetPalette
-├─ hud/                  十字准星/时钟/天数/FPS-TPS-Ping HUD + HudPositionSync
-├─ skyblock/             TabListText（tab list 读取）+ 各解析器（MiningSpeed/MiningAbility/Commission Tracker）
-├─ net/                  PingMonitor
-├─ render/               方块描边/碰撞箱/准星/挥动/字体/模糊/颜色/TPS 等渲染器；GuiPixels = ClickGUI 的设备像素原语
+├─ SkyPocketLog          分区日志（SkyPocketLog.of("area")）
+├─ config/               ConfigManager（Gson JSON ↔ config/skypocket.json）+ ModConfig + ColorDefaults
+├─ gui/                  ClickGUI 业务层：Feature/Module 契约与注册、各页面、布局常量、外壳绘制
+│   ├─ setting/           Setting 数据模型（含全部子类）
+│   └─ widget/            ClickGUI 主题与旧控件（ClickGuiStyle/GuiTheme/ThemeStore/…）
+├─ ui/                   与业务无关的 UI v2 内核：元素树、布局、绘制抽象、输入事件
+│   ├─ input/            InputRouter + 各类输入事件
+│   ├─ mc/               McUiPainter（唯一的 MC painter 实现）
+│   └─ widget/           Control 家族（Switch/Slider/Button/Card/TextField/Dropdown/…）
+├─ hud/                  每个 HUD 元素一个类 + HudPositionSync（位置迁移/自愈）
+├─ skyblock/             SkyBlock 数据解析：tracker、静态数据表、物品字段
+├─ render/               渲染器与绘制原语（含 GuiPixels 设备像素原语、字体、后处理）
+├─ net/                  PingMonitor + SkyBlockDetector（服务器/场景判定）
 ├─ i18n/                 Localization（中文 key → 英文映射）
-├─ tooltip/              TooltipScroller（可滚动提示框）
-├─ sound/                MentionSoundManager（提示音播放/导入）
-├─ chat/                 MentionAlert（聊天提及检测）
-└─ mixin/                Mixin 类（见 §6，清单在 skypocket.mixins.json）
+├─ chat/                 聊天相关（压缩、提及检测、文本工具）
+├─ sound/                SoundManager + MentionSoundManager
+├─ tooltip/              TooltipScroller
+├─ diagnostics/          非 mixin 的运行时诊断（MixinTargetCheck）
+└─ mixin/                **只能放 mixin 类**，见下方硬约束
 ```
+
+### 2.1 每个包放什么、不放什么
+
+| 包 | 只放 | 明确不放 | 依赖方向 |
+|---|---|---|---|
+| `config/` | 配置数据结构、Gson 持久化、迁移、默认值常量 | 渲染器、UI、任何 `gui`/`ui` 类 | 被几乎所有包引用；**自身应只依赖 JDK** |
+| `gui/` | ClickGUI 的**业务**：功能契约与注册、页面、布局数值、外壳绘制 | 通用控件（在 `ui/widget`）、MC 渲染原语（在 `render`） | → `ui`/`gui.setting`/`gui.widget`/`config`/`render`/`i18n` |
+| `gui/setting/` | `Setting` 及全部子类（纯数据模型，不创建控件） | 任何控件、任何 Screen | → `config` |
+| `gui/widget/` | ClickGUI 主题 token、度量、主题持久化、旧版即时控件 | 新控件请放 `ui/widget` | → `render.ClickGuiFonts`/`GuiPixels` |
+| `ui/` | **与业务无关**的 UI 内核：元素、样式、布局、绘制抽象、事件 | `Feature`/`Setting`/`ModuleRegistry`（内核不得知道"功能"是什么） | → 仅 `render`（字体/像素原语）与 `ui.*` |
+| `ui/widget/` | 可复用控件：`Control` 及其子类 | 业务逻辑、配置字段名 | → `ui`、`render` |
+| `ui/input/` | 输入事件与路由 | 任何绘制 | → `ui.UiElement` |
+| `ui/mc/` | MC 侧的 `UiPainter` 实现 | 业务判断 | → `render.ClickGuiFonts`/`GuiPixels` |
+| `hud/` | 每个 HUD 元素的注册与绘制、位置同步 | 数据解析（在 `skyblock`） | → `config`/`render`/`skyblock`/`net` |
+| `skyblock/` | SkyBlock 数据的**解析与静态表**（tab/actionbar/NBT） | HUD 绘制、ClickGUI | → `config`/`net`/`chat` |
+| `render/` | 渲染器、绘制原语、着色器链、字体 | 页面布局、命中检测、配置迁移 | → `config`/`skyblock`/`mixin`（Accessor） |
+| `net/` | 服务器地址与场景判定、延迟统计 | 渲染、UI | → `config` |
+| `diagnostics/` | 运行时自检，结果只写日志 | **不得放进 `mixin/`**（见下） | → `SkyPocketLog` |
+
+已知的两处**反向依赖**（写在这里是为了不被当成范例）：
+
+- `config/ModConfig` 依赖 `render.AntialiasingRenderer` / `ColorGradeRenderer`（字段默认值取自它们的常量，`sanitize()` 用它们校验取值）以及 `render.ColorUtil`（颜色运算）——`config` 依赖 `render` 违反了上表，属于历史遗留。
+- `ui/widget/CrosshairGrid`、`CrosshairPreview` 直接 import `config.ModConfig`——`ui` 依赖 `config` 同样违反"内核不知道业务"。
+
+新增代码**不要**扩大这两条反向依赖。
+
+### 2.2 `mixin/` 包的硬约束
+
+`skypocket.mixins.json` 用 `"package": "dev.skypocket.mixin"` 声明了这个包，**Mixin 会接管整包并禁止其中任何类被当作普通类直接引用**。后果分两种：
+
+- 把一个**普通类**放进去并从别处调用 → 启动即崩：
+  `IllegalClassLoadError: ... is in a defined mixin package ... and cannot be referenced directly`
+- 把一个 mixin 类放进去但**忘了写进 `skypocket.mixins.json` 的 `client` 列表** → 它不会被应用，功能静默失效
+
+因此：
+
+1. **`mixin/` 下只放 mixin 类**（`@Mixin`/`@Accessor`/`@Invoker`），且每个都必须在 `skypocket.mixins.json` 里登记。
+2. **辅助类、诊断类、任何要 new/静态调用的类，一律放别的包**（如 `diagnostics/MixinTargetCheck`）。这一条已踩过一次，代价是一次启动崩溃。
+3. **`javac` 和 `gradle build` 都发现不了这类错误**——它们是合法的 Java 类。验证方式是读 jar 确认类路径，或直接跑一次游戏。
 
 ## 3. 核心契约与约定（必须遵守）
 
@@ -99,7 +132,7 @@ dev.skypocket/
   - **带动画的 off/on 开关（`ui/widget/Switch`）**：动画状态放在 **Setting** 上（`ToggleAnimation`），不是控件上 —— 行每次滚动都会重建，控件自己存进度就会"每次都从终点开始"；而且它是**按时间推进**的（读时钟）而不是按绘制推进，否则离屏的开关会卡在半途、让缓存键永远不干净。**面板缓存键必须包含这个动画进度**（`ToggleAnimation` 静止时恒为 0，运动中随进度变化）——漏了它就是"开关卡在中间不动/动画被冻进缓存帧"。
 - **所有滑条都必须有步进**（`SliderSetting` 不再接受"连续"）：不写时按量程自动取约百分之一（`defaultStep`），量纲明确的写死（像素大小步进 1、缩放 0.05、位置 0.01、旋转 1）。理由：无步进时拖动一个像素数字就跳一次、读数没法看，而且同一个量程的两个滑条行为不该不同。
 - 分类：`Category` 仍是两级树模型，但**不设 `SkyBlock` 一级容器**。模组整体面向 SkyBlock，顶层直接按玩家活动领域分：`HUD / 挖矿 / 战斗 / 钓鱼 / ESP / 渲染 / 通知 / 移动`。空的领域不要保留占位，等真正有模块时再加；容器能力保留给未来的确有子分组的领域。
-- 侧边栏：`PanelRenderer.drawSidebar` 渲染「全部 + 一级分类」。过滤规则：`selected == null` 显示全部；叶子精确匹配；未来容器仍通过 `Category.contains()` 覆盖后代。卡片网格/搜索框都在侧边栏右侧的面板内。
+- 侧边栏：由 `ModulesPage` 建出的 v2 树渲染，一棵包含「全部 + 一级分类」的 `SidebarRow` 列表（`SidebarRow extends Control`，自己 `paint`）。过滤规则：`selected == null` 显示全部；叶子精确匹配；未来容器仍通过 `Category.contains()` 覆盖后代。卡片网格/搜索框都在侧边栏右侧的面板内。
 - `skyBlockOnly` 标记：只有真正依赖 Hypixel SkyBlock 的模块才调用 `Module.markSkyBlockOnly()`，卡片显示 `SB` 徽标；模块逻辑仍必须自己调用 `SkyBlockDetector.isActive()`，不能靠分类或徽标门控。
 - **面板几何数值只写一处，而且都在 `gui/PanelGeometry`**：面板尺寸 `PANEL_W/H`、圆角 `ROUND`、tab（`TAB_BAR_H/TAB_W/TAB_H/TAB_Y/TAB_GAP/TAB_MARGIN`、`tabX()`、`tab2X()`）、卡片（`CARD_W/H/GAP`、`ICON_SIZE`、`CARD_PAD`、`CARD_TITLE_*`、`CARD_BTN_*`、`CARD_STATUS_*`）、搜索框（`SEARCH_X/Y/W/H`、`NAV_SIZE/NAV_GAP/NAV_X`）、内容区（`CONTENT_TOP_MODULES/SETTINGS`、`contentTop(view)`、`contentWidth()`、`contentBottom()`、`contentBottomRow()`、`maxScroll(view, settingsHeight)`）、侧边栏（`SIDEBAR_W/SIDEBAR_ITEM_H/SIDEBAR_TOP`）、页脚（`FOOTER_H`、`FOOTER_BTN_*`、`footerBtnY()`）、卡片网格（`columns()`、`cardRowLeft(rowCount)`）、命中（`inPanel`、`inBody`）。
   - **这些值同时被绘制与命中检测使用**（`ModulesPage` 的树布局 ↔ `Control.contains()` 的命中 ↔ 缓存键）。以前两处各写一遍，改一处忘另一处会**静默**造成"看到的位置和能点的位置不一致"；现在改成只在一处定义。
@@ -174,6 +207,46 @@ dev.skypocket/
 - 每个 mixin 顶部 javadoc 写清「目的 + 注入方法 + 注入点」。
 - 私有字段/方法访问用 `@Accessor`/`@Invoker`（如 `MinecraftAccessor`、`FontManagerAccessor`）。
 - 清单见 `skypocket.mixins.json`。
+
+### 6.1 `require` 分级：核心硬失败，其余降级
+
+`skypocket.mixins.json` 的 `required` 是 **`false`**，且 `injectors.defaultRequire` 仍为 1——真正的分级写在每个 `@Inject` 上：
+
+| 级别 | 写法 | 适用 | 失败后果 |
+|---|---|---|---|
+| **核心** | `require = 1`（显式或默认） | 失败会造成静默的视觉/状态损坏 | 启动时大声报错 |
+| **增强** | `require = 0` | 单个化妆性/便利功能 | 该功能失效，游戏照常启动 |
+
+目前共 **45 个 `@Inject`：42 个显式 `require = 0`，3 个保持 `require = 1`**。
+
+**这 3 处必须保持 `require = 1`，改动前先读原因：**
+
+1. **`GuiScreenScissorMixin` 的 3 个注入**（`<init>` / `enableScissor` / `disableScissor`）。它们驱动 `ScissorTracker` 的**栈**：`push` 与 `pop` 必须成对，只挂上一半会让栈永久失衡，此后 ClickGUI 会一直裁错矩形——一种比启动失败难查得多的静默视觉损坏。
+2. **`GameRendererMixin#sky$bakePanelCache`**（`render` 的 HEAD）。它是面板缓存的烘焙时机；丢了它缓存不会崩，但会退化成只靠 600 帧兜底，表现为"面板更新很慢"，同样难归因。
+
+**新增 mixin 时按这个判据选择**：如果"注入没挂上"会出现**看起来像 bug、而不是像功能没开**的现象，就用 `require = 1`；否则用 `require = 0`。
+
+### 6.2 启动自检（`diagnostics/MixinTargetCheck`）
+
+它放在 `dev.skypocket.diagnostics` 而不是 `dev.skypocket.mixin`——原因见 §2.2，那里是这个包级约束的正式说明。
+
+`require = 0` 的代价是沉默：某个目标方法被改名后，对应功能悄悄失效，玩家无法区分"开关坏了"还是"钩子没挂上"。
+
+`MixinTargetCheck.report()` 在客户端初始化末尾跑一次，用**类名 + 方法名字符串**（避免 `NoClassDefFoundError`）逐个探测 14 个 `require = 0` 的目标方法是否存在：
+
+- 全部存在 → `debug` 一行（默认不输出）
+- 有缺失 → **一条 `WARN`**，列出功能名与缺失的 `类#方法`
+
+设计约束：
+
+- **纯诊断，任何异常都吞掉**——诊断本身绝不能成为新的崩溃源。
+- 探测走 `Class.forName` + `getDeclaredMethods()`（并向上遍历父类），**不读 Mixin 的内部字段**：`MixinProcessor.injections` 之类的私有状态在不同版本间会变，绑定它就是给自己造一个"升级即崩"的点。
+- 新增 `require = 0` 注入时，**顺手在 `MixinTargetCheck.TARGETS` 里加一行**，否则那条静默失效仍然无人知晓。
+
+### 6.3 已知崩溃面（mixin 之外）
+
+- **`ThemeStore` 的反射路径**（`gui/widget/ThemeStore`）。原实现在读/构造 `GuiTheme`/`GuiMetrics` 记录时 `throw new IllegalStateException`，而调用链 `OneClickScreen.mouseClicked → DevDrawer.mouseClicked` **没有任何 try 兜底**，异常会直达 MC 事件循环。现在所有反射入口都是**全函数**：`withColor`/`withMetric`/`colors`/`metrics` 失败时**整体返回原值**（不做半空白拷贝），`invoke` 失败时返回调用方给的 fallback，并**只记一次 ERROR**（`reflectionFailureLogged` 去重，避免每帧刷屏）。代价是那次主题编辑丢失，收益是游戏不崩。
+- **6 个 `static {}` 初始化块**（`HudPositionEditorScreen`、`StatsBarHudElement`、`StatTextHudElement`、`Localization`、`FontLab`、`MiningBlocks`）。当前内容都是纯数据填充，不会抛可预见异常；但 `<clinit>` 一抛就是 `ExceptionInInitializerError`。**往里加任何可能失败的操作（IO、解析、反射）前必须自行 try**。
 
 ## 7. 26.2 关键反编译结论（踩坑记录，务必先读）
 
@@ -760,7 +833,19 @@ layout(location = 0) out vec4 fragColor;
 
 ## 10. UI v2（已落地，当前分支 `main`）
 
-**目标**：把 ClickGUI 的字体、布局、输入和缓存收敛成一套可长期维护、可复用的 UI 基础设施。UI 内核、输入、控件和设置页均已在 `main` 落地；本节保留最初的设计与实验记录，不再表示“尚未实现”。
+**目标**：把 ClickGUI 的字体、布局、输入和缓存收敛成一套可长期维护、可复用的 UI 基础设施。UI 内核、输入、控件、设置页和**首页模块网格**均已在 `main` 落地；本节保留最初的设计与实验记录，不再表示"尚未实现"。
+
+**当前落地边界**（写清楚以免误判进度）：
+
+| 层 | 状态 |
+|---|---|
+| UI 内核（`ui/`：元素树、`Style`、`LayoutEngine`、`ScrollView`、`UiPainter`） | ✅ 已落地 |
+| 输入（`InputRouter`、key/pointer/text/preedit/wheel 事件） | ✅ 已落地 |
+| 控件（`Control` 家族：`Switch`/`Slider`/`Button`/`Card`/`ColorField`/`Dropdown`/`Segmented`/`TextField`/`Scrollbar`） | ✅ 已落地 |
+| 设置页（`SettingsPage`） | ✅ 已落地 |
+| 首页模块网格（`ModulesPage` + `SidebarRow` + `ModuleCard` + `NavButton`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
+| **外壳 chrome**（面板背景 / 顶部主 tabs / 底栏） | ⬜ 仍是 `PanelRenderer` 手工绘制 + `shellCache` 整块烘焙 |
+| 主题抽屉（`DevDrawer`） | ⬜ 仍用 `ImmediateColorPicker` / `ImmediateTextField` 旧控件 |
 
 **已定方向**：
 
@@ -935,8 +1020,9 @@ layout(location = 0) out vec4 fragColor;
 - ChoiceSetting 使用带滑动动画的 Segmented
 - 颜色弹层、文本设置、准星自定义行均走 v2
 - HUD 右键设置弹窗也内嵌 `SettingsPage`
-- 首页卡片、侧栏、搜索框、导航按钮、主 tabs 和 footer 按钮均已改用 v2 painter 绘制
-- 首页布局、命中、输入路由和整面板缓存仍复用原有 `PanelGeometry` / `PanelInput`
+- 首页（模块网格）**整个页面已是 v2 树**：`ModulesPage` 构建 `Box`/`ScrollView`/`TextField`/`NavButton`，侧边栏和卡片是真实的 `SidebarRow`/`ModuleCard`（`extends Control`）节点，命中由 `InputRouter` 按 `Control.contains()` 分派。该文件里已无任何直接 `graphics.fill/blit/text` 调用
+- **仍留在 v2 之外的是"外壳 chrome"三块**：面板背景（`PanelRenderer.drawBackground`）、顶部主 tabs（`drawTabs`）、底栏（`drawFooter`）。它们由 `OneClickScreen` 用 `GuiGraphicsExtractor` 手工绘制，整体经 `shellCache` 烘成一张纹理，命中走 `PanelInput.hit`。外壳是静态的、不参与布局，所以未迁移不影响正确性，只是与页面层风格不统一
+- `OneClickScreen` 里唯一残留的直接绘制调用是标题栏 logo 的那一次 `graphics.blit`
 - 旧的设置视图与旧 widget 构建路径已删除
 
 **设置卡片规范（强制）**：

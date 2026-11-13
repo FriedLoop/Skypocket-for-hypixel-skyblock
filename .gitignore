@@ -49,3 +49,6 @@ desktop.ini
 .backup/
 *.tmp
 *.bak
+
+# 本地测试用部署脚本（路径绑定本机启动器，不属于仓库）
+tools/deploy.ps1

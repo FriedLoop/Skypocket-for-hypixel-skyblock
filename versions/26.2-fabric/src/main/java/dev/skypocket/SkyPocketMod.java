@@ -116,6 +116,9 @@ public final class SkyPocketMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(SkyBlockNpcTracker::tick);
         ClientTickEvents.END_CLIENT_TICK.register(ThunderBottleTracker::tick);
         ClientTickEvents.END_CLIENT_TICK.register(ItemPickupTracker::tick);
+        // Most injections are require = 0 so a renamed target disables one feature instead of
+        // stopping the game; this turns that silence into a startup log line.
+        dev.skypocket.diagnostics.MixinTargetCheck.report();
     }
 
     public static KeyMapping getClickGuiKey() {

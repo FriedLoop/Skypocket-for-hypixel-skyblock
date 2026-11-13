@@ -30,7 +30,7 @@ public abstract class LivingEntityMixin {
 
     /** Mirrors 26.2: record the hand, restart only when the custom 75% gate allows it. */
     @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;"
-            + "Lnet/minecraft/world/item/component/SwingAnimation;Z)Z", at = @At("HEAD"))
+            + "Lnet/minecraft/world/item/component/SwingAnimation;Z)Z", at = @At("HEAD"), require = 0)
     private void sky$onSwing(InteractionHand hand, SwingAnimation animation, boolean updateSelf,
                              CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
@@ -45,7 +45,7 @@ public abstract class LivingEntityMixin {
     }
 
     /** 26.3 render path: same custom progress as 26.2's getAttackAnim. */
-    @Inject(method = "getSwingAnimation", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getSwingAnimation", at = @At("RETURN"), cancellable = true, require = 0)
     private void sky$overrideSwingAnimation(float partialTick,
                                             CallbackInfoReturnable<Float> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
@@ -61,7 +61,7 @@ public abstract class LivingEntityMixin {
      * synthetic render descriptor while it is still playing. This is a read-only render-state
      * shim: no swing cancellation, packets, or attack logic are involved.
      */
-    @Inject(method = "getCurrentSwing", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getCurrentSwing", at = @At("RETURN"), cancellable = true, require = 0)
     private void sky$overrideCurrentSwing(CallbackInfoReturnable<LivingEntity.SwingDescription> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
             return;
@@ -72,7 +72,7 @@ public abstract class LivingEntityMixin {
         }
     }
 //#else
-    @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"))
+    @Inject(method = "swing(Lnet/minecraft/world/InteractionHand;Z)V", at = @At("HEAD"), require = 0)
     private void sky$onSwing(InteractionHand hand, boolean updateSelf, CallbackInfo ci) {
         if ((Object) this != Minecraft.getInstance().player) {
             return;
@@ -87,7 +87,7 @@ public abstract class LivingEntityMixin {
     }
 
     /** 26.2 has no animation argument, so the progress itself has to be replaced. */
-    @Inject(method = "getAttackAnim", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getAttackAnim", at = @At("RETURN"), cancellable = true, require = 0)
     private void sky$adjustSwingSpeed(float partialTick, CallbackInfoReturnable<Float> cir) {
         if ((Object) this != Minecraft.getInstance().player) {
             return;

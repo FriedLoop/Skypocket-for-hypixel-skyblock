@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 public abstract class MouseHandlerMixin {
 
-    @Inject(method = "onScroll", at = @At("HEAD"))
+    @Inject(method = "onScroll", at = @At("HEAD"), require = 0)
     private void sky$scrollableTooltip(long window, double horizontal, double vertical, CallbackInfo ci) {
         if (ConfigManager.get().scrollableTooltipsEnabled && Minecraft.getInstance().gui.screen() != null) {
             TooltipScroller.scroll(vertical);

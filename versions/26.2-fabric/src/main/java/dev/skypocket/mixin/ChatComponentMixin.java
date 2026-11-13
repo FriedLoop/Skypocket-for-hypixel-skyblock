@@ -41,13 +41,13 @@ public abstract class ChatComponentMixin {
      * message and the duplicates piled up instead of collapsing.
      */
     @Inject(method = "addMessageToQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V",
-            at = @At("HEAD"))
+            at = @At("HEAD"), require = 0)
     private void sky$onQueue(GuiMessage message, CallbackInfo ci) {
         ChatCompactor.onCreated(message);
     }
 
     @Inject(method = "addMessageToDisplayQueue(Lnet/minecraft/client/multiplayer/chat/GuiMessage;)V",
-            at = @At("HEAD"))
+            at = @At("HEAD"), require = 0)
     private void sky$onDisplay(GuiMessage message, CallbackInfo ci) {
         ChatCompactor.onCreated(message);
     }

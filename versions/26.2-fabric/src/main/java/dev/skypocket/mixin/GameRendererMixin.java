@@ -23,7 +23,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
 
-    @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true)
+    /** Cosmetic toggle: a missing {@code bobHurt} only loses "no hurt camera". */
+    @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$disableHurtShake(CameraRenderState state, PoseStack poseStack, CallbackInfo ci) {
         if (ConfigManager.get().noHurtCameraEnabled && !state.entityRenderState.isDeadOrDying) {
             ci.cancel();
@@ -34,6 +35,10 @@ public abstract class GameRendererMixin {
      * Frames start here, so this is the last point where no render pass is open: the Click
      * GUI panel cache can open its own pass and bake the panel it recorded last frame.
      * (See {@code GuiPanelCache}: the GUI pass itself cannot be nested inside.)
+     *
+     * <p>Deliberately left at the default {@code require = 1}: unlike the cosmetic injections in
+     * this package, losing this one would silently disable the panel cache's bake step and leave it
+     * depending on the 600-frame backstop. A failure here is worth reporting loudly at startup.
      */
     @Inject(method = "render", at = @At("HEAD"))
     private void sky$bakePanelCache(
@@ -57,7 +62,7 @@ public abstract class GameRendererMixin {
      * - which is why it is last: its bright pass should see the finished image, so raising the grade's
      * exposure makes things glow.
      */
-     @Inject(method = "renderLevel", at = @At("TAIL"))
+     @Inject(method = "renderLevel", at = @At("TAIL"), require = 0)
      private void sky$worldPostEffects(
 //#if MC>=260300
             CallbackInfo ci) {

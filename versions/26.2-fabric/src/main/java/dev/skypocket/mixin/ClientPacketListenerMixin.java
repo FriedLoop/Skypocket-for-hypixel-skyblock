@@ -28,12 +28,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {
 
-    @Inject(method = "handleSetTime", at = @At("HEAD"))
+    @Inject(method = "handleSetTime", at = @At("HEAD"), require = 0)
     private void sky$onSetTime(ClientboundSetTimePacket packet, CallbackInfo ci) {
         TpsEstimator.onServerTime(packet.gameTime());
     }
 
-    @Inject(method = "handlePongResponse", at = @At("HEAD"))
+    @Inject(method = "handlePongResponse", at = @At("HEAD"), require = 0)
     private void sky$onPong(ClientboundPongResponsePacket packet, CallbackInfo ci) {
         PingMonitor.onPong(packet);
     }
@@ -44,7 +44,7 @@ public abstract class ClientPacketListenerMixin {
      * execution: the handler begins with the same-thread check, which throws on the
      * network thread and skips everything after it.
      */
-    @Inject(method = "handleParticleEvent", at = @At("TAIL"))
+    @Inject(method = "handleParticleEvent", at = @At("TAIL"), require = 0)
     private void sky$onParticle(ClientboundLevelParticlesPacket packet, CallbackInfo ci) {
 //#if MC>=260300
         // 26.3 made the packet a record: the accessors lost their get- prefix.
@@ -60,19 +60,19 @@ public abstract class ClientPacketListenerMixin {
      * Authoritative block changes: the server confirming a mined block is gone.
      * TAIL on purpose (main thread, and the packet is still readable for both kinds).
      */
-    @Inject(method = "handleBlockUpdate", at = @At("TAIL"))
+    @Inject(method = "handleBlockUpdate", at = @At("TAIL"), require = 0)
     private void sky$onBlockUpdate(ClientboundBlockUpdatePacket packet, CallbackInfo ci) {
         MiningBreakTracker.onServerBlockChange(packet.getPos(), sky$blockId(packet.getBlockState()));
     }
 
-    @Inject(method = "handleChunkBlocksUpdate", at = @At("TAIL"))
+    @Inject(method = "handleChunkBlocksUpdate", at = @At("TAIL"), require = 0)
     private void sky$onChunkBlocksUpdate(ClientboundSectionBlocksUpdatePacket packet, CallbackInfo ci) {
         packet.runUpdates((pos, state) ->
                 MiningBreakTracker.onServerBlockChange(pos, sky$blockId(state)));
     }
 
     /** Keeps the tab header/footer text (Hypixel renders its "Stats:" block there). */
-    @Inject(method = "handleTabListCustomisation", at = @At("TAIL"))
+    @Inject(method = "handleTabListCustomisation", at = @At("TAIL"), require = 0)
     private void sky$onTabListCustomisation(ClientboundTabListPacket packet, CallbackInfo ci) {
         TabListText.onTabList(packet.header(), packet.footer());
     }
@@ -80,7 +80,7 @@ public abstract class ClientPacketListenerMixin {
     private static String sky$blockId(BlockState state) {
         return BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
     }
-    @Inject(method = "handleSetEntityData", at = @At("TAIL"))
+    @Inject(method = "handleSetEntityData", at = @At("TAIL"), require = 0)
     private void sky$onEntityData(ClientboundSetEntityDataPacket packet, CallbackInfo ci) {
         DamageSplashCompactor.onEntityData(packet);
     }

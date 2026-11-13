@@ -22,7 +22,8 @@ public abstract class StuckInBodyLayerMixin {
     @Inject(
             method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/AvatarRenderState;FF)V",
             at = @At("HEAD"),
-            cancellable = true)
+            cancellable = true,
+            require = 0)
     private void sky$hideStuckArrows(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
                                      AvatarRenderState state, float yRot, float xRot, CallbackInfo ci) {
         if (ConfigManager.get().hideStuckArrows) {

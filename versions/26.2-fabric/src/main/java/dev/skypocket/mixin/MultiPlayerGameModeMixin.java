@@ -21,19 +21,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(MultiPlayerGameMode.class)
 public abstract class MultiPlayerGameModeMixin {
 
-    @Inject(method = "startDestroyBlock", at = @At("RETURN"))
+    @Inject(method = "startDestroyBlock", at = @At("RETURN"), require = 0)
     private void sky$onStartDestroy(BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
         if (cir.getReturnValueZ()) {
             MiningBreakTracker.onTarget(pos);
         }
     }
 
-    @Inject(method = "continueDestroyBlock", at = @At("HEAD"))
+    @Inject(method = "continueDestroyBlock", at = @At("HEAD"), require = 0)
     private void sky$onContinueDestroy(BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {
         MiningBreakTracker.onTarget(pos);
     }
 
-    @Inject(method = "stopDestroyBlock", at = @At("HEAD"))
+    @Inject(method = "stopDestroyBlock", at = @At("HEAD"), require = 0)
     private void sky$onStopDestroy(CallbackInfo ci) {
         MiningBreakTracker.onStopDestroy();
     }

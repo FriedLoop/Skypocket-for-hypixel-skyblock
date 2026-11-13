@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(GlyphRenderState.class)
 public abstract class GlyphRenderStateMixin {
 
-    @Inject(method = "textureSetup", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "textureSetup", at = @At("RETURN"), cancellable = true, require = 0)
     private void sky$linearFontSampling(CallbackInfoReturnable<TextureSetup> cir) {
         if (!FontLab.linearFilter()) {
             return;

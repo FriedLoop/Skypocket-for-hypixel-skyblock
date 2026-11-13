@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EnderDragonRenderer.class)
 public abstract class EnderDragonRendererMixin {
 
-    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
     private void sky$setDragonGlowColor(EnderDragon dragon, EnderDragonRenderState state, float partialTick, CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();
         if (cfg.dragonGlowEnabled && SkyBlockDetector.isActive()) {

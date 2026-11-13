@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntityRenderer.class)
 public abstract class LivingEntityRendererMixin {
 
-    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
     private void sky$setGlowColor(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();
         if (cfg.playerGlowEnabled && entity == Minecraft.getInstance().player) {

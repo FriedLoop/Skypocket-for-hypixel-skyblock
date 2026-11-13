@@ -35,7 +35,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Hud.class)
 public abstract class HudMixin {
 
-    @Inject(method = "extractHearts", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractHearts", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceHearts(GuiGraphicsExtractor graphics, Player player, int i, int j, int k,
                                    int l, float f, int m, int n, int o, boolean bl, CallbackInfo ci) {
         if (hide(cfg -> cfg.statsHideVanillaHealth)) {
@@ -43,7 +43,7 @@ public abstract class HudMixin {
         }
     }
 
-    @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceFood(GuiGraphicsExtractor graphics, Player player, int i, int j,
                                  CallbackInfo ci) {
         if (hide(cfg -> cfg.statsHideVanillaFood)) {
@@ -51,7 +51,7 @@ public abstract class HudMixin {
         }
     }
 
-    @Inject(method = "extractAirBubbles", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractAirBubbles", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceAir(GuiGraphicsExtractor graphics, Player player, int i, int j, int k,
                                 CallbackInfo ci) {
         if (hide(cfg -> cfg.statsHideVanillaAir)) {
@@ -60,7 +60,7 @@ public abstract class HudMixin {
     }
 
     /** Static in the target, so the handler has to be static too. */
-    @Inject(method = "extractArmor", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractArmor", at = @At("HEAD"), cancellable = true, require = 0)
     private static void sky$replaceArmor(GuiGraphicsExtractor graphics, Player player, int i, int j,
                                          int k, int l, CallbackInfo ci) {
         if (hide(cfg -> cfg.statsHideVanillaArmor)) {
@@ -72,7 +72,7 @@ public abstract class HudMixin {
      * The action bar text. Hiding it does not stop the display from working: the numbers come from the
      * message event, which is untouched by whether the text is drawn.
      */
-    @Inject(method = "extractOverlayMessage", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "extractOverlayMessage", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$hideActionBar(GuiGraphicsExtractor graphics, net.minecraft.client.DeltaTracker delta,
                                    CallbackInfo ci) {
         if (hide(cfg -> cfg.statsHideVanillaActionBar)) {
@@ -85,7 +85,7 @@ public abstract class HudMixin {
         return StatsOverlayRenderer.active() && toggle.test(ConfigManager.get());
     }
 
-    @Inject(method = "extractPlayerHealth", at = @At("TAIL"))
+    @Inject(method = "extractPlayerHealth", at = @At("TAIL"), require = 0)
     private void sky$drawStats(GuiGraphicsExtractor graphics, CallbackInfo ci) {
         StatsOverlayRenderer.draw(graphics);
     }

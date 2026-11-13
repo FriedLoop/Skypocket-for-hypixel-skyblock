@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemInHandRenderer.class)
 public abstract class ItemInHandRendererMixin {
 
-    @Inject(method = "swingArm", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "swingArm", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$removeSwingThrust(float attack, PoseStack poseStack, int invert, HumanoidArm arm, CallbackInfo ci) {
         ModConfig config = ConfigManager.get();
         if (!config.handItemEnabled || !config.handItemDisableSwing) {
@@ -61,7 +61,7 @@ public abstract class ItemInHandRendererMixin {
      * driven by the dedicated {@code handItemDisableReequip} toggle, independent of the
      * swing toggle.
      */
-    @Inject(method = "applyItemArmTransform", at = @At("TAIL"))
+    @Inject(method = "applyItemArmTransform", at = @At("TAIL"), require = 0)
     private void sky$applyHandTransform(PoseStack poseStack, HumanoidArm arm, float inverseArmHeight, CallbackInfo ci) {
         ModConfig config = ConfigManager.get();
         if (!config.handItemEnabled) {
