@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# 换行与文本属性
+#
+# 仓库内统一存 LF；Windows 检出为 CRLF（与 core.autocrlf=true 的既有行为一致，
+# 但不再依赖每台机器各自的 git 配置）。加入新文件类型时在这里声明，
+# 不要让 git 自己猜 —— 猜错的表现是整文件 diff 或图片被当文本合并。
+# ---------------------------------------------------------------------------
+* text=auto eol=crlf
+
+# 构建脚本
+*.gradle      text eol=crlf
+*.gradle.kts  text eol=crlf
+*.properties  text eol=crlf
+*.bat         text eol=crlf
+
+# Unix 侧必须保持 LF，否则检出到 macOS / Linux 后无法执行
+gradlew  text eol=lf
+*.sh     text eol=lf
+
+# 二进制：显式标注，避免 git 尝试转换或做文本合并
+*.png   binary
+*.ttf   binary
+*.otf   binary
+*.jar   binary
+*.mp3   binary
+*.zip   binary
+*.spv   binary
