@@ -400,15 +400,9 @@ public class ModConfig {
     public static final float CLICK_GUI_SCALE_MIN = 0.5f;
     public static final float CLICK_GUI_SCALE_MAX = 1.5f;
     public static final float CLICK_GUI_SCALE_STEP = 0.1f;
-    /** One-time legacy config conversion only; never used by rendering. */
-    private static final float LEGACY_SCALE_BASE = 1.75f;
     public float clickGuiScale = 1.0f;
-    /** One-time migration marker for the ClickGUI scale baseline change (see sanitize). */
-    public int clickGuiScaleVersion = 0;
     /** Panel background opacity [0, 255]; 255 = fully opaque. */
     public int clickGuiBackgroundAlpha = 255;
-    /** Panel width in px (draggable via the right edge). */
-    public int clickGuiWidth = 300;
     /** Open/close scale-animation duration in ms (0 = no animation). */
     public int clickGuiAnimDuration = 200;
     /** Easing curve id for the open/close animation (see dev.skypocket.gui.Easing). */
@@ -754,16 +748,8 @@ public class ModConfig {
         lookRayLength = ColorUtil.clamp(lookRayLength, 1f, 64f);
 
         clickGuiBlurIntensity = ColorUtil.clamp(clickGuiBlurIntensity, 0, 100);
-        // One-time migration: the render baseline was multiplied by 1.75 (so scale = 1
-        // now matches the old scale = 1.75). Rescale existing values once so the
-        // on-screen size is unchanged.
-        if (clickGuiScaleVersion < 1) {
-            clickGuiScale = clickGuiScale / LEGACY_SCALE_BASE;
-            clickGuiScaleVersion = 1;
-        }
         clickGuiScale = ColorUtil.clamp(clickGuiScale, CLICK_GUI_SCALE_MIN, CLICK_GUI_SCALE_MAX);
         clickGuiBackgroundAlpha = ColorUtil.clamp(clickGuiBackgroundAlpha, 0, 255);
-        clickGuiWidth = ColorUtil.clamp(clickGuiWidth, 300, 520);
         clickGuiAnimDuration = ColorUtil.clamp(clickGuiAnimDuration, 0, 2000);
         hideNearbyPlayersRange = ColorUtil.clamp(hideNearbyPlayersRange, 0f, 10f);
         hideSpawnPointRadius = ColorUtil.clamp(hideSpawnPointRadius, 0.1f, 3f);

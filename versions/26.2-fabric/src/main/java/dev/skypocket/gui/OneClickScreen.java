@@ -37,7 +37,7 @@ import static dev.skypocket.render.GuiPixels.scissorRow;
  * "panel-local" coordinate space ({@link #PANEL_W} x {@link #PANEL_H}) and then scaled
  * by {@code clickGuiScale} at render time, so the panel's real size is independent of
  * the game's GUI Scale. The design canvas is calibrated directly in current units
- * (1225 x 735); there is no legacy 1.75 multiplier in rendering.
+ * (1348 x 810); there is no legacy scale multiplier in rendering.
  *
  * <p>The top bar is a dark main-tab strip: the title on the left, and two tabs
  * ("Modules" / "Settings") on the right. "Settings" hosts the panel settings as a
@@ -122,7 +122,7 @@ public class OneClickScreen extends Screen {
         ModConfig cfg = ConfigManager.get();
         float guiScale = minecraft.getWindow().getGuiScale();
         float target = ClickGuiMetrics.projectedScale(guiScale);
-        // The panel is a fixed 1225x735 design surface. In a small window it must shrink to fit,
+        // The panel is a fixed 1348x810 design surface. In a small window it must shrink to fit,
         // otherwise its right/bottom edge (and the content scissor derived from it) can leave the
         // drawable area. Keep the configured scale as the upper bound.
         float fitX = Math.max(0.05f, (width - 16f) / PANEL_W);

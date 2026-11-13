@@ -16,8 +16,7 @@ import static dev.skypocket.render.GuiPixels.scissorRow;
  */
 public final class PanelGeometry {
     // ---- panel ----
-    // The design canvas is calibrated directly in new design units: 700 x 420
-    // was the old 1.75 baseline, so it is 1225 x 735 here.
+    // The design canvas is calibrated directly in current design units.
     public static final int PANEL_W = 1348;
     public static final int PANEL_H = 810;
     public static final int ROUND = 16;

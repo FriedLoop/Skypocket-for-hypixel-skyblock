@@ -112,9 +112,7 @@ public final class ConfigManager {
             config = new ModConfig();
             fresh = true;
         }
-        // A brand-new config has nothing to migrate; skip the one-time scale rescale and mark it current.
         if (fresh) {
-            config.clickGuiScaleVersion = 1;
             config.configVersion = CURRENT_VERSION;
         } else {
             migrate(config);
