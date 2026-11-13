@@ -52,3 +52,51 @@ desktop.ini
 
 # 本地测试用部署脚本（路径绑定本机启动器，不属于仓库）
 tools/deploy.ps1
+
+# Windows 保留设备名造成的残留（git 的凭据提示脚本偶发把输出重定向到 CON 等）
+# 这些名字在资源管理器里不可见，却会出现在 git status 里。
+# 大小写两种都写：本机 core.ignorecase=true 只认一种，但克隆到 Linux/macOS 后区分大小写。
+CON
+con
+PRN
+prn
+AUX
+aux
+NUL
+nul
+COM1
+com1
+COM2
+com2
+COM3
+com3
+COM4
+com4
+COM5
+com5
+COM6
+com6
+COM7
+com7
+COM8
+com8
+COM9
+com9
+LPT1
+lpt1
+LPT2
+lpt2
+LPT3
+lpt3
+LPT4
+lpt4
+LPT5
+lpt5
+LPT6
+lpt6
+LPT7
+lpt7
+LPT8
+lpt8
+LPT9
+lpt9
