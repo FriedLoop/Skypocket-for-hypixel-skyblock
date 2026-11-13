@@ -50,8 +50,9 @@ import java.util.Map;
  * current pose supplies the subpixel offset.</p>
  *
  * <p>A text run is batched into one custom {@link GuiElementRenderState} per atlas page. This bypasses
- * both MC's {@code BlitRenderState} integer rectangle and the whole-panel cache, while
- * {@link ScissorTracker} gives the run the same clip as the engine's own glyphs.</p>
+ * MC's {@code BlitRenderState} integer rectangle, while {@link ScissorTracker} gives the run the same
+ * clip as the engine's own glyphs. The state is still recorded by {@code GuiPanelCache} and replayed
+ * from its baked texture like any other GUI element.</p>
  */
 public final class AtlasText {
     private static final int PAGE_SIZE = 1024;

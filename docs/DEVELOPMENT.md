@@ -562,17 +562,22 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 | HUD | FPS/TPS/Ping fps_tps_ping | 有 | |
 | HUD | 手持物品名 held_item_name | 有 | |
 | HUD | 技能进度显示 skill_display | 有 | 是 |
+| HUD | 雷瓶显示 thunder_bottle | 有 | 是 |
+| HUD | 物品拾取记录 item_pickup_log | 有 | 是 |
 | 挖矿 MINING | 挖矿技能提醒 mining_ability_reminder | 有 | 是 |
+| 挖矿 MINING | 钻头燃料条 drill_fuel_bar | 有 | 是 |
 | 挖矿 MINING | 挖矿委托 commissions | 有 | 是 |
 | 挖矿 MINING | 挖矿破坏预测 mining_break_predict | 有 | 是 |
 | 战斗 COMBAT | 伤害飘字 damage_splash_compact | 有 | 是 |
 | 钓鱼 FISHING | 钓鱼热点覆盖层 fishing_hotspot_overlay | 有 | 是 |
 | 钓鱼 FISHING | 传奇海怪警告 legendary_sea_creature_warning | 有 | 是 |
 | ESP | 人物发光 player_glow | 有 | |
+| ESP | 掉落物发光 item_glow | 有 | 是 |
 | ESP | 末影龙发光 dragon_glow | 有 | 是 |
 | ESP | 隐藏附近玩家 hide_players | 有 | |
 | ESP | 隐藏出生点玩家 hide_spawn_point_players | 有 | 是 |
 | ESP | 隐藏 NPC 附近玩家 hide_players_near_npcs | 有 | 是 |
+| ESP | 隐藏其他玩家礼物 hide_other_players_presents | 有 | 是 |
 | ESP | 碰撞箱 hitbox | 有 | |
 | ESP | 隐藏落地箭矢 hide_landed_arrows | 无 | |
 | ESP | 隐藏插体箭矢 hide_stuck_arrows | 无 | |
@@ -745,9 +750,9 @@ layout(location = 0) out vec4 fragColor;
 
 **教训**：后处理强度**不要直接用瞬时帧时长**。反比关系会把任何帧尖峰放大成可见的强度跳变；必须平滑 + 钳位，否则调参永远调不稳。
 
-## 10. UI v2（规划中，分支 `ui-v2`）
+## 10. UI v2（已落地，当前分支 `main`）
 
-**目标**：把 ClickGUI 的字体、布局、输入和缓存收敛成一套可长期维护、可复用的 UI 基础设施，取代当前"逐字号字体 + 整块面板缓存"的组合。当前 ClickGUI 在新实现覆盖主要页面前**必须保留为 fallback**。
+**目标**：把 ClickGUI 的字体、布局、输入和缓存收敛成一套可长期维护、可复用的 UI 基础设施。UI 内核、输入、控件和设置页均已在 `main` 落地；本节保留最初的设计与实验记录，不再表示“尚未实现”。
 
 **已定方向**：
 
@@ -797,7 +802,7 @@ layout(location = 0) out vec4 fragColor;
 - 文本 run 按字符串 + 字号 + 设备比例缓存；相同文本不重复排版。
 - 字形用 `u0/v0/u1/v1` 显式提交，线性 clamp 采样。
 - 上传走队列，在 `run` 构建后和绘制前 `flush`；客户端 tick 可能因界面暂停而不可靠，不能只依赖 tick。
-- 字体实验开启时**绕过整块面板缓存**，直接实时绘制。自定义文字与现有面板缓存尚未完成兼容，这是后续工作。
+- 自研图集通过自定义 `GuiElementRenderState` 提交，该状态会进入 `GuiPanelCache.record()` 使用的 `GuiRenderState`，并由同一个 `GuiRenderer` 烘焙和回放；缓存命中时文字已经是烘焙像素，不需要重新排版。当前字体后端与整块面板缓存兼容，不再绕过缓存。
 
 **关键教训**：
 
