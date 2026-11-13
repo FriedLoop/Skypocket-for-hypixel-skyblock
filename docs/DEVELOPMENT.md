@@ -24,8 +24,17 @@ dev.skypocket/
 │                        Category / OneClickScreen(ClickGUI 屏幕：生命周期+事件) /
 │                        PanelGeometry(布局常量+命中检测) / PanelRenderer(面板绘制) /
 │                        PanelView(几何输入快照) / ModMenuIntegration / *EditorScreen
-│   ├─ setting/          Setting 抽象 + Boolean/Slider/Color/Action/Custom
-│   └─ widget/           BaseWidget + Toggle/Slider/Action/ColorToggle/PixelGrid/CrosshairPreview
+│   ├─ setting/          Setting 抽象 + Boolean/Slider/Color/Dropdown/Group/Choice/Action/TextField/V2Custom/Header
+│   └─ widget/           ClickGuiStyle / GuiMetrics / GuiTheme / ThemeStore / ToggleAnimation /
+│                        MouseButtons / PickerMemory / ImmediateColorPicker / ImmediateTextField
+├─ ui/                   UI v2 元素树：UiElement / Box / Style / LayoutEngine / ScrollView /
+│                        UiPainter / Text / TextMeasurer / Painted / Rect / Insets / Size / Dimension
+│   ├─ input/            InputRouter / KeyEvent / Keys / Modifiers / PointerEvent / PreeditEvent /
+│   │                    TextInputEvent / WheelEvent
+│   ├─ mc/               McUiPainter（唯一的 MC painter）
+│   └─ widget/           Control（交互基类）+ Switch/Slider/Button/Card/ColorField/
+│                        ColorPickerPanel/Dropdown/Segmented/TextField/Scrollbar/
+│                        CrosshairGrid/CrosshairPreview/WidgetPalette
 ├─ hud/                  十字准星/时钟/天数/FPS-TPS-Ping HUD + HudPositionSync
 ├─ skyblock/             TabListText（tab list 读取）+ 各解析器（MiningSpeed/MiningAbility/Commission Tracker）
 ├─ net/                  PingMonitor
@@ -72,50 +81,50 @@ dev.skypocket/
 
 - 模块卡片：`hasSettings()` 为真 → 绿色「设置」按钮；为假 → 灰色「无设置」按钮。
 - `Setting` 子类：`BooleanSetting` / `SliderSetting` / `ColorSetting` / `DropdownSetting` / `TextFieldSetting` / `GroupSetting` / `ChoiceSetting` / `ActionSetting` / `V2CustomSetting` / `Header`。
-- **所有带设置的模块页面、“设置”主标签页和 HUD 右键设置卡都走 `SettingsPage`**（UI v2 元素树）。旧 `SettingsView` 与旧 widget 构建路径已删除；`Setting` 只保留数据模型，不再负责创建控件。
+- **所有带设置的模块页面、“设置”主标签页和 HUD 右键设置卡都走 `SettingsPage`**（UI v2 元素树）。旧的设置视图与旧 widget 构建路径已删除；`Setting` 只保留数据模型，不再负责创建控件。
 - **卡片规则**：`Header` 开始一张新卡片；`GroupSetting` 也是独立卡片，带开关的组把开关放在标题行右侧，不再折叠或嵌入上一张卡片。`V2CustomSetting` 提供基于 v2 `Box`/`Control` 的自定义行（准星网格与预览）。
 - **设置控件**：Switch / Slider / ColorField / Dropdown / Segmented / Button / TextField。滑杆使用 `SliderSetting` 的真实 step 和 format；文本设置在绘制层自动本地化，标签在左、field 在右。
 - **`Setting#visibleWhen(BooleanSupplier)`**：条件行必须成块且收尾；模式切换后调用 `rebuildAfterSettingChange()` 重建页面。`Header`、`GroupSetting`、`ChoiceSetting` 的显示/结构变化都依赖这次重建。
 - **hint tooltip 已移除**：说明文字写在 Header 副标题里；`GroupSetting` 不再生成折叠状态，页面只按功能拆卡。
 - **条件行（`visibleWhen`）必须成块且收尾**：一个 `List.of(...)` 里，无条件行在前，条件块在后；**不允许**"条件行 → 无条件行 → 条件行"的交替。否则切换开关时，夹在后面的无条件行会整体位移（"中途塌陷"）。控制这些条件行的那一行（如风格切换按钮）要放在它们**之前**。参考 `registerStatsDisplay`：风格 → 切换 → 原版 HUD → 颜色 → 文字行 → 经典块 → 现代块。
-- **主题编辑是"实时抽屉"，不是"预览屏幕"**：`DevDrawer` 挂在 Click GUI 上，编辑直接写入实时调色板，打开时记一份快照，关闭未保存则整体还原；只有「保存」写文件。不要再为它做"第二份面板"（旧的 `ThemeStudioScreen` 就是这么坏的：手工拼壳 + 页 + 行过滤，随真实面板演进持续漂移，已删除）。抽屉里的拾色器按 0.75 绘制（pose 缩放 + 命中反变换），设置页与卡片仍是 1:1。抽屉顶部的主题行是唯一的主题入口：`‹ ›` 切换（从磁盘载入，未保存改动丢弃）、`+` 另存为新主题、`-` 删除当前主题（**内置 Dark/Light 不可删**，删除即时写盘，并回落到 Dark）。\n- **层次靠明度 + 阴影，不靠描边**：所有控件、行、模块卡片、抽屉、浮窗与 tooltip 都不画描边（`border` / `cardBorder` / `switchBorder` 三个令牌已删除，Studio 里不再有它们）。深度由三件事给出：比背景略深/略浅的填充、`ClickGuiStyle.shadow(...)`（两层半透明叠加，此层没有模糊）、以及组内子行统一画在一张卡片上（`RowAt.inCard`）。新增面板类元素时**先想明度差**，不要再引入 1px 边框。\n- **配置结构变更必须走版本迁移**：`ModConfig.configVersion` + `ConfigManager.CURRENT_VERSION` + `MIGRATIONS`（第 i 步把 v{i} 升到 v{i+1}）。新增/改名/改类型字段时：改字段 → `CURRENT_VERSION++` → 在 `MIGRATIONS` 末尾加一步。**不要**依赖"解析失败回落到默认值"——那会静默丢掉玩家设置，并在下一次保存时覆盖原文件（已发生过一次）。配套保护：读取失败写 `skypocket.json.unreadable` + ERROR 日志；保存前复制 `skypocket.json.bak`；写入用临时文件 + 原子替换。
+- **主题编辑是"实时抽屉"，不是"预览屏幕"**：`DevDrawer` 挂在 Click GUI 上，编辑直接写入实时调色板，打开时记一份快照，关闭未保存则整体还原；只有「保存」写文件。不要再为它做"第二份面板"（旧的独立主题工作室屏幕就是这么坏的：手工拼壳 + 页 + 行过滤，随真实面板演进持续漂移，已删除）。抽屉里的拾色器按 0.75 绘制（pose 缩放 + 命中反变换），设置页与卡片仍是 1:1。抽屉顶部的主题行是唯一的主题入口：`‹ ›` 切换（从磁盘载入，未保存改动丢弃）、`+` 另存为新主题、`-` 删除当前主题（**内置 Dark/Light 不可删**，删除即时写盘，并回落到 Dark）。\n- **层次靠明度 + 阴影，不靠描边**：所有控件、行、模块卡片、抽屉、浮窗与 tooltip 都不画描边（`border` / `cardBorder` / `switchBorder` 三个令牌已删除，Studio 里不再有它们）。深度由三件事给出：比背景略深/略浅的填充、`ClickGuiStyle.shadow(...)`（两层半透明叠加，此层没有模糊）、以及组内子行统一画在一张卡片上（`RowAt.inCard`）。新增面板类元素时**先想明度差**，不要再引入 1px 边框。\n- **配置结构变更必须走版本迁移**：`ModConfig.configVersion` + `ConfigManager.CURRENT_VERSION` + `MIGRATIONS`（第 i 步把 v{i} 升到 v{i+1}）。新增/改名/改类型字段时：改字段 → `CURRENT_VERSION++` → 在 `MIGRATIONS` 末尾加一步。**不要**依赖"解析失败回落到默认值"——那会静默丢掉玩家设置，并在下一次保存时覆盖原文件（已发生过一次）。配套保护：读取失败写 `skypocket.json.unreadable` + ERROR 日志；保存前复制 `skypocket.json.bak`；写入用临时文件 + 原子替换。
 - **所有诊断/调试开关统一放进「调试」分组**（`buildPanelSettings` 末尾的 `GroupSetting("调试", …, false)`），不要再散落在主列表里：这些行只写日志、对玩家无用，放在一起既不打眼，也给下一个开关一个显然的落点。目前里面有：调试日志（信息日志总开关）、面板缓存统计（每 5 秒一行缓存命中/烘焙/停在哪个门）。
 - **日志**：一律用 `SkyPocketLog.of("area")` 取 logger，调用写法仍是 `LOGGER.info(...)`，输出带 `[SkyPocket/area]` 前缀 —— MC 的日志格式只打印 `[线程/级别]`，不加前缀就无法在共享日志里定位我们的行（改全局 pattern 会连原版日志一起改，不做）。logger 名固定 `skypocket.<area>`（**点分**，级别继承才成立；斜杠形式不继承）。级别由「调试日志」控制：开 = DEBUG 及以上，关 = **WARN 及以上**（信息静默，但警告/异常永远留证）。
 - **HUD 位置编辑器（`HudPositionEditorScreen`）的结构约定**：每个可编辑元素的 x/y/缩放读写集中在 `SPECS`（`EnumMap<Target, Spec>`，一个元素一条）；新增元素 = 枚举常量 + 表里一行 + `computeLines`/`label` 两个 switch 分支（这两个是 `switch` **表达式**，漏写编译不过）。`init()` 会自检"表项数 == Target 数"，缺项只 warn 不会静默。测量（`lines`/`bounds`）有**帧内缓存**，且缓存只在 `extractRenderState` 期间生效（鼠标处理走实时测量）。控件是**可拖动悬窗**，不再固定在屏幕底部（底部正是 HUD 元素常放的位置）；ESC 退出。**可见性**由 `visible(target, cfg)` 统一决定，规则是"功能开关已开 **且** 该风格下真的会画"：条形仅现代风格可见，生命/法力两条文字行仅经典风格可见（现代风格下这两个数由条形印出，否则两套元素重叠、没法调）；运行时条件（是否在 SkyBlock、有无数据）**不**参与——否则无法在数据出现前预先摆放。
 - **位置/缩放/启用状态的映射各自只有一份**：`StatTextHudElement.FIELDS` 与 `StatsBarHudElement.FIELDS`（`EnumMap<Kind, Fields>`，一行一个 kind），编辑器通过它们的 `x/setX/y/setY/scale/setScale` 访问器委托，不再重复字段名。新增 kind = 枚举常量 + 表里一行。`HudPositionSync` 同样表驱动：`REPAIRED`（每个元素一行，含"跑到屏幕外时回到的默认坐标"）与 `BARS`（仅用于按比例缩放；越界修复是**逐条**的：只把越界那根放回它在列里的默认位置，另五根的位置/缩放/自定义尺寸不动）。新增元素要在这张表里加一行，否则窗口尺寸变化时它不会被按比例迁移、也不会被拉回屏幕内。
 - **设置页的组织方式是"子功能 = 一张卡片"**（`GroupSetting`）：组标题行右侧是本功能的开关，组不再折叠。
   - **组的开关必须写真实的开关字段**（例如「瞄准目标变色」写 `crosshairEntityColorEnabled`，后处理的四个组写各自效果的 `xxxEnabled`），关掉要真的停掉功能。**只有参数簇（一组颜色、一个位置/旋转）才用不带开关的组**：它照样能折叠，只是没有东西可关 —— 装饰性开关比没有开关更糟。
-  - **子设置保持整页宽度，不缩进**：组头的深色表面 + 折叠指示已经说明了归属，而缩进会迫使 `HsvPickerWidget`/预览网格这类按整宽调好的布局重算。
+  - **子设置保持整页宽度，不缩进**：组头的深色表面 + 折叠指示已经说明了归属，而缩进会迫使 `ColorPickerPanel`/预览网格这类按整宽调好的布局重算。
   - 组的高度 = 组头 + 展开时的所有子设置高度（`GroupSetting.height()` 递归求和），所以 `panelSettingsHeight()`/`isRowVisible()` 不用改；折叠时调 `relayout()`（下一 tick 重排，与 `ColorSetting`/`DropdownSetting` 同一路径）。
-  - **带动画的 off/on 开关（`ToggleButton`）**：动画状态放在 **Setting** 上（`ToggleAnimation`），不是控件上 —— 行每次滚动都会重建，控件自己存进度就会"每次都从终点开始"；而且它是**按时间推进**的（读时钟）而不是按绘制推进，否则离屏的开关会卡在半途、让缓存键永远不干净。**面板缓存键里有 `ToggleAnimation.signature()` 这一项**（静止时恒为 0，运动中随进度变化）——漏了它就是"开关卡在中间不动/动画被冻进缓存帧"。
+  - **带动画的 off/on 开关（`ui/widget/Switch`）**：动画状态放在 **Setting** 上（`ToggleAnimation`），不是控件上 —— 行每次滚动都会重建，控件自己存进度就会"每次都从终点开始"；而且它是**按时间推进**的（读时钟）而不是按绘制推进，否则离屏的开关会卡在半途、让缓存键永远不干净。**面板缓存键必须包含这个动画进度**（`ToggleAnimation` 静止时恒为 0，运动中随进度变化）——漏了它就是"开关卡在中间不动/动画被冻进缓存帧"。
 - **所有滑条都必须有步进**（`SliderSetting` 不再接受"连续"）：不写时按量程自动取约百分之一（`defaultStep`），量纲明确的写死（像素大小步进 1、缩放 0.05、位置 0.01、旋转 1）。理由：无步进时拖动一个像素数字就跳一次、读数没法看，而且同一个量程的两个滑条行为不该不同。
 - 分类：`Category` 仍是两级树模型，但**不设 `SkyBlock` 一级容器**。模组整体面向 SkyBlock，顶层直接按玩家活动领域分：`HUD / 挖矿 / 战斗 / 钓鱼 / ESP / 渲染 / 通知 / 移动`。空的领域不要保留占位，等真正有模块时再加；容器能力保留给未来的确有子分组的领域。
 - 侧边栏：`PanelRenderer.drawSidebar` 渲染「全部 + 一级分类」。过滤规则：`selected == null` 显示全部；叶子精确匹配；未来容器仍通过 `Category.contains()` 覆盖后代。卡片网格/搜索框都在侧边栏右侧的面板内。
 - `skyBlockOnly` 标记：只有真正依赖 Hypixel SkyBlock 的模块才调用 `Module.markSkyBlockOnly()`，卡片显示 `SB` 徽标；模块逻辑仍必须自己调用 `SkyBlockDetector.isActive()`，不能靠分类或徽标门控。
-- **面板几何数值只写一处，而且都在 `gui/PanelGeometry`**：面板尺寸 `PANEL_W/H`、圆角 `ROUND`、tab（`TAB_*`、`tabX()`、`tab2X()`）、卡片（`CARD_W/H/GAP`、`ICON_SIZE`、`CARD_PAD`、`CARD_TITLE_*`、`CARD_BTN_*`、`CARD_STATUS_*`）、搜索框（`SEARCH_X/Y/W/H`）、内容区（`CONTENT_TOP_MODULES/SETTINGS`、`contentTop(view)`、`contentBottom(Row)`）、侧边栏（`SIDEBAR_*`）、页脚（`FOOTER_*`、`footerBtnY()`）、卡片网格（`columns()`、`cardRowLeft(rowCount)`、`cardRowTop(view, row)`）。
-  - **这些值同时被绘制与命中检测使用**（`PanelRenderer` ↔ `hoveredCardKey` / `insideSearchBox` / `PanelInput.hit` …）。以前两处各写一遍，改一处忘另一处会**静默**造成"看到的位置和能点的位置不一致"；现在改成只在一处定义。
-  - 依赖状态的查询（`contentTop`、`inCardArea`、`visibleFeatures`、`maxScroll`、`hoveredSidebarKey`、`hoveredCardKey`、`sidebarRowAt`、`sidebarCategory`、`cardAt`、`sidebarTargetY`）接收一个 `PanelView` 快照（`OneClickScreen.view()` 每帧构造，纯 record，零成本）；`OneClickScreen` 只保留仍然有人用的一行委托。
-  - **列表/网格位置不要自己算**：侧边栏行用 `sidebarRowHit(y, rowY)`（半开区间）；卡片位置用 `cardRowLeft/cardRowTop`。新增同类布局时也走这些函数，不要再写一遍 `rowW`/`left`/`cy`。
+- **面板几何数值只写一处，而且都在 `gui/PanelGeometry`**：面板尺寸 `PANEL_W/H`、圆角 `ROUND`、tab（`TAB_BAR_H/TAB_W/TAB_H/TAB_Y/TAB_GAP/TAB_MARGIN`、`tabX()`、`tab2X()`）、卡片（`CARD_W/H/GAP`、`ICON_SIZE`、`CARD_PAD`、`CARD_TITLE_*`、`CARD_BTN_*`、`CARD_STATUS_*`）、搜索框（`SEARCH_X/Y/W/H`、`NAV_SIZE/NAV_GAP/NAV_X`）、内容区（`CONTENT_TOP_MODULES/SETTINGS`、`contentTop(view)`、`contentWidth()`、`contentBottom()`、`contentBottomRow()`、`maxScroll(view, settingsHeight)`）、侧边栏（`SIDEBAR_W/SIDEBAR_ITEM_H/SIDEBAR_TOP`）、页脚（`FOOTER_H`、`FOOTER_BTN_*`、`footerBtnY()`）、卡片网格（`columns()`、`cardRowLeft(rowCount)`）、命中（`inPanel`、`inBody`）。
+  - **这些值同时被绘制与命中检测使用**（`ModulesPage` 的树布局 ↔ `Control.contains()` 的命中 ↔ 缓存键）。以前两处各写一遍，改一处忘另一处会**静默**造成"看到的位置和能点的位置不一致"；现在改成只在一处定义。
+  - 依赖状态的查询（`contentTop`、`maxScroll`）接收一个 `PanelView` 快照（`OneClickScreen.view()` 每帧构造，纯 record，零成本）；侧边栏/卡片的命中不再走"坐标 → 索引"的函数，而是**真实的控件对象**（`SidebarRow`、`ModuleCard`）挂在 v2 树里，由 `InputRouter` 按 `contains()` 命中。
+  - **列表/网格位置不要自己算**：卡片列宽用 `PanelGeometry.columns()`，行首用 `cardRowLeft(rowCount)`，行距用 `CARD_H + CARD_GAP`（见 `ModulesPage` 的建树代码）。新增同类布局时也走这些函数，不要再写一遍 `rowW`/`left`/`cy`。
 - 半透明背景约定：面板主体、顶栏、底栏、**侧边栏**的背景色都拼接 `clickGuiBackgroundAlpha << 24`，统一受「设置 → 背景透明度」影响；卡片、按钮、hover/选中高亮等前景元素保持不透明。新增深色背景条时记得同样拼接 alpha。
-- **控件风格只有一个来源：`gui/widget/ClickGuiStyle`**（半径 + 配色 + `surface/button/field/pill`）。**所有按钮/输入框/列表底色都必须走它**：设置页全部 widget（`BaseWidget.drawButtonBackground`、`TextFieldWidget`、`SliderWidget`、`DropdownWidget`/`DropdownListWidget`、`ColorToggleWidget`）和面板侧的搜索框、卡片「设置/无设置」按钮、ENABLED 状态条、底栏按钮都已改。
-  - 形状是**圆角**的 `surface`（= `GuiPixels.fillRoundedBorderedRect`：**在设备像素空间**把外圈吸附一次，内圈 = 同一矩形**内缩整数个设备像素**，半径同步减去该值）；卡片外框也用同一个 helper。半径 `RADIUS = 4`，滑条轨道用 `pill`。
+- **控件风格只有一个来源：`gui/widget/ClickGuiStyle`**（半径 + 配色 + `surface/button/field/pill`）。**所有按钮/输入框/列表底色都必须走它**：设置页全部 widget（`Control` 家族：`Switch`、`Slider`、`Button`、`ColorField`、`Dropdown`、`Segmented`、`TextField`）和面板侧的搜索框、卡片「设置/无设置」按钮、ENABLED 状态条、底栏按钮都已改。
+  - 形状是**圆角**的 `surface`（= `GuiPixels.fillRoundedBorderedRect`：**在设备像素空间**把外圈吸附一次，内圈 = 同一矩形**内缩整数个设备像素**，半径同步减去该值）；卡片外框也用同一个 helper。半径**不是固定常量**：卡片用 `ClickGuiStyle.cardRadius()`、控件用 `controlRadius()`，两者都来自 `GuiMetrics.current()`（主题可调，`gui/widget/GuiMetrics` 是 record，带 `generation()` 让缓存失效）；滑条轨道用 `pill`（`PILL = 2`，并按高度折半）。
   - **边框必须这样画，不能写成"外圈圆角矩形 + 内缩 1 个设计单位的内圈"**：1 设计单位 = `step`（≈2-4）个设备像素，四条内边各自独立吸附 ⇒ 每边拿到 `floor(step)` 或 `ceil(step)`，四边不相等 —— **实测症状**是"按钮黑边右边明显比左边细"，而且不同按钮缺的方向还不一样（上下/左右都会）。设备像素内缩 + 半径同步是最好的解：环宽处处相等，包括圆弧段。环宽取 `round(step)`（≈仍等于 1 设计单位），所以厚度观感和原来一致，只是变均匀了。
-  - 调色板：中性按钮 `BUTTON/BUTTON_HOVER`（= 卡片按钮的灰）、主色 `ACCENT/ACCENT_HOVER`（= tab/滑条填充/开关 ON 的绿）、`DISABLED`、`DANGER`（状态条 OFF）、字段 `FIELD/FIELD_HOVER/FIELD_INNER/BORDER`。
+  - 调色板（访问器形式，不再是全大写常量）：中性按钮 `button()/buttonHover()`（= 卡片按钮的灰）、主色 `accent()/accentHover()`（= tab/滑条填充/开关 ON 的绿）、`disabled()/disabledText()`、`switchOn()/switchOff()`、字段 `field()/fieldHover()/fieldInner()`、列表行 `listRowHover()/listRowCurrent()`、文字 `text()/textDim()/textMuted()/cardText()`、卡片 `card()/cardHover()/cardFloat()`。
   - **不要再写 `graphics.fill` + `graphics.outline` 的直角按钮** —— 那正是"设置页 widget 和卡片圆角按钮风格不一致"的来源（实测）。
-  - **控件 hover 必须用局部坐标自己判定（`BaseWidget.hovered(mouseX, mouseY)` / `inBounds(...)`），绝不能用 `isHovered()`**。MC 在 final 的 `AbstractWidget.extractRenderState` 里把这个字段设成 `extractor.containsPointInScissor(mouseX, mouseY) && areCoordinatesInRectangle(...)` —— **它额外要求该点落在 extractor 当前的 scissor 内**，而面板的裁剪是在 `pushDeviceSpace()` 里推入的（设备像素，直绘帧还含面板原点平移），拿面板局部坐标去比没有意义；更糟的是直绘帧与缓存帧的裁剪数值不同（烘焙不带原点）⇒ **hover 会在两种帧之间反复翻转**。**实测症状**：开关/动作按钮（用 `isHovered()`）高亮"亮一会就不亮、鼠标动一下又亮"，而下拉/列表（一直用 `inBounds`）正常。
-  - 列表行（侧边栏、下拉选项）保持**直角平铺**：它们上下紧挨着排，逐行圆角会在行间留缺口；颜色取自 `ClickGuiStyle.LIST_ROW_*`。预览类控件（准星像素网格、准星棋盘格预览）是画布而非按钮，保持现状。
-  - **画布类控件的例外写法**（`HsvPickerWidget` 的 SV 方块/色相条/透明度条，以及预览类）：直角、用 `fill`/`fillGradient` 直接画，**边框用"先铺一圈底色、再内缩 1 单位铺内容"**（两次 `fill`），不要用 `graphics.outline` —— 后者是四条独立 `fill`，在非整数面板缩放下四条边各自吸附、会一粗一细。外层容器仍走 `ClickGuiStyle.surface` 保证圆角观感统一。
-  - **`HsvPickerWidget` 的排版与交互约定**：整行内容**居中**（`CONTENT_W` 与两侧均分的 slack，两侧留白对称）；方块 132、色相/透明度条 18、右侧两列 = 输入框列（hex + R/G/B/A，各 20 高，正好铺满方块高度）+ 预设色卡列（2×7）。方块/条是画布，预设色卡是按钮（走 `ClickGuiStyle.surface`，当前色的那格描主色边、hover 描白边）；点预设**只改 RGB、保留当前 α**，并把色相一起写回（否则拾色器不会跟着走）。
-  - **"覆盖整行的控件"必须自己转交输入框的点击**：MC 的 `ContainerEventHandler.getChildAt` 是**正序遍历取第一个命中**（`Iterator` + `hasNext/next` + `isMouseOver`），也就是**先添加的（下层）控件赢得点击**。拾色器覆盖整行、且为了绘制在下层而先添加，于是 hex/通道输入框永远收不到点击 —— 修法是拾色器在 `onClick` 里先遍历 `bindField` 绑定的字段，命中就 `TextFieldWidget.focusField(...)` 并返回。**新增任何覆盖其它控件的整块控件（弹层、遮罩、色板）都会踩到这条，且方向是反直觉的。**
-  - **输入框显示值由外部同步（`TextFieldWidget.syncValue`）**：hex 与 R/G/B/A 的"真值"是颜色本身，拖动方块/条、点预设时要把文本刷进去；`syncValue` **不触发 `onChange`**、且**聚焦时不覆盖**（否则会在用户打字时把光标下的文本换掉）。顺带得到一个好行为：**失焦后下一帧自动恢复规范文本**，所以非法/半截输入（`#E7`、`999`）既不改变颜色、也不会留在框里。解析规则见 `HsvPickerWidget.parseHex`（`#RGB` / `#RRGGBB` / `#AARRGGBB`，`#` 可省；只有 8 位自带透明度，其余沿用当前 α；非法返回 -1 → 保持原色）。
-  - **需要"横向渐变"时必须旋转 pose**：`GuiGraphicsExtractor.fillGradient` 只沿 y 插值，没有四角渐变。`HsvPickerWidget.fillHorizontalGradient` 的做法是 `translate(x,y)` + `rotate(π/2)`（局部 `(u,v) → (x−v, y+u)`，所以覆盖目标矩形的局部区域是 `u∈[0,h]`、`v∈[−w,0]`，颜色顺序要反过来）。**不要用"逐列 1px 半透明 fill"凑横向渐变**：相邻半透明四边形的共享边落在小数设备像素上会双重混合，出现竖条纹。
-  - **拾色器的光标位置来自"记忆"，绝不能从颜色反推**（`HsvPickerWidget.Memory`，持有 h/s/v，放在 `Setting.ColorSetting` 里，因为行每次滚动都会重建 widget）。RGB 表达不了完整的 HSV：
+  - **控件 hover 由 v2 输入层设置，控件只管读取（`Control.isHovered()`）**：命中由 `InputRouter.hitTest` 用 `UiElement.contains()` 在**页面局部坐标**里算，然后回调 `onHoverChanged(boolean)` 写进 `Control.hovered`。**不要**自己拿 `MouseButtonEvent` 的屏幕坐标去和控件 bounds 比，也不要依赖 MC 的 `AbstractWidget.isHovered()`——那个字段在 `extractRenderState` 里被设成 `containsPointInScissor(...) && areCoordinatesInRectangle(...)`，**额外要求该点落在 extractor 当前 scissor 内**，而面板的裁剪是在 `pushDeviceSpace()` 里推入的（设备像素，直绘帧还含面板原点平移），拿面板局部坐标去比没有意义；更糟的是直绘帧与缓存帧的裁剪数值不同（烘焙不带原点）⇒ **hover 会在两种帧之间反复翻转**。**实测症状**：开关/动作按钮高亮"亮一会就不亮、鼠标动一下又亮"。
+  - 列表行（侧边栏、下拉选项）保持**直角平铺**：它们上下紧挨着排，逐行圆角会在行间留缺口；颜色取自 `ClickGuiStyle.listRowHover()` / `listRowCurrent()`。预览类控件（准星像素网格、准星棋盘格预览）是画布而非按钮，保持现状。
+  - **画布类控件的例外写法**（`ColorPickerPanel` 的 SV 方块/色相条/透明度条，以及预览类）：直角、用 `fill`/`fillGradient` 直接画，**边框用"先铺一圈底色、再内缩 1 单位铺内容"**（两次 `fill`），不要用 `graphics.outline` —— 后者是四条独立 `fill`，在非整数面板缩放下四条边各自吸附、会一粗一细。外层容器仍走 `ClickGuiStyle.surface` 保证圆角观感统一。
+  - **`ColorPickerPanel` 的排版与交互约定**：整行内容**居中**（`CONTENT_W` 与两侧均分的 slack，两侧留白对称）；方块 132（`SQUARE`）、色相/透明度条 18（`BAR_W`）、右侧两列 = 输入框列（hex + R/G/B/A，各 20 高，正好铺满方块高度）+ 预设色卡列（2×7，`PRESET_COLS/PRESET_W/H`）。方块/条是画布，预设色卡是按钮（走 `ClickGuiStyle.surface`，当前色的那格描主色边、hover 描白边）；点预设**只改 RGB、保留当前 α**，并把色相一起写回（否则拾色器不会跟着走）。
+  - **"覆盖整行的控件"必须自己转交输入框的点击**：MC 的 `ContainerEventHandler.getChildAt` 是**正序遍历取第一个命中**（`Iterator` + `hasNext/next` + `isMouseOver`），也就是**先添加的（下层）控件赢得点击**。拾色器覆盖整行、且为了绘制在下层而先添加，于是 hex/通道输入框永远收不到点击。v2 的解法是把拾色器做成 `ColorField` 自己的**弹层 `Card`**（`popup`），输入框和拾色器是同一个 owner 下的兄弟节点，由 `InputRouter` 统一按 `Control.contains()` 分派，不再依赖旧的事件转发。**新增任何覆盖其它控件的整块控件（弹层、遮罩、色板）时，要用同样的"同级 owner + 弹层"结构，不要手工转发事件。**
+  - **输入框显示值由外部同步（`ColorField.syncFields()`）**：hex 与 R/G/B/A 的"真值"是颜色本身，拖动方块/条、点预设时要把文本刷进去；同步时**只写未聚焦的字段**（`if (!hex.isFocused())`、`if (!channels[i].isFocused())`），否则会在用户打字时把光标下的文本换掉。`TextField.text(String)` 直接替换内容、**不触发 `onChange`**，所以不会形成回写循环。顺带得到一个好行为：**失焦后下一帧自动恢复规范文本**，所以非法/半截输入（`#E7`、`999`）既不改变颜色、也不会留在框里。解析规则见 `ColorField.applyHex`：去掉可选 `#` 后**必须正好 6 位十六进制**（即 `RRGGBB` 六位），α 沿用当前值的低 8 位；长度不符或解析失败直接返回、保持原色。通道输入框走 `applyChannel`：`Integer.parseInt` 失败则忽略，成功则钳制到 0–255。
+  - **需要"横向渐变"时走 `UiPainter.fillHorizontalGradient(rect, left, right)`**：`GuiGraphicsExtractor.fillGradient` 只沿 y 插值，没有四角渐变。`McUiPainter.fillHorizontalGradient` 的做法是 `translate(x,y)` + `rotate(π/2)`（局部 `(u,v) → (x−v, y+u)`，所以覆盖目标矩形的局部区域是 `u∈[0,h]`、`v∈[−w,0]`，颜色顺序要反过来）。**不要用"逐列 1px 半透明 fill"凑横向渐变**：相邻半透明四边形的共享边落在小数设备像素上会双重混合，出现竖条纹。
+  - **拾色器的光标位置来自"记忆"，绝不能从颜色反推**（`gui/widget/PickerMemory`，持有 h/s/v，由 `Setting.ColorSetting` 持有，因为行每次滚动都会重建 widget）。不过 `ColorPickerPanel` 自己**也**保留了一份 `hue/saturation/value` 状态，并从 `getter` 拉取颜色（`paint()` 里 `adopt(argb)`），其中 `adopt` 在 `delta < 1e-6`（灰阶）时**沿用旧 hue** 而不是重算 —— 这两处共同保证光标不抖。RGB 表达不了完整的 HSV：
     - **色相**在 s=0 或 v=0 时丢失（灰/黑/白都换算回 0）→ 不记忆就会"拖到方块角落时方块底色跳回红色"。
     - **饱和度**在 v=0 时丢失（黑色只有 RGB=0）→ 不记忆就会**实测症状**："拖动方块到底部时方块光标抖动、拖到右下极限时弹到左下角"（`(s, 1-v)` 里 s 一丢就归 0 = 最左）。**这一条是"光标不能由颜色反推"的真正原因**：v 很小时一次 8bit 取整就能让反推出来的 s 偏 0.04（约 5 像素）。
-    - **色相是"角度"，不是标量**：360° 与 0° 是同一个颜色，所以比较要用**角度差**（`angularDistance`）、`hueYOf` **不能**对色相取模（否则 360 折回 0）——**实测症状**："色相条拖到最下方会自动弹回最上面"。
-    - 同步规则（`resolve`，三条缺一不可）：① **拖动中记忆值说了算**（颜色是它的取整结果，此时反同步会让光标在静止鼠标下抖动）；② **颜色与记忆值渲染出来的差 ≤1 个 8bit 台阶就什么都不做**（拖拽刚结束、只改透明度都走这里；记忆存的是光标的精确比例，颜色是它的取整结果，不留这 1 个台阶的话松手那一帧光标会被推一下）；③ **只在颜色"表达得出"该分量时才采纳**（色相要求 s>0 且 v>0，饱和度要求 v>0）。
+    - **色相是"角度"，不是标量**：360° 与 0° 是同一个颜色。v2 的 `hsvToArgb` 内部做 `((hue % 360) + 360) % 360` 归一，而色相条的读数直接用 `hue / 360f * SQUARE`（**不做取模**），所以拖到底得到 360、读数是满格而不是折回 0 —— **实测症状**是"色相条拖到最下方会自动弹回最上面"，根因就是对色相读数取模。
+    - 同步规则（`ColorPickerPanel.adopt` 与 `paint`，三条缺一不可）：① **拖动中记忆值说了算**（`pressed` 为真时不从 getter 反同步，否则光标会在静止鼠标下抖动）；② **颜色与自己刚发出的值相同就什么都不做**（`argb != lastEmitted` 才 adopt —— 颜色是记忆值的取整结果，不留这个判断的话松手那一帧光标会被推一下）；③ **只在颜色"表达得出"该分量时才采纳**：灰阶时 `delta < 1e-6` 沿用旧 hue、黑色时 `max < 1e-6` 令饱和度为 0，而不是拿 0 反推。
   - **预设色卡用满饱和"本色"**：每个彩色预设必有一个通道是 255（红 `#FF0000`、黄 `#FFFF00`、橙 `#FF8000`…），点"红"就该得到纯红。点击**只改 RGB、保留当前 α**，并把 h/s/v 一起写进记忆（否则拾色器不跟着走）。
-  - **成组输入框的标签列宽必须取齐**（`TextFieldWidget.MIN_LABEL_W = 10`）：值框起点是 `6 + max(标签宽, MIN_LABEL_W) + 8`，所以 `#` / `R` / `G` / `B` / `A` 这些单字符标签的值框能严格对齐；用**实际标签宽**会让每行的值框各自跟着标签走，一列看起来参差不齐（实测：颜色代码框比 R/G/B/A 的值框更靠左更宽）。
+  - **成组输入框的标签列宽**：`TextField` 的 `labelOutside` 模式里值框起点是 `bounds().x() + 11f + labelWidth + 15f`（`outsideFieldBounds`），用的是**实际标签宽**。所以 `#` / `R` / `G` / `B` / `A` 这些单字符标签天然等宽、值框自动对齐；**给它们写不同长度的标签（如 `HEX` 对 `R`）就会让值框各走各的**，一列参差不齐。需要混用不同长度标签时，要么统一宽度、要么给这几个字段传同长标签。
   - 拖动必须靠 v2 输入层的指针捕获（`Control.onPointerMove` / `onPointerUp`）；拖出控件范围或页面后仍要继续调节，不要在拖动中重新做区域命中。
 - **圆角必须走 `render/GuiPixels` 的 `fillRoundedRect/TopRect/BottomRect`**（设备像素原语统一放在 `GuiPixels`：widget 也要用它，若留在面板类里会让 `gui.widget` 反向依赖 Screen）：默认走 **`GuiCornerTextures` 预烘焙抗锯齿掩码 + 九宫格**（4 次 1:1 `blit` + 3 次直线填充，全部设备像素对齐、互不重叠），只有掩码建不出来时才回退到逐行 AA。掩码是白色 + 覆盖率 alpha（四象限一张图、按设备半径缓存），颜色由 blit 的 tint 给，所以面板透明度滑条拖动时不会反复重烘焙。**mask 只在 client tick 烘焙，绘制阶段只读未命中就回退逐行 AA；绝不能在绘制中创建/注册 `DynamicTexture`，否则会污染 `AtlasText` 的字形采样（见 §7.1.1）。**
   - **为什么不能把"逐行 AA"当默认**：它每次填充都是一次独立的 GUI 元素，成本 ∝ 设备半径（`r × deviceStep`，通常 8→16~24 行）× 4 角 × 2 次填充 ≈ 200 次/圆角矩形。屏幕上几十个卡片（每个还画"外框 + 内填充"两层）就是几千个元素，比字体几何量还大——实测就是这个性能回退。质量上也更差：逐行是行近似，掩码是精确 2D 覆盖率。
@@ -125,13 +134,13 @@ dev.skypocket/
 - **面板整体渲染到离屏纹理缓存（`GuiPanelCache`）**：MC 26.2 的 GUI 是"状态树 → 每帧重新排版/建网格"，所以面板每帧的 `fill`/`text` 次数就是每帧开销（卡片/设置多的页面几千个元素）。缓存机制：面板内容录进私有 `GuiRenderState` → **在主 GUI pass 之前**（`GameRendererMixin` 注入 `render` 的 HEAD，此时没有 pass 打开）用自建 `GuiRenderer` 烘进离屏目标 → 之后每帧只 1 次 blit。
   - **烘焙时的两个临时替换**（都在 `finally` 里还原）：把 `GameRenderer.mainRenderTarget` 指向离屏目标；把 `GameRenderState.windowRenderState` 的 `width/height/guiScale` 改成"面板就是整个窗口"。GUI 的投影和裁剪区**都来自这个 state**，所以面板自身坐标直接落在纹理像素上，不需要任何坐标补偿，1 纹素 = 1 屏幕像素。
   - **配置写入必须通知缓存**：`ConfigManager.revision()` 只在 `ConfigManager.save()` 里自增，而绝大多数设置是**裸写字段**（`cfg.x = v`），所以 `Setting`（`BooleanSetting`/`SliderSetting`/`ColorSetting`/`DropdownSetting`/`TextFieldSetting`，通过三个 `touch(...)` 重载）和 `Module.setEnabled` 都把 setter 包了一层 `ConfigManager.touch()`。**新增任何会改变面板外观的写入路径都必须走这层包装**，否则缓存不会失效：**实测症状**是"启用面板缓存后开关模块，按钮显示更新很慢（要等鼠标移动改变 hover 键、或 600 帧兜底才刷新），像卡了一下"；滑条同理（拖动过程中面板一直显示旧值）。
-  - **失效条件集中在 `gui/PanelCacheKey.of(view, lmx, lmy, sidebarHighlightY, contentRevision, settingsAnimation, animFinished)`**（`settingsAnimation` = 设置页开关动画的签名，静止时为 0，见 `ToggleAnimation`）：翻页/选中分类/滚动/搜索/侧边栏高亮/配置 revision（`ConfigManager.revision()`）/内容 revision（语言、布局重建）/设备缩放/开合动画是否结束 + **hover 签名**（按"光标在哪个元素上"而不是原始坐标，所以在一张卡片内移动鼠标不会使缓存失效；设置/功能详情页因为控件自己画 hover，退化为原始坐标）。
-    - **面板状态来自 `PanelView`**（翻页/选中/滚动/搜索/features），只有"不在 `PanelView` 里"的状态才额外传参（侧边栏高亮动画值、内容 revision、动画是否结束）。**新增会改变面板像素的状态时，要么进 `PanelView`，要么加一个参数** —— 漏了就是"偶发一帧旧画面"。
-    - **随时间变化的东西必须在键里，否则会冻住**：缓存只在键变化时重烘，所以任何**自己会动**的控件（动画开关、进度、拖拽中的拾色器、闪烁提示）都必须让键跟着变 —— 现有两种处理：把动画值本身放进键（`sidebarHighlightY`、`animFinished` 这样做的），或在设置页退化为"原始光标"（此时只在鼠标静止时命中缓存）。新加动画控件时先想清楚它属于哪一种。
+  - **失效条件集中在各页自己的缓存键**（`ModulesPage.pageCacheKey()` / `SettingsPage.pageCacheKey()` / `OneClickScreen.shellCacheKey(lmx, lmy, scaleX, scaleY)` / `ColorPickerPanel.staticCacheKey(scaleX, scaleY)`）：翻页/选中分类/滚动/搜索/侧边栏高亮/配置 revision（`ConfigManager.revision()`）/内容 revision（语言、布局重建）/设备缩放/开合动画是否结束/聚焦控件 + **hover 签名**（按"光标在哪个元素上"而不是原始坐标，所以在一张卡片内移动鼠标不会使缓存失效；设置/功能详情页因为控件自己画 hover，退化到"聚焦控件 + 控件自身 hover 标志"）。
+    - **面板状态来自 `PanelView`**（翻页/选中/滚动/搜索/features）与页面自己的字段；**新增会改变面板像素的状态时，必须加进对应页的 `pageCacheKey()`** —— 漏了就是"偶发一帧旧画面"。
+    - **随时间变化的东西必须在键里，否则会冻住**：缓存只在键变化时重烘，所以任何**自己会动**的控件（动画开关、进度、拖拽中的拾色器、闪烁提示）都必须让键跟着变 —— 现有两种处理：把动画值本身放进键（`sidebarHighlightY` 这样做的），或在设置页只哈希"聚焦控件 + 控件自身的 hover 标志"（此时控件内部状态变化仍会重烘）。新加动画控件时先想清楚它属于哪一种。
   - **抖动保护**：缓存键连续两帧都变（拖滑条、开合动画、拖面板）时**不烘焙、直接直绘**，避免"每帧多烘一次"比直绘还贵；内容稳定两帧后才录一次，下一帧 HEAD 烘焙。另有 600 帧的强制重录兜底。
   - **三条"缓存帧必须和直绘帧长得一模一样"的硬约束**（踩过坑，别改）：
     1. **烘焙前把离屏目标清成透明**（`clearTarget()`）。GUI pass 不会替我们清（MC 自己是在别处清的），不清就会在上一帧的烘焙结果上再混一次，越烘越深。
-    2. **blit 必须用预乘管线 + `BlitRenderState`**（`GUI_TEXTURED_PREMULTIPLIED_ALPHA`，照抄 `PictureInPictureRenderer.blitTexture`：`GuiRenderState.addBlitToCurrentLayer(new BlitRenderState(pipeline, TextureSetup.singleTexture(view, sampler), new Matrix3x2f(pose), 0, 0, w, h, 0, 1, 0, 1, -1, null))`）。面板是烘在**透明**底上的，纹理里是**预乘 alpha**；直通 alpha 的 `blit(view, sampler, …)`（= `GUI_TEXTURED`）会把 alpha 再乘一次 → 带 alpha 的像素（字形抗锯齿边、圆角边、图标边）覆盖率被平方、略显淡 → 进出缓存就"闪现"。用预乘 blit 后**整块面板（含半透明外壳）合成都是精确的**，所以不需要分层，只看 `panelCacheKey` 是否覆盖了所有输入。
+    2. **blit 必须用预乘管线 + `BlitRenderState`**（`GUI_TEXTURED_PREMULTIPLIED_ALPHA`，照抄 `PictureInPictureRenderer.blitTexture`：`GuiRenderState.addBlitToCurrentLayer(new BlitRenderState(pipeline, TextureSetup.singleTexture(view, sampler), new Matrix3x2f(pose), 0, 0, w, h, 0, 1, 0, 1, -1, null))`）。面板是烘在**透明**底上的，纹理里是**预乘 alpha**；直通 alpha 的 `blit(view, sampler, …)`（= `GUI_TEXTURED`）会把 alpha 再乘一次 → 带 alpha 的像素（字形抗锯齿边、圆角边、图标边）覆盖率被平方、略显淡 → 进出缓存就"闪现"。用预乘 blit 后**整块面板（含半透明外壳）合成都是精确的**，所以不需要分层，只要各页的缓存键覆盖了所有输入。
        - **绝对不要用 `fill(RenderPipeline, TextureSetup, ...)` + `GUI_TEXTURED_PREMULTIPLIED_ALPHA`**：`fill` 生成 `ColoredRectangleRenderState`（只写位置+颜色），而该管线的顶点格式要求 UV2/Normal/LineWidth，MC 建网格时抛 `IllegalStateException: Missing elements in vertex` → **崩溃**（实测）。`blit` 生成的 `BlitRenderState` 才满足该格式。
        - `BlitRenderState` 的构造实参按 `(pipeline, textureSetup, pose, x0, y0, x1, y1, uv, uv, uv, uv, color, scissorArea)` 顺序传；**UV 必须照抄 `PictureInPictureRenderer`：`0, 1, 1, 0`** —— 渲染目标纹理的 V 方向与 GUI 纹理相反（GUI 以 V=0 为顶、渲染目标以 V=0 为底），传 `0, 0, 1, 1` 会把缓存的面板**上下翻转**（实测）。scissor 传 `null`（面板没有额外裁剪，MC 的 `executeDraw` 对 null 走 `disableScissor`）。
     3. **面板缩放吸附到"设备尺寸为整数"，原点吸附到"整设备像素"**（`OneClickScreen.layout`）：
@@ -149,14 +158,13 @@ dev.skypocket/
         4. **上/左/右必须向外取整（`scissorFloor`），绝不能裁进内容**：第一屏的控件正好布局在 `contentTop()`，若把上边界"四舍五入"到最近的网格行，有一半概率落到内容起始行之下，把最上面那个按钮的上边框切掉一条 —— **实测症状**："顶部按钮的黑色描边顶部比其它方向细"（两个设置页都会）。下边界相反，必须用 `contentBottomRow()`（= `scissorRow`）与底 tab 条的绘制行严格一致，否则不是留缝就是重叠。
       - **内容区下边界只有一个来源，而且必须是"设备行"**：`contentBottomRow()` 直接给出**设备行**（= 裁剪真正能落到的行，即 `guiScale` 的整数倍设备像素），`contentBottom()` 只是把它换算成设计单位供命中检测用。**底 tab 条（`fillRoundedBottomToRow`）、主体渐变（`fillVerticalGradientToRow`）、侧边栏件（`fillDeviceToRow`）、裁剪（`scissorContentArea`）全部共用这一个设备行**；与这条边界相接的新元素也必须用这组 `*ToRow` 函数，不要用设计坐标版。（`fillDeviceToRow` / `fillVerticalGradientToRow` / `fillRoundedBottomToRow` 与 `scissorRow` / `scissorFloor` / `snapSize` / `pushDeviceSpace` 都在 `render/GuiPixels`。）
         - **不要在"设计 ↔ 设备"之间来回换算**：`ScreenRectangle` 把裁剪量化到整 GUI 单位，所以"把该设备行换算回设计单位（int）再让绘制按设计坐标吸附"会**再取整一次**，必然差 1 个设备像素 —— **实测症状**就是"卡片蒙版下边缘比底部 tab 上边缘高 1px"（这是第二次踩：第一版直接把设计坐标给裁剪，差 1~2px；第二版换算回设计单位，仍差 1px）。要精确落到某设备行，绘制入口必须能接收设备行。
-      - **交互必须用和裁剪同一套边界**：`inPanel`（面板矩形）/ `inBody`（面板内、上下两条半透明条之间）/ `inCardArea`（= 卡片裁剪矩形：body 内 + `lx >= SIDEBAR_W` + `ly >= contentTop()`）。所有命中检测（`PanelInput.hit`、`hoveredCardKey`、`hoveredSidebarKey`、`insideSearchBox`、`hoveredTabKey`、`hoveredFooterButton`、`mouseScrolled`）都要过这些判定；绘制侧的 hover 用 `FAR_AWAY`（在 `PanelGeometry`）掩码（`PanelRenderer.drawCards`、`drawSidebar`、`OneClickScreen#drawPanel` 转给 widget 的那一处）。**关键原因**：滚动后卡片会排到裁剪区之外（只是被裁掉、**没有**被移走），所以不能只按行/列区间比 y —— 否则就是"鼠标在 GUI 以外或底 tab 区域仍能选中卡片并交互"（实测）。`mouseReleased` / `mouseDragged` 故意不设限：拖拽要在面板外也能正常结束。
-      - **"点到了什么"和"点了之后做什么"必须分开**：`gui/PanelInput.hit(view, lx, ly)` 把一次面板内的点击解析成 `PanelInput.Hit`（`Kind` = 主 tab / 底栏按钮 / 侧边栏某行 / 卡片开详情 / 卡片开关 / 卡片空点 / 无），**只做判断、不改任何状态**；`OneClickScreen.mouseClicked` 只负责把 `Kind` 映射成动作（翻页、选中分类、进详情、切启用状态）。新增面板可点元素时：在 `PanelInput.hit` 里加判断 + 在 `mouseClicked` 的 switch 里加动作，**不要**再往事件方法里写布局算术。
-        - **区域判定顺序就是语义**（tabs → 底栏按钮 → 侧边栏 → 卡片），不要重排：`lx == SIDEBAR_W` 那一列属于侧边栏而不是卡片网格（两者边界相接）。widget 页（设置页 / 功能详情页）在底栏之后直接返回 `NONE`，因为那些页面整行铺满、由控件自己命中。
-      - **"哪个元素在某个点上"也只有一个来源**：侧边栏用 `PanelGeometry.sidebarRowAt(view, ly)`（行号，边界归属见下）+ `sidebarCategory(view, row)`（行号 → 分类，null = "All"）；卡片用 `PanelGeometry.cardAt(view, lx, ly)` → `CardHit(index, part)`，`part` 区分 `STATUS_BAR` / `SETTINGS_BUTTON` / `BODY`。hover 查询（`hoveredSidebarKey` / `hoveredCardKey`）**内部就是调用它们**，所以不会出现"画在 A 处、点在 B 处"。
-      - **紧挨着的行/列必须用半开区间**（`>= from && < from + 长度`，侧边栏统一走 `PanelGeometry.sidebarRowHit(y, rowY)`）：两端都闭时，边界那一像素**同时属于上一行和下一行**（下一行起点正是上一行终点），于是 hover 高亮会盖住两个分类（实测："鼠标放在分类标签中间，选中预览显示在两个分类上"）。缓存键（`hoveredSidebarKey`）、绘制（`drawSidebarItem`）、点击（`PanelInput.hit` → `sidebarRowAt`）三者的"边界归属"必须用同一个判定。卡片网格因为 `CARD_GAP = 12` 有间隔不会互相命中，但新增紧贴的行/列时必须注意。
+      - **交互必须用和裁剪同一套边界**：`PanelGeometry.inPanel`（面板矩形）/ `inBody`（面板内、上下两条半透明条之间）；页面内容的命中由 UI v2 树自己负责（`ModulesPage.pointerDown` → `InputRouter` → 控件 `contains()`），而 `ModulesPage` 只在 `ly >= TAB_BAR_H && ly < contentBottom()` 的区间内接管指针。**关键原因**：滚动后卡片会排到裁剪区之外（只是被裁掉、**没有**被移走），所以不能只按行/列区间比 y —— 否则就是"鼠标在 GUI 以外或底 tab 区域仍能选中卡片并交互"（实测）。`mouseReleased` / `mouseDragged` 故意不设限：拖拽要在面板外也能正常结束。
+      - **"点到了什么"和"点了之后做什么"仍然分开，但分两层**：外壳 chrome 由 `gui/PanelInput.hit(lx, ly)` 解析成 `PanelInput.Hit`（`Kind` = `MODULES_TAB` / `SETTINGS_TAB` / `FOOTER_BUTTON` / `NONE`），**只做判断、不改状态**，`OneClickScreen.mouseClicked` 负责映射成动作（翻页、打开 HUD 编辑器）；页面内部（侧边栏行、搜索框、卡片、开关、导航按钮）则是**真实控件对象**，由 v2 的 `InputRouter` 命中并直接触发自己的 `onPointerDown`。新增面板可点元素时：先判断它属于外壳还是页面 —— 外壳加进 `PanelInput` 的 `Kind` 与 `switch`，页面就造一个 `Control` 挂到树里，**不要**再往事件方法里写布局算术。
+        - **外壳判定顺序就是语义**（tabs → 底栏按钮），不要重排：`lx == SIDEBAR_W` 那一列属于侧边栏而不是卡片网格（两者边界相接），但这一判定现在在 `ModulesPage` 的树布局里，不在 `PanelInput` 中。
+      - **紧挨着的行/列必须用半开区间**（`>= from && < from + 长度`）：两端都闭时，边界那一像素**同时属于上一行和下一行**（下一行起点正是上一行终点），于是 hover 高亮会盖住两个分类（实测："鼠标放在分类标签中间，选中预览显示在两个分类上"）。v2 里这条由 `UiElement.contains` 统一实现（`x < bounds.right() && y < bounds.bottom()`），`SidebarRow`、`Dropdown` 的行都用它 —— 自己写命中判定时必须照抄这个半开区间。卡片网格因为 `CARD_GAP = 24` 有间隔不会互相命中，但新增紧贴的行/列时必须注意。
     4. **blit 保持 1:1**：因为第 3 条，纹理尺寸正好等于 `panelWidth × scaleX × guiScale`（整数），blit 目标矩形（整数 pose 单位）落在同一个网格上，所以 `exactScale` 修正因子正好是 1（保留它作为兜底：万一尺寸/缩放不再对齐，它会自动把 blit 拉回 1 texel = 1 设备像素）。
   - 另外：**开合动画进行中不 blit**（`animating` 参数），因为缓存是 1:1 光栅化的，缩放采样既和直绘不一致、动画结束还会跳一下。
-  - **失败降级**：任何异常（离屏 pass/纹理/sampler 出问题）→ 永久关闭缓存、打印 `[gui] panel cache disabled ...`、面板照旧直绘。看到那行日志就是缓存没生效（观感不变，只是没省开销）。改这里时要保留：`finally` 还原、异常降级、以及 `PanelCacheKey.of` 的输入项（漏一项 = 偶尔一帧旧画面）。
+  - **失败降级**：任何异常（离屏 pass/纹理/sampler 出问题）→ 永久关闭缓存、打印 `[gui] panel cache disabled ...`、面板照旧直绘。看到那行日志就是缓存没生效（观感不变，只是没省开销）。改这里时要保留：`finally` 还原、异常降级、以及各页 `pageCacheKey()` 的输入项（漏一项 = 偶尔一帧旧画面）。
 - 底栏（footer）：面板底部深色条，左下角「HUD 位置调整」按钮打开统一的 HUD 位置编辑器；内容区（`contentBottom`）不会延伸进底栏。
 - 字体：`ClickGuiFonts`（Inter + Noto Sans SC），运行时矢量烘焙（见 §7.1），文字绘制/测量一律走 `ClickGuiFonts.drawText/width/lineHeight`。文字阴影默认关闭（几何量翻倍），面板设置页可开。
 
@@ -237,7 +245,7 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 - `deviceFactor = scale × guiScale`，保证 1 个栅格像素 = 1 个设备像素
 - 字重按元素 scale 分档：`< 1.0` Regular，`1.0–1.8` Medium，`>= 1.8` SemiBold；默认 scale = 1 使用 Medium
 - `lineHeight` 仍是本地 GUI 单位 9，由 pose 负责缩放
-- `MiningBreak` 的固定 1:1 debug 读数使用不传 scale 的重载，不要把它当成普通 HUD 字体路径
+- `MiningBreakRenderer` 的固定 1:1 debug 读数使用不传 scale 的重载，不要把它当成普通 HUD 字体路径
 
 新增 HUD 文字时必须同时改 `width` 和 `draw` 的 scale，不能只改其中一个，否则框体、居中和行距会漂移。
 
@@ -296,8 +304,8 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
 - 防误触发（重要）：`GAME` 路径**没有 sender**，Hypixel 会把聊天回显成 `名字: 内容`、进服公告也会带自己名字。所以：① 用 `ClientSendMessageEvents.CHAT` 记录最近发出的消息，收到 `: <自己刚发的内容>` 结尾的回显时跳过；② `GAME` 消息必须含 `: `（玩家聊天分隔符）才参与匹配，从而过滤掉 `Welcome back FriedLoop!` 这类无冒号的公告。单人世界走 `CHAT`（有 sender），不受此影响。
 - 音效：统一走 `SoundManager.play(id, volume, pitch)`——`minecraft:...` 前缀走原版 `SoundManager`（`SimpleSoundInstance.forUI(event, pitch, volume)`，仅渲染线程调用，支持**音量 0~200%**/音高 0.5~2；>100% 是**放大**原版增益而不是被钳制，所以三个音量设置的上限都是 200）；其余视为自定义 MP3 文件名，用 **JLayer**（`javazoom.jl.player.Player`）在单线程守护 executor 解码播放（不应用音量/音高）。默认音效 `minecraft:entity.experience_orb.pickup`；旧配置的 `ding` 在 `sanitize` 迁移为默认。音效下拉用 `Setting.DropdownSetting`（带搜索，选项 = `BuiltInRegistries.SOUND_EVENT.keySet()` + 自定义 MP3）。
 - 自定义音频目录：`<gameDir>/skypocket/sound/`（`FabricLoader.getGameDir()`），`init()` 时 `createDirectories`。「快捷上传」用 AWT `FileDialog`（EDT 上 `EventQueue.invokeAndWait`），选中后 `Files.copy` 到目录。
-- 文本输入：`TextFieldWidget`（`BaseWidget` 子类）+ `Setting.TextFieldSetting`；`OneClickScreen.charTyped/keyPressed/mouseClicked` 通过静态 `TextFieldWidget.focusedField()` 路由输入，点击别处/重建/关闭时清焦点。
-- 下拉选择（可搜索）：`Setting.DropdownSetting` 展开为「按钮行 + 搜索框（复用 `TextFieldWidget`）+ `DropdownListWidget` 列表」，搜索文本存在 Setting 实例上（滚动重建不丢失）；列表滚轮由 `OneClickScreen.mouseScrolled` 转发给 hover 的 `DropdownListWidget.listScroll`（面板滚动优先级低于列表内部滚动）。
+- 文本输入：`ui/widget/TextField`（`Control` 子类）+ `Setting.TextFieldSetting`；输入由 `InputRouter` 按焦点路由（`focus(UiElement)` / `focused()`），点击别处/重建/关闭时调用 `clearFocus()` 清焦点。
+- 下拉选择（可搜索）：`Setting.DropdownSetting` → `ui/widget/Dropdown`。选项列表是一个**独立的、可搜索的虚拟化弹层**：只有选项数超过 `MAX_VISIBLE_ROWS` 时才在弹层顶部加搜索框（`TextField` + `onChange(this::filter)`），列表本身用 `scrollRow` 做虚拟滚动、只绘制可见行。搜索文本和滚动位置都存在 `Dropdown` 实例上（页面重排不丢），弹层由 `SettingsPage` 注册进 `InputRouter` 的 layer 栈，所以滚轮/点击先到列表而不是面板。
 
 ### 7.10 挖矿技能提醒（tab list 假玩家解析）
 
@@ -359,7 +367,7 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
   - `obs/model ≤4 / 5-8 / 9-16 / 17-32`：**判案工具** —— 随桶递减 = 加性偏差（下限/取整/服务端多一 tick）；各桶持平且 ≠1 = 乘性偏差（速度刻度）。
   - `speed` 显示 `-` 时看日志 `[mining] unrecognised Mining Speed tab line:` 的原始行，按实际格式改 `MiningSpeedTracker.SPEED`。
 - **两个 block overlay 的绘制顺序（必读，踩过坑）**：`MiningBreakRenderer` 的进度棱边和 render 分类的 `BlockOutlineRenderer` 会**同时**画在同一个方块的同一批棱边上。
-  - Fabric 的挂载顺序（`LevelRendererMixin` 的注入目标）：`COLLECT_SUBMITS` ← 特征提交步骤（**早**）；`BEFORE_BLOCK_OUTLINE` ← `submitBlockOutline`（**晚**）；`BEFORE_GIZMOS` ← gizmo 收集（更晚）。所以把挖矿 overlay 放在 `COLLECT_SUBMITS` 会被 block outline **压在下层**，而且在两者深度相同时（还都参与透明排序）谁在上会随相机移动来回变 ⇒ **闪现**。
+  - Fabric 的挂载顺序（`LevelRenderEvents` 的阶段语义，实际注册在 `MiningBreakRenderer` / `BlockOutlineRenderer`）：`COLLECT_SUBMITS` ← 特征提交步骤（**早**）；`BEFORE_BLOCK_OUTLINE` ← `submitBlockOutline`（**晚**）；`BEFORE_GIZMOS` ← gizmo 收集（更晚）。所以把挖矿 overlay 放在 `COLLECT_SUBMITS` 会被 block outline **压在下层**，而且在两者深度相同时（还都参与透明排序）谁在上会随相机移动来回变 ⇒ **闪现**。
   - 解决：挖矿 overlay 注册到 **`BEFORE_GIZMOS`**（更晚的提交阶段 ⇒ 画在 outline 之上），**并且**把整块几何沿"相机→方块"方向平移 `DEPTH_BIAS = 0.005` 格（沿视线平移只改深度、不动轮廓 ⇒ 看不出位移），这样即使落在同一层、参与透明排序也永远赢深度测试。**新增任何与已有 overlay 重叠的线框/半透明特效时，同样要选更晚的提交阶段 + 加微小深度偏置。**
 
 ### 7.12 UI 观感与性能的取舍（26.2 GUI 管线边界）
@@ -435,7 +443,7 @@ HUD 文字不能再用固定的 `9 × guiScale` 位图去套元素 pose 的缩�
   - ⚠️ **坐标约定不要猜**：`minecraft:core/screenquad` 的顶点着色器是 `texCoord = uv; gl_Position = uv * 2 - 1;` —— **两个轴都与裁剪空间线性对应、任何轴都不翻转**（不是 D3D 式自上而下的纹理坐标）。我一开始按"纹理 v 向下"写了 `1 - uv.y * 2`，结果整个重建是**上下镜像**的：速度全成垃圾 → 再被下面的守卫一律丢弃 → 现象是**设置完全没效果**（而在此之前"没有守卫"的版本表现为"只有位移最大的那点（手）在糊"）。一个符号错了就是这两种极端，所以这类 pass 一定要拿 `screenquad.vsh` 对一次。
   - **速度拆成两项**，这是"不会整条失效"的关键：**旋转项不需要深度**（足够远的点在相机平移下位移可忽略，重投影它就等于旋转造成的位移 —— 旋转会让近处远处一起糊，这才是肉眼最明显的部分），**视差项**才用深度（逐像素重投影与远场重投影之差）。深度不可用、或该像素的深度不来自世界投影（第一人称的手）时，只是**退化成纯旋转模糊**，而不是变成零。
     - 远场探测点用 `InverseView` 把视图轴的 `(0,0,-500)` 变回世界，再用真实 `VIEW_PROJ` 求它的 `z/w` 作为 `FarDepth` —— 全程走真实矩阵，不假设深度区间约定，也避开远平面（`w≈0`）。
-    - 三项守卫都是"防垃圾"而非"开关"：`MaxVelocity`（旋转上界 + 视差上界，按本帧相机实际能产生的最大屏幕位移算）、`MaxParallax`（本帧平移在最近可模糊深度上的视差上界）、`MIN_DISTANCE`（1.5 方块）。
+    - 三项守卫都是"防垃圾"而非"开关"：`VELOCITY_MARGIN`（3.0，旋转/平移换算成屏幕位移时的放大裕度，配合 `MIN_BOUND = 0.02` 夹下限）、`FAR_PROBE_BLOCKS`（500，取景深探测距离，`min(500, max(depthFar * 0.5f, 32f))`）、`MIN_PLAUSIBLE_DEPTH`（1.5 方块，低于此深度视为不可信）。另有 `MIN_VELOCITY`（0.0015，低于它视为静止）。
   - **自诊断**：状态发生变化时打一行日志（`[render] motion blur running/idle ...`），把 `exposure/frame/scale/maxVelocity/chain=live(writable|rebuilt)` 一次说清。**沉默的空操作是这类效果唯一无法靠看画面排查的故障**（着色器要么糊、要么原样返回，两者看起来都是"开关没用"），所以这条日志是必需品而不是调试残留。
     - 实测收益：日志里 `chain=live(writable)` + `maxParallax` 等于下限（说明平移≈0、速度只可能来自旋转项）这两点，直接把"uniform 没写进去""矩阵不对""速度算成 0"三种猜测一次排除，剩下的唯一嫌疑就是下面那条逐拍剔除。
   - ⚠️ **逐拍剔除必须比"到相机的距离"，不能比"世界坐标距离"**：模糊路径上像素本来就在扫过场景，距离越远、重建出的世界坐标位移越大（100 方块处 32 px 的扫掠 ≈ 局部 4 方块），于是"同一块世界"的判据把**所有**采样点判掉 → 加权和退回中心像素 → 表现是"**pass 在跑、速度算得对、但画面上什么都没变**"。而第一人称的手离相机只有约 2 方块，判据轻松通过 → **只有手在糊**。两者叠加就是"只有手持物品有动态模糊"。现在比的是 `abs(tapDistance - hereDistance)`（到相机距离，容差 `max(1.0, 距离*15%)`）；**天空按"无穷远"参与这个判据**（清屏后没有深度可重建，但它是和别的表面一样的表面，转身时要能自我模糊，同时不会把地形混进来）。
@@ -605,10 +613,10 @@ SkyPocket/
 └─ versions/
    ├─ mainProject           纯文本，内容 = 26.2-fabric（手写源码所在版本）
    ├─ 26.2-fabric/src       唯一手写源码树（可含 //#if）
-   └─ 26.3-fabric/src       不手工维护；构建时从 26.2 解析生成
+   └─ 26.3-fabric/build/preprocessed  构建时由 26.2 解析生成；仓库不保留 src 副本
 ```
 
-- 命令：`gradlew :26.2-fabric:build` / `gradlew :26.3-fabric:build`，产物在 `versions/<名>/build/libs/skypocket-<名>-1.0.jar`。
+- 命令：`gradlew :26.2-fabric:build` / `gradlew :26.3-fabric:build`，产物在 `versions/<名>/build/libs/skypocket-<名>-<mod_version>.jar`（版本号取自 `gradle.properties` 的 `mod_version`）。
 - **源码只改 `versions/26.2-fabric/src`**。`versions/<名>/build/preprocessed/` 是配置期生成的解析结果（每次构建重建），不要手改。
 
 ### 9.2 两条差异表达机制
@@ -902,9 +910,9 @@ layout(location = 0) out vec4 fragColor;
 - `Scrollbar`：`ScrollView` 的绝对定位子控件，支持点击轨道和拖动滑块。
 - `LayoutEngine`：新增 `position: absolute` 与 left/right/top/bottom；绝对定位子元素不参与流式测量和 flex 分配。
 - `Ui2Theme`：把现有 `ClickGuiStyle` 的颜色 token 映射到 `WidgetPalette`。
-- `McUiPainter`：唯一的 MC 生产 painter，复用 `GuiPixels`/`ClickGuiStyle` 的圆角、pill、阴影与设备像素吸附；测试页旧的私有 `GuiPainter` 已删除。
+- `McUiPainter`：唯一的 MC 生产 painter，复用 `GuiPixels`/`ClickGuiStyle` 的圆角、pill、阴影与设备像素吸附；测试页当年的私有 painter 已随页面一起删除。
 - `UiPainter`：新增 `fillRounded` / `outlineRounded` / `surface` / `pill` / `shadow`。
-- `WidgetPalette`：增加 `radius` / `pillRadius`，由 `ClickGuiStyle.RADIUS/PILL` 映射。
+- `WidgetPalette`：增加 `radius` / `pillRadius`，由 `Ui2Theme.palette()` 映射自 `ClickGuiStyle.controlRadius()` 与 `ClickGuiStyle.PILL`。
 - 控件表面不带常驻边框环，使用明度、按下色和轻微阴影建立层次；焦点是背景填充加 accent 圆角描边，不覆盖内容。
 - `TextField`：已接入 `preeditUpdated`，支持 IME 预编辑显示；提交仍通过 `charTyped`。
 
@@ -929,7 +937,7 @@ layout(location = 0) out vec4 fragColor;
 - HUD 右键设置弹窗也内嵌 `SettingsPage`
 - 首页卡片、侧栏、搜索框、导航按钮、主 tabs 和 footer 按钮均已改用 v2 painter 绘制
 - 首页布局、命中、输入路由和整面板缓存仍复用原有 `PanelGeometry` / `PanelInput`
-- `SettingsView` 与旧 widget 构建路径已删除
+- 旧的设置视图与旧 widget 构建路径已删除
 
 **设置卡片规范（强制）**：
 
