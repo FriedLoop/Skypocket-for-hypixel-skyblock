@@ -45,16 +45,17 @@ final class ModuleDefinitions {
         registerMentionAlert(cfg);
         registerChatCompact(cfg);
         registerSplashCompact(cfg);
-        registerPlayerGlow(cfg);
-        registerItemGlow(cfg);
-        registerDragonGlow(cfg);
-        registerHidePlayers(cfg);
-        registerHideSpawnPointPlayers(cfg);
-        registerHidePlayersNearNpcs(cfg);
-        registerHideOtherPlayersPresents(cfg);
+        // Phase 4 batch 1: the ESP family, all toggle + zero-or-one setting.
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.PlayerGlowFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ItemGlowFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DragonGlowFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HidePlayersFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideSpawnPointPlayersFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HidePlayersNearNpcsFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideOtherPlayersPresentsFeature());
         registerHitbox(cfg);
-        registerHideLandedArrows(cfg);
-        registerHideStuckArrows(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideLandedArrowsFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideStuckArrowsFeature());
         registerFishingHotspotOverlay(cfg);
         registerLegendarySeaCreatureWarning(cfg);
         registerDrillFuel(cfg);
@@ -434,73 +435,6 @@ final class ModuleDefinitions {
                 .markSkyBlockOnly());
     }
 
-    private static void registerPlayerGlow(ModConfig cfg) {
-        ModuleRegistry.register(new Module("player_glow", "人物发光", Category.ESP,
-                () -> cfg.playerGlowEnabled, v -> cfg.playerGlowEnabled = v,
-                List.of(
-                        new Setting.Header("外观", "调整玩家发光的颜色"),
-                        new Setting.ColorSetting("发光颜色", () -> cfg.playerGlowColor, v -> cfg.playerGlowColor = v)
-                )));
-    }
-
-    private static void registerItemGlow(ModConfig cfg) {
-        ModuleRegistry.register(new Module("item_glow", "掉落物发光", Category.ESP,
-                () -> cfg.itemGlowEnabled, v -> cfg.itemGlowEnabled = v,
-                List.of(
-                        new Setting.Header("外观", "按物品稀有度给掉落物添加发光轮廓")
-                )).markSkyBlockOnly());
-    }
-
-    private static void registerDragonGlow(ModConfig cfg) {
-        ModuleRegistry.register(new Module("dragon_glow", "末影龙发光", Category.ESP,
-                () -> cfg.dragonGlowEnabled, v -> cfg.dragonGlowEnabled = v,
-                List.of(
-                        new Setting.Header("外观", "调整末影龙发光的颜色"),
-                        new Setting.ColorSetting("发光颜色", () -> cfg.dragonGlowColor, v -> cfg.dragonGlowColor = v)
-                )).markSkyBlockOnly());
-    }
-
-    private static void registerHidePlayers(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_players", "隐藏附近玩家", Category.ESP,
-                () -> cfg.hideNearbyPlayersEnabled, v -> cfg.hideNearbyPlayersEnabled = v,
-                List.of(
-                        new Setting.Header("行为", "设置隐藏附近玩家的范围"),
-                        new Setting.SliderSetting("范围", 0, 10, () -> cfg.hideNearbyPlayersRange,
-                                v -> cfg.hideNearbyPlayersRange = (float) v, "%.1f", 0.1)
-                )));
-    }
-
-    private static void registerHideSpawnPointPlayers(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_spawn_point_players", "隐藏出生点玩家", Category.ESP,
-                () -> cfg.hideSpawnPointPlayers, v -> cfg.hideSpawnPointPlayers = v,
-                List.of(
-                        new Setting.Header("行为", "隐藏站在 Hub 出生点的真实玩家"),
-                        new Setting.SliderSetting("出生点范围", 0.1, 3.0,
-                                () -> cfg.hideSpawnPointRadius,
-                                v -> cfg.hideSpawnPointRadius = (float) v, "%.1f", 0.1)
-                )).markSkyBlockOnly());
-    }
-
-    private static void registerHidePlayersNearNpcs(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_players_near_npcs", "隐藏 NPC 附近玩家", Category.ESP,
-                () -> cfg.hidePlayersNearNpcs, v -> cfg.hidePlayersNearNpcs = v,
-                List.of(
-                        new Setting.Header("行为", "隐藏站在 SkyBlock NPC 附近的真实玩家"),
-                        new Setting.SliderSetting("NPC 附近范围", 0.5, 8.0,
-                                () -> cfg.hidePlayersNearNpcsRange,
-                                v -> cfg.hidePlayersNearNpcsRange = (float) v, "%.1f", 0.5)
-                )).markSkyBlockOnly());
-    }
-
-    private static void registerHideOtherPlayersPresents(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_other_players_presents", "隐藏其他玩家礼物",
-                Category.ESP,
-                () -> cfg.hideOtherPlayersPresents, v -> cfg.hideOtherPlayersPresents = v,
-                List.of(
-                        new Setting.Header("行为", "隐藏既不是给你的、也不是你送出的 Jerry 礼物")
-                )).markSkyBlockOnly());
-    }
-
     private static void registerHitbox(ModConfig cfg) {
         ModuleRegistry.register(new Module("hitbox", "碰撞箱", Category.ESP,
                 () -> cfg.hitboxEnabled, v -> cfg.hitboxEnabled = v,
@@ -522,16 +456,6 @@ final class ModuleDefinitions {
                         new Setting.BooleanSetting("不限距离", () -> cfg.hitboxUnlimitedRange, v -> cfg.hitboxUnlimitedRange = v),
                         new Setting.SliderSetting("范围", 1.0, 128.0, () -> cfg.hitboxRange, v -> cfg.hitboxRange = (float) v, "%.0f", 1)
                 )));
-    }
-
-    private static void registerHideLandedArrows(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_landed_arrows", "隐藏落地箭矢", Category.ESP,
-                () -> cfg.hideLandedArrows, v -> cfg.hideLandedArrows = v, List.of()));
-    }
-
-    private static void registerHideStuckArrows(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hide_stuck_arrows", "隐藏插体箭矢", Category.ESP,
-                () -> cfg.hideStuckArrows, v -> cfg.hideStuckArrows = v, List.of()));
     }
 
     private static void registerFishingHotspotOverlay(ModConfig cfg) {
@@ -888,3 +812,4 @@ final class ModuleDefinitions {
     }
 
 }
+

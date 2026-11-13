@@ -57,7 +57,14 @@ public final class ModuleAdapter {
 
     /** Adapts without registering, for callers that need to configure the module first. */
     public static Module adapt(FeatureModule feature) {
-        return new Module(feature.id(), feature.name(), feature.category(),
+        Module module = new Module(feature.id(), feature.name(), feature.category(),
                 feature::isEnabled, feature::setEnabled, feature.settings());
+        // The SB badge is a property of the feature, so it travels with the adapter rather than
+        // being re-stated at every registration site. Getting this wrong is invisible until a
+        // SkyBlock-only card loses its badge, which is why it is applied here and not left to callers.
+        if (feature.skyBlockOnly()) {
+            module.markSkyBlockOnly();
+        }
+        return module;
     }
 }
