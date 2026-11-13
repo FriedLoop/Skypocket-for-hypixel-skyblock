@@ -20,7 +20,23 @@ $defsPath = 'versions/26.2-fabric/src/main/java/dev/skypocket/gui/ModuleDefiniti
 $modulesDir = Join-Path $repo 'versions\26.2-fabric\src\main\java\dev\skypocket\feature\modules'
 
 # "Before": the committed version of ModuleDefinitions.
-$before = (& git -C $repo show "HEAD:$defsPath") -join "`n"
+#
+# git writes the blob to stdout as UTF-8. Capturing that with `& git ...` would let PowerShell decode
+# it using the console code page, which on a Chinese Windows is GBK - and that mangles every Chinese
+# string in this file. The damage is silent and easy to misread: the quoted name in
+# Module("id", "中文名" stops matching, so those registrations are treated as absent and the check
+# reports "no HEAD registration to compare" instead of comparing them.
+#
+# Asking git for the blob with an explicit UTF-8 decode keeps the bytes intact.
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = 'git'
+$psi.Arguments = "-C `"$repo`" show `"HEAD:$defsPath`""
+$psi.RedirectStandardOutput = $true
+$psi.UseShellExecute = $false
+$psi.StandardOutputEncoding = [Text.Encoding]::UTF8
+$proc = [System.Diagnostics.Process]::Start($psi)
+$before = $proc.StandardOutput.ReadToEnd()
+$proc.WaitForExit()
 if (-not $before) {
     throw "could not read HEAD:$defsPath"
 }
@@ -88,9 +104,14 @@ foreach ($id in ($newFeatures.Keys | Sort-Object)) {
         }
     }
 
-    # 2) Slider step: the last numeric literal of the SliderSetting call, "%..f", step.
-    $oldSteps = [regex]::Matches($old, '"(?:%\.\d+f)",\s*([-\d.]+)\)')
-    $newSteps = [regex]::Matches($new.Text, '"(?:%\.\d+f)",\s*([-\d.]+)\)')
+    # 2) Slider step: the number after the format string, e.g. SliderSetting(..., "%.1f", 0.1).
+    #
+    # The format string is not always a bare "%.1f": sliders use suffixes too ("%.0fs" for seconds,
+    # "%.2fx" for a multiplier, "%.0f%%" for a percentage). Matching only '%\.\d+f' silently skipped
+    # every suffixed slider, and a mutated step in one of them produced "no differences" - the check
+    # looked like it had passed.
+    $oldSteps = [regex]::Matches($old, '"%[^"]*",\s*([-\d.]+)\)')
+    $newSteps = [regex]::Matches($new.Text, '"%[^"]*",\s*([-\d.]+)\)')
     for ($i = 0; $i -lt [Math]::Min($oldSteps.Count, $newSteps.Count); $i++) {
         if ($oldSteps[$i].Groups[1].Value -ne $newSteps[$i].Groups[1].Value) {
             Write-Host ("  {0,-32} slider step {1} -> {2}" -f $id, $oldSteps[$i].Groups[1].Value, $newSteps[$i].Groups[1].Value)

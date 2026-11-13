@@ -57,7 +57,7 @@ final class ModuleDefinitions {
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideLandedArrowsFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideStuckArrowsFeature());
         registerFishingHotspotOverlay(cfg);
-        registerLegendarySeaCreatureWarning(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.LegendarySeaCreatureWarningFeature());
         registerDrillFuel(cfg);
         registerMiningAbilityReminder(cfg);
         registerMiningBreakPredict(cfg);
@@ -69,11 +69,11 @@ final class ModuleDefinitions {
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ClockFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DayCountFeature());
         registerFpsTpsPing(cfg);
-        registerHeldItemName(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HeldItemNameFeature());
         registerStatsDisplay(cfg);
-        registerSkillDisplay(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.SkillDisplayFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThunderBottleFeature());
-        registerItemPickupLog(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ItemPickupLogFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.AutoSprintFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ScrollableTooltipsFeature());
     }
@@ -484,20 +484,6 @@ final class ModuleDefinitions {
                 )).markSkyBlockOnly());
     }
 
-    private static void registerLegendarySeaCreatureWarning(ModConfig cfg) {
-        ModuleRegistry.register(new Module("legendary_sea_creature_warning", "传奇海怪警告", Category.FISHING,
-                () -> cfg.legendarySeaCreatureWarning, v -> cfg.legendarySeaCreatureWarning = v,
-                List.of(
-                        new Setting.Header("警告", "检测传奇/神话海怪刷新并显示中央警告"),
-                        new Setting.ColorSetting("警告颜色", () -> cfg.legendaryWarningColor,
-                                v -> cfg.legendaryWarningColor = v),
-                        new Setting.SliderSetting("显示时长", 1, 10,
-                                () -> cfg.legendaryWarningDurationMs / 1000.0,
-                                v -> cfg.legendaryWarningDurationMs = (int) Math.round(v * 1000),
-                                "%.0fs", 1)
-                )).markSkyBlockOnly());
-    }
-
     private static void registerHandItem(ModConfig cfg) {
         ModuleRegistry.register(new Module("hand_item", "手持物品动画", Category.RENDER,
                 () -> cfg.handItemEnabled, v -> cfg.handItemEnabled = v,
@@ -570,19 +556,6 @@ final class ModuleDefinitions {
      * wheel; the offsets are also exposed here because they are the only way to bring it back after
      * dragging it somewhere silly.
      */
-    private static void registerHeldItemName(ModConfig cfg) {
-        ModuleRegistry.register(new Module("held_item_name", "手持物品名", Category.HUD,
-                () -> cfg.heldItemNameEnabled, v -> cfg.heldItemNameEnabled = v,
-                List.of(
-                        new Setting.Header("位置与大小", "调整手持物品名的缩放与屏幕偏移"),
-                        new Setting.SliderSetting("缩放", 0.25, 4.0, () -> cfg.heldItemNameScale,
-                                v -> cfg.heldItemNameScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
-                        new Setting.SliderSetting("水平偏移", -400, 400, () -> cfg.heldItemNameOffsetX,
-                                v -> cfg.heldItemNameOffsetX = (int) Math.round(v), "%.0f", 1),
-                        new Setting.SliderSetting("垂直偏移", -400, 400, () -> cfg.heldItemNameOffsetY,
-                                v -> cfg.heldItemNameOffsetY = (int) Math.round(v), "%.0f", 1))));
-    }
-
     private static void registerStatsDisplay(ModConfig cfg) {
         ModuleRegistry.register(new Module("stats_display", "玩家数值显示", Category.HUD,
                 () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
@@ -750,36 +723,7 @@ final class ModuleDefinitions {
                 )).markSkyBlockOnly());
     }
 
-    private static void registerSkillDisplay(ModConfig cfg) {
-        ModuleRegistry.register(new Module("skill_display", "技能进度显示", Category.HUD,
-                () -> cfg.skillDisplayEnabled, v -> cfg.skillDisplayEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "显示最近获得经验的技能、当前 XP 和下一级需求，图标使用原版物品"),
-                        new Setting.BooleanSetting("仅显示百分比", () -> cfg.skillDisplayPercentageOnly,
-                                v -> cfg.skillDisplayPercentageOnly = v),
-                        new Setting.ColorSetting("文字颜色", () -> cfg.skillDisplayColor,
-                                v -> cfg.skillDisplayColor = v),
-                        new Setting.SliderSetting("显示时长", 1, 8,
-                                () -> cfg.skillDisplayDurationMs / 1000.0,
-                                v -> cfg.skillDisplayDurationMs = (int) Math.round(v * 1000),
-                                "%.0fs", 1)
-                )).markSkyBlockOnly());
-    }
-
-    private static void registerItemPickupLog(ModConfig cfg) {
-        ModuleRegistry.register(new Module("item_pickup_log", "物品拾取记录", Category.HUD,
-                () -> cfg.pickupLogEnabled, v -> cfg.pickupLogEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "显示最近拾取或失去的物品及数量"),
-                        new Setting.ColorSetting("文字颜色", () -> cfg.pickupLogTextColor,
-                                v -> cfg.pickupLogTextColor = v),
-                        new Setting.SliderSetting("显示时长", 1, 15,
-                                () -> cfg.pickupLogDurationMs / 1000.0,
-                                v -> cfg.pickupLogDurationMs = (int) Math.round(v * 1000),
-                                "%.0fs", 1)
-                )).markSkyBlockOnly());
-    }
-
 }
+
 
 
