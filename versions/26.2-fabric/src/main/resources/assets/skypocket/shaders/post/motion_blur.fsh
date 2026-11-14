@@ -90,6 +90,20 @@ bool emptyDepth(float depth) {
     return depth <= DEPTH_EPSILON || depth >= 1.0 - DEPTH_EPSILON;
 }
 
+/**
+ * Per-pixel value in [0,1). Used to offset the sampling positions.
+ *
+ * <p>Hash without sine (Hoskins). The usual {@code fract(sin(dot(p, ...)) * 43758.5453)} loses
+ * precision once the coordinate grows - and these are pixel coordinates, so four digits - which shows
+ * up as the same few offsets repeating across the screen. This one stays well distributed at that
+ * magnitude and costs three multiplies and a dot.
+ */
+float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
 /** Screen position (the space texCoord is in) to clip space - no flips, see the note above. */
 vec2 toClip(vec2 uv) {
     return uv * 2.0 - 1.0;
@@ -176,10 +190,24 @@ void main() {
     vec3 camera = vec3(CamX, CamY, CamZ);
     float hereDistance = emptyDepth(depth) ? SKY_DISTANCE
             : distance(worldPos(texCoord, depth), camera);
+    // Taps are offset by a per-pixel hash.
+    //
+    // Fixed steps land on exactly the same positions in every pixel and every frame, so taps that
+    // differ by less than one step all average the same texels - which is what a visible band or a
+    // stepped edge along the blur is. Offsetting each pixel's sample set turns that regular grid into
+    // what reads as a continuous smear, and it costs one hash plus one add: the tap count is
+    // unchanged.
+    //
+    // The offset is one-sided, in [-(TAPS-1)/TAPS, 0]. A symmetric offset would push the last tap
+    // past t = 1 and sample past the end of the velocity, where the blur is not meant to reach; being
+    // one-sided keeps every tap inside (0, 1] while still breaking the grid. The first tap can then
+    // land slightly before 1/TAPS, which only makes it start nearer the centre pixel - the tap that
+    // dominates the weighted sum anyway.
+    float jitter = -(hash(texCoord * InSize)) * (float(TAPS - 1) / float(TAPS));
     vec3 sum = src.rgb;
     float weightSum = 1.0;
     for (int i = 1; i <= TAPS; i++) {
-        float t = float(i) / float(TAPS);
+        float t = (float(i) + jitter) / float(TAPS);
         vec2 uv = texCoord + velocity * t;
         float tapDepth = rawDepth(uv);
         // Only average taps that live on the same piece of world, or a foreground object gets smeared
