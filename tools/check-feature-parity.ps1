@@ -197,6 +197,27 @@ foreach ($id in ($newFeatures.Keys | Sort-Object)) {
         $problems++
     }
 
+    # 4) Group switches: the field each group's switch writes.
+    #
+    # A group's label can be identical while its switch points at the wrong config field, which makes
+    # the card look right and toggle the wrong thing. Nothing else in this script looks at these
+    # fields, so mutating one went unreported until this check existed.
+    #
+    # The getter and setter appear on separate lines in the old source, so the gap between them is
+    # matched rather than requiring a single line. Both the getter's and the setter's field name are
+    # captured: they were originally written by hand on two lines, so they can disagree, and a group
+    # whose setter writes a different field than its getter reads would report a state it never
+    # changes.
+    $groupPattern = '(?s)GroupSetting\("([^"]+)",\s*\(\)\s*->\s*cfg\.(\w+)\s*,[^;]{0,80}?cfg\.(\w+)\s*='
+    $oldGroups = [regex]::Matches($old, $groupPattern) |
+            ForEach-Object { "$($_.Groups[1].Value)<-$($_.Groups[2].Value)/$($_.Groups[3].Value)" }
+    $newGroups = [regex]::Matches($new.Text, $groupPattern) |
+            ForEach-Object { "$($_.Groups[1].Value)<-$($_.Groups[2].Value)/$($_.Groups[3].Value)" }
+    if (($oldGroups -join '|') -ne ($newGroups -join '|')) {
+        Write-Host ("  {0,-32} group switches [{1}] -> [{2}]" -f $id, ($oldGroups -join ', '), ($newGroups -join ', '))
+        $problems++
+    }
+
     # 5) Every Chinese literal the feature uses must exist in the translation table.
     #
     # This is the check that would have caught the subtitle typo directly: the text was retyped
