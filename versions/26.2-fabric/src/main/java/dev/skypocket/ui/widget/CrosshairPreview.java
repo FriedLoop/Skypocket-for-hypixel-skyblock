@@ -1,6 +1,7 @@
 package dev.skypocket.ui.widget;
 
 import dev.skypocket.config.ModConfig;
+import dev.skypocket.render.ClickGuiMetrics;
 import dev.skypocket.render.CrosshairRenderer;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
@@ -61,22 +62,29 @@ public final class CrosshairPreview extends Control {
         painter.fill(new Rect(x, y, 1, h), border);
         painter.fill(new Rect(x + w - 1, y, 1, h), border);
         if (painter instanceof McUiPainter mc) {
-            // Draw at the real size first, then shrink only if it would not fit.
+            // Draw at the size the crosshair actually occupies on screen, then shrink only if it
+            // would not fit.
             //
-            // The previous version clamped pixel to 1..3 and scale to 0.25..2, which were not the
-            // configurable ranges (1..3 and 0.25..4): a scaled-up crosshair was silently shown
-            // smaller than it really is. Real proportions matter more here than filling the box, so
-            // the clamp is gone and an oversized crosshair is scaled down to fit instead - that keeps
-            // the shape comparable across presets while never drawing outside the frame.
+            // Two conversions are involved and they pull in opposite directions:
+            //  - the game draws the real crosshair in GUI units, at a size of GRID * pixel * scale;
+            //  - this preview draws in panel design units, and the whole panel is then scaled by
+            //    ClickGuiMetrics.effectiveScale() when it is blitted to the screen.
+            // So a crosshair drawn here at GRID * pixel * scale design units reaches the screen at
+            // effectiveScale times that - which is why the preview looked smaller than the real
+            // thing by roughly the panel scale (about 0.5 to 0.7 depending on resolution). Dividing
+            // by the panel scale makes the previewed crosshair cover the same fraction of the screen
+            // as the real one.
             int pixel = Math.max(1, Math.round(cfg.crosshairPixelSize));
             float scale = Math.max(0.25f, cfg.crosshairScale);
+            float panelScale = Math.max(0.05f, ClickGuiMetrics.effectiveScale());
 
             // Leave a 2-unit inset so the outer ring of cells is not flush against the border.
             float box = Math.max(1f, Math.min(w, h) - 4f);
-            int naturalSize = CrosshairRenderer.sizeFor(pixel, scale);
+            int naturalSize = CrosshairRenderer.sizeFor(pixel, scale / panelScale);
             float fit = naturalSize <= box ? 1f : box / naturalSize;
 
-            CrosshairRenderer.render(mc.graphics(), x + w / 2, y + h / 2, pixel, scale * fit,
+            CrosshairRenderer.render(mc.graphics(), x + w / 2, y + h / 2, pixel,
+                    (scale / panelScale) * fit,
                     cfg.crosshairGrid, cfg.getCrosshairColorARGB(), cfg.crosshairStroke,
                     cfg.crosshairStrokeWidth);
         }
