@@ -60,7 +60,6 @@ public class ModConfig {
     public boolean crosshairEnabled = true;
     public boolean handItemEnabled = false;
     public boolean blockOutlineEnabled = true;
-    public boolean autoSprintEnabled = false;
     public boolean scrollableTooltipsEnabled = true;
     public boolean scrollableTooltipsAlwaysScroll = false;
     public float scrollableTooltipsSensitivity = 1.0f;
@@ -942,4 +941,11 @@ public class ModConfig {
             miningAbilityReminderSound = "minecraft:entity.experience_orb.pickup";
         }
     }
+
+    // ---- Per-feature config blocks (Phase 3) ----
+    //
+    // Each feature owns its own state object; Gson writes them as nested objects under the
+    // field name. FeatureModule.config() returns the instance so the framework can find it.
+    public dev.skypocket.feature.config.AutoSprintConfig autoSprintBlock = new dev.skypocket.feature.config.AutoSprintConfig();
 }
+

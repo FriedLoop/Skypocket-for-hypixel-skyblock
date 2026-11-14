@@ -80,6 +80,24 @@ $steps = @(
             $json.PSObject.Properties.Remove('hideLandedArrows')
             return $true
         }
+    },
+    @{
+        Name = 'autoSprintEnabled -> autoSprintBlock'
+        Apply = {
+            param($json)
+            if (-not ($json.PSObject.Properties.Name -contains 'autoSprintEnabled')) {
+                return $false
+            }
+            $value = [bool] $json.autoSprintEnabled
+            $block = [PSCustomObject]@{ autoSprintEnabled = $value }
+            if ($json.PSObject.Properties.Name -contains 'autoSprintBlock') {
+                $json.autoSprintBlock = $block
+            } else {
+                $json | Add-Member -NotePropertyName 'autoSprintBlock' -NotePropertyValue $block
+            }
+            $json.PSObject.Properties.Remove('autoSprintEnabled')
+            return $true
+        }
     }
 )
 

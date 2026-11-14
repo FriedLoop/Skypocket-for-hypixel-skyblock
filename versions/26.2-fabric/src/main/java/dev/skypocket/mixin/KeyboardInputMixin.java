@@ -24,7 +24,7 @@ public abstract class KeyboardInputMixin {
     @Inject(method = "tick", at = @At("RETURN"), require = 0)
     private void sky$forceSprint(CallbackInfo ci) {
         ModConfig config = ConfigManager.get();
-        if (!config.autoSprintEnabled) {
+        if (!config.autoSprintBlock.autoSprintEnabled) {
             return;
         }
         ClientInput self = (ClientInput) (Object) this;
