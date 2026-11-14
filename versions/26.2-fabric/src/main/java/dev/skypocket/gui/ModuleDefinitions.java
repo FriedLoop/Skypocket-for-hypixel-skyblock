@@ -53,24 +53,24 @@ final class ModuleDefinitions {
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideSpawnPointPlayersFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HidePlayersNearNpcsFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideOtherPlayersPresentsFeature());
-        registerHitbox(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HitboxFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideLandedArrowsFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HideStuckArrowsFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.FishingHotspotOverlayFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.LegendarySeaCreatureWarningFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DrillFuelFeature());
-        registerMiningAbilityReminder(cfg);
-        registerMiningBreakPredict(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.MiningAbilityReminderFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.MiningBreakPredictFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.CommissionsFeature());
-        registerPostProcess(cfg);
-        registerHandItem(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.PostProcessFeature());
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HandItemFeature());
         // Phase 2: these two also own a HUD element, so their HudSpec replaces the editor's
         // hand-written entry for that target.
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ClockFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.DayCountFeature());
-        registerFpsTpsPing(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.FpsTpsPingFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.HeldItemNameFeature());
-        registerStatsDisplay(cfg);
+        dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.StatsDisplayFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.SkillDisplayFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ThunderBottleFeature());
         dev.skypocket.feature.ModuleAdapter.register(new dev.skypocket.feature.modules.ItemPickupLogFeature());
@@ -114,30 +114,6 @@ final class ModuleDefinitions {
                 )));
     }
 
-    private static void registerMiningAbilityReminder(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("提醒", "调整技能名与可用颜色、缩放和提醒音效"));
-        settings.add(new Setting.ColorSetting("技能名颜色", () -> cfg.miningAbilityNameColor,
-                v -> cfg.miningAbilityNameColor = v));
-        settings.add(new Setting.ColorSetting("可用颜色", () -> cfg.miningAbilityAvailableColor,
-                v -> cfg.miningAbilityAvailableColor = v));
-        settings.add(new Setting.SliderSetting("冷却缩放", 0.25, 6.0,
-                () -> cfg.miningAbilityScale, v -> cfg.miningAbilityScale = (float) v,
-                "%.2f", ModConfig.SCALE_GRID));
-        settings.add(new Setting.SliderSetting("提醒缩放", 0.25, 6.0,
-                () -> cfg.miningAbilitySubtitleScale,
-                v -> cfg.miningAbilitySubtitleScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
-        settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
-                () -> cfg.miningAbilityReminderSound, v -> cfg.miningAbilityReminderSound = v));
-        settings.add(new Setting.SliderSetting("音量", 0, 200, () -> cfg.miningAbilityReminderVolume * 100,
-                v -> cfg.miningAbilityReminderVolume = (float) (v / 100.0), "%.0f%%", 1));
-        settings.add(new Setting.SliderSetting("音高", 0.5, 2.0, () -> cfg.miningAbilityReminderPitch,
-                v -> cfg.miningAbilityReminderPitch = (float) v, "%.2f", 0.05));
-        ModuleRegistry.register(new Module("mining_ability_reminder", "挖矿技能提醒", Category.MINING,
-                () -> cfg.miningAbilityReminderEnabled, v -> cfg.miningAbilityReminderEnabled = v, settings)
-                .markSkyBlockOnly());
-    }
-
     /**
      * SkyBlock mining commissions (only the Dwarven Mines / Crystal Hollows / Glacite Tunnels have
      * them, and the tab list only carries the block there - see {@code CommissionTracker}).
@@ -150,249 +126,39 @@ final class ModuleDefinitions {
      * is that effect's existing enable flag, so a config written before the merge keeps meaning exactly
      * what it did - and the per-effect code still reads the same fields.
      */
-    private static void registerPostProcess(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.GroupSetting("抗锯齿", () -> cfg.antialiasingEnabled,
-                v -> cfg.antialiasingEnabled = v, antialiasingSettings(cfg))
-                .subtitle("平滑边缘，并按强度调整锐化"));
-        settings.add(new Setting.GroupSetting("动态模糊", () -> cfg.motionBlurEnabled,
-                v -> cfg.motionBlurEnabled = v, motionBlurSettings(cfg))
-                .subtitle("移动视角时加入方向性模糊"));
-        settings.add(new Setting.GroupSetting("画面调色", () -> cfg.colorGradeEnabled,
-                v -> cfg.colorGradeEnabled = v, colorGradeSettings(cfg))
-                .subtitle("调整画面亮度、对比度、饱和度与色调"));
-        settings.add(new Setting.GroupSetting("泛光", () -> cfg.bloomEnabled,
-                v -> cfg.bloomEnabled = v, bloomSettings(cfg))
-                .subtitle("让高亮区域产生柔和光晕"));
-        ModuleRegistry.register(new Module("post_process", "后处理", Category.RENDER,
-                () -> cfg.postProcessEnabled, v -> cfg.postProcessEnabled = v, settings));
-    }
-
     /**
      * Anti-aliasing as a post pass (see {@code AntialiasingRenderer}): no SkyBlock gate, it is a
      * plain render feature. The strength picks a parameter set (edge threshold + sub-pixel amount) and
      * the sharpening slider rides along in the same chain, as its last pass - after FXAA, which is
      * what lets it put back the contrast the filter takes out of small text.
      */
-    private static List<Setting> antialiasingSettings(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.DropdownSetting("强度", AntialiasingRenderer::presets,
-                () -> cfg.antialiasingStrength, v -> cfg.antialiasingStrength = v));
-        settings.add(effectParameter("锐化", 0.00, 1.50, 0.05, "%.2f",
-                () -> cfg.antialiasingSharpen, v -> cfg.antialiasingSharpen = (float) v));
-        settings.add(new Setting.BooleanSetting("光影下也生效", () -> cfg.antialiasingWithShaders,
-                v -> cfg.antialiasingWithShaders = v));
-        settings.add(new Setting.BooleanSetting("开界面时跳过", () -> cfg.antialiasingSkipScreens,
-                v -> cfg.antialiasingSkipScreens = v));
-        return settings;
-    }
-
     /**
      * Colour grading (see {@code ColorGradeRenderer}): the cheap half of a shader pack's look as one
      * post pass - no geometry pass, no shadow map. The parameters are live - the chain is rebuilt
      * (debounced, see {@code LivePostChain}) whenever one of them changes - so the dropdown writes a
      * whole preset at once and the sliders fine-tune it.
      */
-    private static List<Setting> colorGradeSettings(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.DropdownSetting("套用预设", ColorGradeRenderer::presets,
-                () -> cfg.colorGradePreset, id -> applyColorGradePreset(cfg, id)));
-        settings.add(colorParameter(cfg, "曝光", 0.80, 1.60, 0.01, "%.2f",
-                () -> cfg.colorGradeExposure, v -> cfg.colorGradeExposure = (float) v));
-        settings.add(colorParameter(cfg, "对比度", 0.80, 1.60, 0.01, "%.2f",
-                () -> cfg.colorGradeContrast, v -> cfg.colorGradeContrast = (float) v));
-        settings.add(colorParameter(cfg, "饱和度", 0.50, 1.80, 0.01, "%.2f",
-                () -> cfg.colorGradeSaturation, v -> cfg.colorGradeSaturation = (float) v));
-        settings.add(colorParameter(cfg, "伽马", 0.80, 1.25, 0.01, "%.2f",
-                () -> cfg.colorGradeGamma, v -> cfg.colorGradeGamma = (float) v));
-        settings.add(colorParameter(cfg, "黑位", -0.02, 0.03, 0.001, "%.3f",
-                () -> cfg.colorGradeLift, v -> cfg.colorGradeLift = (float) v));
-        settings.add(colorParameter(cfg, "色温", 0.00, 1.00, 0.01, "%.2f",
-                () -> cfg.colorGradeTemperature, v -> cfg.colorGradeTemperature = (float) v));
-        settings.add(colorParameter(cfg, "暗角", 0.00, 1.00, 0.01, "%.2f",
-                () -> cfg.colorGradeVignette, v -> cfg.colorGradeVignette = (float) v));
-        settings.add(new Setting.BooleanSetting("开界面时跳过", () -> cfg.colorGradeSkipScreens,
-                v -> cfg.colorGradeSkipScreens = v));
-        return settings;
-    }
-
     /**
      * Motion blur (see {@code MotionBlurRenderer}): camera reprojection against the previous frame, so
      * walking and turning smear while a still camera is untouched. The amount is an exposure time in
      * milliseconds rather than a per-frame factor, which is what keeps the look the same at any frame
      * rate. Off by default - it is a look, not a correction.
      */
-    private static List<Setting> motionBlurSettings(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(effectParameter("强度", 0.00, 1.00, 0.05, "%.2f",
-                () -> cfg.motionBlurStrength, v -> cfg.motionBlurStrength = (float) v));
-        settings.add(effectParameter("曝光", 1, 50, 1, "%.0f",
-                () -> cfg.motionBlurExposureMs, v -> cfg.motionBlurExposureMs = (float) v));
-        settings.add(effectParameter("最大半径", 4, 64, 2, "%.0f",
-                () -> cfg.motionBlurMaxRadius, v -> cfg.motionBlurMaxRadius = (float) v));
-        settings.add(new Setting.BooleanSetting("开界面时跳过", () -> cfg.motionBlurSkipScreens,
-                v -> cfg.motionBlurSkipScreens = v));
-        settings.add(new Setting.BooleanSetting("调试：显示速度", () -> cfg.motionBlurDebug,
-                v -> cfg.motionBlurDebug = v));
-        return settings;
-    }
-
     /**
      * Bloom (see {@code BloomRenderer}): a bright pass that already blurs, a composite and a blit.
      * Its own module so switching it off costs nothing - the passes only exist while it is on - and
      * its sliders are live like the grade's.
      */
-    private static List<Setting> bloomSettings(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(effectParameter("强度", 0.00, 2.00, 0.05, "%.2f",
-                () -> cfg.bloomStrength, v -> cfg.bloomStrength = (float) v));
-        settings.add(effectParameter("阈值", 0.00, 1.00, 0.02, "%.2f",
-                () -> cfg.bloomThreshold, v -> cfg.bloomThreshold = (float) v));
-        settings.add(effectParameter("半径", 1.0, 64.0, 1.0, "%.1f",
-                () -> cfg.bloomRadius, v -> cfg.bloomRadius = (float) v));
-        return settings;
-    }
-
     /**
      * One of the seven *colour* parameters. Moving it also marks the state as "custom": those values
      * no longer match the preset the dropdown names, and saying so is cheaper than leaving the two
      * out of step.
      */
-    private static Setting.SliderSetting colorParameter(ModConfig cfg, String label, double min,
-                                                        double max, double step, String format,
-                                                        DoubleSupplier getter, DoubleConsumer setter) {
-        return new Setting.SliderSetting(label, min, max, getter, v -> {
-            setter.accept(v);
-            cfg.colorGradePreset = ColorGradeRenderer.CUSTOM;
-        }, format, step);
-    }
-
     /**
      * One of the parameters no preset owns (sharpen, fog, AO, bloom). Rebuilding the chain does not
      * care which module a value came from, so these are ordinary sliders.
      */
-    private static Setting.SliderSetting effectParameter(String label, double min, double max,
-                                                         double step, String format,
-                                                         DoubleSupplier getter, DoubleConsumer setter) {
-        return new Setting.SliderSetting(label, min, max, getter, setter, format, step);
-    }
-
     /** Applies a preset, then re-lays the page out so the sliders show what it wrote. */
-    private static void applyColorGradePreset(ModConfig cfg, String id) {
-        ColorGradeRenderer.applyPreset(cfg, id);
-        Minecraft mc = Minecraft.getInstance();
-        mc.schedule(() -> {
-            if (mc.gui.screen() instanceof OneClickScreen screen) {
-                screen.rebuildAfterSettingChange();
-            }
-        });
-    }
-
-    private static void registerMiningBreakPredict(ModConfig cfg) {
-        List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.Header("提醒", "调整方块轮廓、提示偏移与提醒音效"));
-        settings.add(new Setting.BooleanSetting("方块轮廓", () -> cfg.miningBreakOutlineEnabled,
-                v -> cfg.miningBreakOutlineEnabled = v));
-        settings.add(new Setting.ColorSetting("轮廓颜色", () -> cfg.miningBreakOutlineColor,
-                v -> cfg.miningBreakOutlineColor = v, true));
-        settings.add(new Setting.SliderSetting("提示偏移(Tick)", -6, 3, () -> cfg.miningBreakBiasTicks,
-                v -> cfg.miningBreakBiasTicks = (int) Math.round(v), "%.0f", 1));
-        settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
-                () -> cfg.miningBreakSound, v -> cfg.miningBreakSound = v));
-        settings.add(new Setting.SliderSetting("音量", 0, 200, () -> cfg.miningBreakSoundVolume * 100,
-                v -> cfg.miningBreakSoundVolume = (float) (v / 100.0), "%.0f%%", 1));
-        settings.add(new Setting.SliderSetting("音高", 0.5, 2.0, () -> cfg.miningBreakSoundPitch,
-                v -> cfg.miningBreakSoundPitch = (float) v, "%.2f", 0.05));
-        // Calibration and diagnostics are not everyday settings: folded into one group so the page shows
-        // the six things a player normally touches and nothing else.
-        List<Setting> advanced = new ArrayList<>();
-        advanced.add(new Setting.ActionSetting(
-                () -> Localization.tr("重置矿物强度识别") + " (" + MiningStrengthTable.size() + ")",
-                MiningStrengthTable::clear));
-        advanced.add(new Setting.DropdownSetting("取整方式",
-                () -> List.of("ceil", "floor", "round"),
-                () -> cfg.miningTickRounding, v -> cfg.miningTickRounding = v));
-        advanced.add(new Setting.BooleanSetting("自动校准速度刻度", () -> cfg.miningAutoScale,
-                v -> cfg.miningAutoScale = v));
-        advanced.add(new Setting.BooleanSetting("相位对齐", () -> cfg.miningPhaseAlign,
-                v -> cfg.miningPhaseAlign = v));
-        advanced.add(new Setting.DropdownSetting("对准时刻",
-                () -> List.of("zero", "server", "client"),
-                () -> cfg.miningAlignTarget, v -> cfg.miningAlignTarget = v));
-        advanced.add(new Setting.SliderSetting("最小破坏 tick", 1, 20,
-                () -> cfg.miningMinBreakTicks,
-                v -> cfg.miningMinBreakTicks = (int) Math.round(v), "%.0f", 1));
-        advanced.add(new Setting.BooleanSetting("调试信息", () -> cfg.miningBreakDebugHud,
-                v -> cfg.miningBreakDebugHud = v));
-        settings.add(new Setting.GroupSetting("校准与调试", advanced)
-                .subtitle("调试信息与高级显示选项"));
-        ModuleRegistry.register(new Module("mining_break_predict", "挖矿破坏预测", Category.MINING,
-                () -> cfg.miningBreakPredictEnabled, v -> cfg.miningBreakPredictEnabled = v, settings)
-                .markSkyBlockOnly());
-    }
-
-    private static void registerHitbox(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hitbox", "碰撞箱", Category.ESP,
-                () -> cfg.hitboxEnabled, v -> cfg.hitboxEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "调整碰撞箱颜色、线宽和视线"),
-                        new Setting.ColorSetting("颜色", () -> cfg.hitboxColor, v -> cfg.hitboxColor = v),
-                        new Setting.SliderSetting("线宽", 0.5, 8.0, () -> cfg.hitboxLineWidth, v -> cfg.hitboxLineWidth = (float) v, "%.1f", 0.5),
-                        new Setting.BooleanSetting("实体视线", () -> cfg.hitboxShowLineOfSight, v -> cfg.hitboxShowLineOfSight = v),
-                        new Setting.ColorSetting("视线颜色", () -> cfg.lookRayColor, v -> cfg.lookRayColor = v),
-                        new Setting.SliderSetting("视线长度", 1.0, 64.0, () -> cfg.lookRayLength, v -> cfg.lookRayLength = (float) v, "%.1f", 0.5),
-                        new Setting.Header("过滤", "选择要显示碰撞箱的实体类型"),
-                        new Setting.BooleanSetting("玩家", () -> cfg.hitboxShowPlayer, v -> cfg.hitboxShowPlayer = v),
-                        new Setting.BooleanSetting("箭矢", () -> cfg.hitboxShowProjectile, v -> cfg.hitboxShowProjectile = v),
-                        new Setting.BooleanSetting("敌对生物", () -> cfg.hitboxShowHostile, v -> cfg.hitboxShowHostile = v),
-                        new Setting.BooleanSetting("中立生物", () -> cfg.hitboxShowNeutral, v -> cfg.hitboxShowNeutral = v),
-                        new Setting.BooleanSetting("箱子", () -> cfg.hitboxShowContainer, v -> cfg.hitboxShowContainer = v),
-                        new Setting.BooleanSetting("其他", () -> cfg.hitboxShowOther, v -> cfg.hitboxShowOther = v),
-                        new Setting.Header("范围", "控制碰撞箱的显示距离"),
-                        new Setting.BooleanSetting("不限距离", () -> cfg.hitboxUnlimitedRange, v -> cfg.hitboxUnlimitedRange = v),
-                        new Setting.SliderSetting("范围", 1.0, 128.0, () -> cfg.hitboxRange, v -> cfg.hitboxRange = (float) v, "%.0f", 1)
-                )));
-    }
-
-    private static void registerHandItem(ModConfig cfg) {
-        ModuleRegistry.register(new Module("hand_item", "手持物品动画", Category.RENDER,
-                () -> cfg.handItemEnabled, v -> cfg.handItemEnabled = v,
-                List.of(
-                        new Setting.Header("外观", "调整手持物品的大小"),
-                        new Setting.SliderSetting("物品大小", 0.1, 4.0, () -> cfg.handItemScale, v -> cfg.handItemScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
-                        new Setting.Header("动作", "控制挥动、切换和挥砍速度"),
-                        new Setting.BooleanSetting("禁用挥动动画", () -> cfg.handItemDisableSwing, v -> cfg.handItemDisableSwing = v),
-                        new Setting.BooleanSetting("禁用切换动画", () -> cfg.handItemDisableReequip, v -> cfg.handItemDisableReequip = v),
-                        new Setting.SliderSetting("挥砍速度", 0.0, 200.0, () -> cfg.swingSpeed, v -> cfg.swingSpeed = (int) Math.round(v), "%.0f%%", 1),
-                        new Setting.BooleanSetting("忽略急迫等效果", () -> cfg.swingIgnoreHaste, v -> cfg.swingIgnoreHaste = v),
-                        new Setting.Header("位置与旋转", "调整第一人称手部的偏移与旋转"),
-                        new Setting.SliderSetting("位置 X", -1.0, 1.0, () -> cfg.handItemOffsetX, v -> cfg.handItemOffsetX = (float) v, "%.3f", 0.01),
-                        new Setting.SliderSetting("位置 Y", -1.0, 1.0, () -> cfg.handItemOffsetY, v -> cfg.handItemOffsetY = (float) v, "%.3f", 0.01),
-                        new Setting.SliderSetting("位置 Z", -1.0, 1.0, () -> cfg.handItemOffsetZ, v -> cfg.handItemOffsetZ = (float) v, "%.3f", 0.01),
-                        new Setting.SliderSetting("旋转 X", -180.0, 180.0, () -> cfg.handItemRotateX, v -> cfg.handItemRotateX = (float) v, "%.0f", 1),
-                        new Setting.SliderSetting("旋转 Y", -180.0, 180.0, () -> cfg.handItemRotateY, v -> cfg.handItemRotateY = (float) v, "%.0f", 1),
-                        new Setting.SliderSetting("旋转 Z", -180.0, 180.0, () -> cfg.handItemRotateZ, v -> cfg.handItemRotateZ = (float) v, "%.0f", 1)
-                )));
-    }
-
-    private static void registerFpsTpsPing(ModConfig cfg) {
-        ModuleRegistry.register(new Module("fps_tps_ping", "FPS/TPS/Ping", Category.HUD,
-                () -> cfg.fpsTpsPingEnabled, v -> cfg.fpsTpsPingEnabled = v,
-                List.of(
-                        new Setting.Header("显示", "选择显示项目、大小与排版"),
-                        new Setting.BooleanSetting("FPS", () -> cfg.fpsTpsPingShowFps, v -> cfg.fpsTpsPingShowFps = v),
-                        new Setting.BooleanSetting("TPS", () -> cfg.fpsTpsPingShowTps, v -> cfg.fpsTpsPingShowTps = v),
-                        new Setting.BooleanSetting("Ping", () -> cfg.fpsTpsPingShowPing, v -> cfg.fpsTpsPingShowPing = v),
-                        new Setting.SliderSetting("大小", 0.25, 6.0, () -> cfg.fpsTpsPingScale, v -> cfg.fpsTpsPingScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
-                        new Setting.ChoiceSetting("排版", List.of("竖向排版", "横向排版"),
-                                () -> cfg.fpsTpsPingVertical ? 0 : 1,
-                                index -> {
-                                    cfg.fpsTpsPingVertical = index == 0;
-                                    dev.skypocket.config.ConfigManager.touch();
-                                })
-                )));
-    }
-
     /**
      * SkyBlock's own numbers over the vanilla health area (see {@code StatsOverlayRenderer}): the
      * classic style redraws them with the HUD's own vocabulary, the modern one as bars. The first
@@ -407,15 +173,6 @@ final class ModuleDefinitions {
      * hidden through {@code Setting#visibleWhen}, and the widgets are built once rather than every
      * frame, so the panel has to be laid out again for the change to show.
      */
-    private static void rebuildPanelAfterStyleChange() {
-        Minecraft mc = Minecraft.getInstance();
-        mc.schedule(() -> {
-            if (mc.gui.screen() instanceof OneClickScreen screen) {
-                screen.rebuildAfterSettingChange();
-            }
-        });
-    }
-
     /**
      * The vanilla held item tooltip - the item name that fades in above the hotbar after the selected
      * slot changes - made movable and sizable.
@@ -426,173 +183,6 @@ final class ModuleDefinitions {
      * wheel; the offsets are also exposed here because they are the only way to bring it back after
      * dragging it somewhere silly.
      */
-    private static void registerStatsDisplay(ModConfig cfg) {
-        ModuleRegistry.register(new Module("stats_display", "玩家数值显示", Category.HUD,
-                () -> cfg.statsEnabled, v -> cfg.statsEnabled = v,
-                List.of(
-                        new Setting.Header("显示风格", "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
-                        new Setting.ChoiceSetting("风格", List.of("经典", "现代"),
-                                () -> cfg.statsModernStyle ? 1 : 0,
-                                index -> {
-                                    cfg.statsModernStyle = index == 1;
-                                    rebuildPanelAfterStyleChange();
-                                }, true),
-                        // Vanilla HUD is its own card: the style switch above only chooses the module's
-                        // presentation and must not visually own the vanilla-element toggles.
-                        new Setting.Header("原版元素", "隐藏原版元素，避免和本模块重复绘制"),
-                        new Setting.BooleanSetting("隐藏原版生命条",
-                                () -> cfg.statsHideVanillaHealth,
-                                v -> cfg.statsHideVanillaHealth = v)
-                                .hint("本模块会自己画血量，留着会两层叠在一起"),
-                        new Setting.BooleanSetting("隐藏原版饥饿条",
-                                () -> cfg.statsHideVanillaFood,
-                                v -> cfg.statsHideVanillaFood = v)
-                                .hint("饥饿那一行被法力占用"),
-                        new Setting.BooleanSetting("隐藏原版空气泡",
-                                () -> cfg.statsHideVanillaAir,
-                                v -> cfg.statsHideVanillaAir = v)
-                                .hint("它会正好落在法力的第二行上"),
-                        new Setting.BooleanSetting("隐藏原版盔甲条",
-                                () -> cfg.statsHideVanillaArmor,
-                                v -> cfg.statsHideVanillaArmor = v)
-                                .hint("它和本模块的布局不冲突，所以默认留着"),
-                        new Setting.BooleanSetting("隐藏原版动作栏",
-                                () -> cfg.statsHideVanillaActionBar,
-                                v -> cfg.statsHideVanillaActionBar = v)
-                                .hint("只隐藏绘制：数值仍然在读取，显示照常更新"),
-                        // Style-independent rows come first, style-specific blocks last: otherwise a
-                        // conditional block sat between two unconditional ones and switching the style
-                        // shifted everything below it, including rows that have nothing to do with it.
-                        new Setting.Header("颜色", "现代风格的条与经典风格的数值文字共用同一套"),
-                        new Setting.ColorSetting("生命颜色", () -> cfg.statsHealthColor,
-                                v -> cfg.statsHealthColor = v),
-                        new Setting.ColorSetting("吸收颜色", () -> cfg.statsAbsorptionColor,
-                                v -> cfg.statsAbsorptionColor = v),
-                        new Setting.ColorSetting("法力颜色", () -> cfg.statsManaColor,
-                                v -> cfg.statsManaColor = v),
-                        new Setting.ColorSetting("溢出法力颜色", () -> cfg.statsOverflowColor,
-                                v -> cfg.statsOverflowColor = v),
-                        new Setting.ColorSetting("空气颜色", () -> cfg.statsAirColor,
-                                v -> cfg.statsAirColor = v),
-                        new Setting.ColorSetting("防御颜色", () -> cfg.statsDefenseColor,
-                                v -> cfg.statsDefenseColor = v),
-                        new Setting.ColorSetting("速度颜色", () -> cfg.statsSpeedColor,
-                                v -> cfg.statsSpeedColor = v),
-                        new Setting.ColorSetting("活力颜色", () -> cfg.statsVitalityColor,
-                                v -> cfg.statsVitalityColor = v),
-                        // Classic-only: the modern style renders these values inside its bars, so
-                        // separate text rows would duplicate the same responsibility.
-                        new Setting.Header("经典文字行", "仅经典风格；现代风格的条已经直接显示这些数值")
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.BooleanSetting("防御文字", () -> cfg.statsDefenseEnabled,
-                                v -> cfg.statsDefenseEnabled = v)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.BooleanSetting("速度文字", () -> cfg.statsSpeedEnabled,
-                                v -> cfg.statsSpeedEnabled = v)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.BooleanSetting("活力文字", () -> cfg.statsVitalityEnabled,
-                                v -> cfg.statsVitalityEnabled = v)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.SliderSetting("防御文字大小", 0.25, 6.0, () -> cfg.statsDefenseScale,
-                                v -> cfg.statsDefenseScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.SliderSetting("速度文字大小", 0.25, 6.0, () -> cfg.statsSpeedScale,
-                                v -> cfg.statsSpeedScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.SliderSetting("活力文字大小", 0.25, 6.0, () -> cfg.statsVitalityScale,
-                                v -> cfg.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.Header("经典布局", "原版图标 + 精确数值；两行文字的位置在「HUD 位置调整」页里拖")
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        // Classic-only: blink the mana container when mana runs low.
-                        new Setting.BooleanSetting("法力不足时闪烁", () -> cfg.statsManaBlink,
-                                v -> cfg.statsManaBlink = v)
-                                .hint("剩余不足两格时按原版节奏闪烁")
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.BooleanSetting("生命数值", () -> cfg.statsHealthTextEnabled,
-                                v -> cfg.statsHealthTextEnabled = v)
-                                .hint("20 格图标表达不了一个点；这里给出精确值与吸收量")
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.SliderSetting("生命数值大小", 0.25, 6.0, () -> cfg.statsHealthTextScale,
-                                v -> cfg.statsHealthTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.BooleanSetting("法力数值", () -> cfg.statsManaTextEnabled,
-                                v -> cfg.statsManaTextEnabled = v)
-                                .hint("精确值与溢出法力")
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        new Setting.SliderSetting("法力数值大小", 0.25, 6.0, () -> cfg.statsManaTextScale,
-                                v -> cfg.statsManaTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> !cfg.statsModernStyle),
-                        // Modern-only: the geometry all six bars share, then a switch and a size for
-                        // each. Position comes from the HUD position editor, where every bar is its
-                        // own target; these rows are for switching them on and for sizing them
-                        // without leaving the panel.
-                        new Setting.Header("现代条",
-                                "位置在「HUD 位置调整」页里逐条拖拽与缩放，这里只管粗细与开关")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("条上显示数值", () -> cfg.statsBarShowValues,
-                                v -> cfg.statsBarShowValues = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("生命条", () -> cfg.statsHealthBarEnabled,
-                                v -> cfg.statsHealthBarEnabled = v)
-                                .hint("吸收血量作为第二层叠在它上面")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("生命条大小", 0.25, 6.0, () -> cfg.statsHealthBarScale,
-                                v -> cfg.statsHealthBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("法力条", () -> cfg.statsManaBarEnabled,
-                                v -> cfg.statsManaBarEnabled = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("法力条大小", 0.25, 6.0, () -> cfg.statsManaBarScale,
-                                v -> cfg.statsManaBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("防御条", () -> cfg.statsDefenseBarEnabled,
-                                v -> cfg.statsDefenseBarEnabled = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("防御条大小", 0.25, 6.0, () -> cfg.statsDefenseBarScale,
-                                v -> cfg.statsDefenseBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("速度条", () -> cfg.statsSpeedBarEnabled,
-                                v -> cfg.statsSpeedBarEnabled = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("速度条大小", 0.25, 6.0, () -> cfg.statsSpeedBarScale,
-                                v -> cfg.statsSpeedBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("活力条", () -> cfg.statsVitalityBarEnabled,
-                                v -> cfg.statsVitalityBarEnabled = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("活力条大小", 0.25, 6.0, () -> cfg.statsVitalityBarScale,
-                                v -> cfg.statsVitalityBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.BooleanSetting("空气条", () -> cfg.statsAirBarEnabled,
-                                v -> cfg.statsAirBarEnabled = v)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.SliderSetting("空气条大小", 0.25, 6.0, () -> cfg.statsAirBarScale,
-                                v -> cfg.statsAirBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        // Advanced is its own card: it is a different kind of operation from the bar
-                        // switches above, and should not read as another bar row.
-                        new Setting.Header("重置与恢复", "重置条位置与恢复默认颜色")
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.ActionSetting(() -> Localization.tr("重置条位置"),
-                                () -> StatsBarHudElement.resetToDefaults(cfg))
-                                .visibleWhen(() -> cfg.statsModernStyle),
-                        new Setting.ActionSetting(() -> Localization.tr("恢复默认颜色"),
-                                () -> {
-                                    cfg.statsHealthColor = dev.skypocket.config.ColorDefaults.STATS_HEALTH;
-                                    cfg.statsAbsorptionColor = dev.skypocket.config.ColorDefaults.STATS_ABSORPTION;
-                                    cfg.statsManaColor = dev.skypocket.config.ColorDefaults.STATS_MANA;
-                                    cfg.statsOverflowColor = dev.skypocket.config.ColorDefaults.STATS_OVERFLOW;
-                                    cfg.statsAirColor = dev.skypocket.config.ColorDefaults.STATS_AIR;
-                                    cfg.statsDefenseColor = dev.skypocket.config.ColorDefaults.STATS_DEFENSE;
-                                    cfg.statsSpeedColor = dev.skypocket.config.ColorDefaults.STATS_SPEED;
-                                    cfg.statsVitalityColor = dev.skypocket.config.ColorDefaults.STATS_VITALITY;
-                                    rebuildPanelAfterStyleChange();
-                                })
-                                .visibleWhen(() -> cfg.statsModernStyle)
-                )).markSkyBlockOnly());
-    }
-
 }
 
 

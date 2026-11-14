@@ -74,6 +74,33 @@ foreach ($file in Get-ChildItem -LiteralPath $modulesDir -Filter *.java) {
 Write-Host ("old registrations: {0}   migrated features: {1}" -f $oldBlocks.Count, $newFeatures.Count)
 Write-Host ''
 
+<#
+    Appends the bodies of helper methods the block calls.
+
+    One level only: a registration that builds its groups from helpers (post_process is the case that
+    motivated this) declares its settings inside those helpers, so a comparison that sees only the
+    registration body concludes every setting was deleted. Following one level covers the real shape;
+    going deeper would start pulling in unrelated code through the shared cfg object.
+#>
+function Expand-Helpers {
+    param([string]$Source, [string]$Block)
+
+    $expanded = $Block
+    # Only helpers this block actually calls: matching every helper name and appending all of them
+    # mixed one feature's sliders into another (hitbox's line width appeared under mining_break_predict).
+    foreach ($helper in @('antialiasingSettings', 'colorGradeSettings', 'motionBlurSettings', 'bloomSettings')) {
+        # Plain Contains, not -match: the block is source text and the helper name is a literal, and a
+        # word-boundary escape written in a double-quoted string is not the regex \b.
+        if (-not $Block.Contains("$helper(cfg)")) { continue }
+        $start = $Source.IndexOf("private static List<Setting> $helper(")
+        if ($start -lt 0) { continue }
+        $end = $Source.IndexOf("`n    }`n", $start)
+        if ($end -lt 0) { continue }
+        $expanded += "`n" + $Source.Substring($start, $end - $start)
+    }
+    return $expanded
+}
+
 $problems = 0
 foreach ($id in ($newFeatures.Keys | Sort-Object)) {
     $new = $newFeatures[$id]
@@ -85,9 +112,21 @@ foreach ($id in ($newFeatures.Keys | Sort-Object)) {
     }
     $old = $oldBlocks[$id]
 
-    # 1) Slider: name, min, max, step. Compared as raw text because the old side is source code.
-    $oldSliders = [regex]::Matches($old, 'SliderSetting\("([^"]+)",\s*([-\d.]+),\s*([-\d.]+)')
-    $newSliders = [regex]::Matches($new.Text, 'SliderSetting\("([^"]+)",\s*([-\d.]+),\s*([-\d.]+)')
+    # Helper bodies are pulled in once, up front: the slider and step checks below read $oldExpanded,
+    # and leaving the assignment further down meant those checks ran against $null and silently
+    # compared nothing.
+    $oldExpanded = Expand-Helpers -Source $before -Block $old
+    $oldHasHelpers = $oldExpanded.Length -ne $old.Length
+
+    # 1) Sliders: name, min, max.
+    #
+    # Two spellings exist: a direct `new Setting.SliderSetting(...)`, and the helper factories
+    # `effectParameter(...)` / `colorParameter(...)` that post_process uses. Matching only the first
+    # left every helper-built slider unchecked - mutating 锐化's range from 1.50 to 2.50 went
+    # unreported.
+    $sliderPattern = '(?:SliderSetting|effectParameter|colorParameter)\(\s*(?:cfg,\s*)?"([^"]+)",\s*([-\d.]+),\s*([-\d.]+)'
+    $oldSliders = [regex]::Matches($oldExpanded, $sliderPattern)
+    $newSliders = [regex]::Matches($new.Text, $sliderPattern)
     if ($oldSliders.Count -ne $newSliders.Count) {
         Write-Host ("  {0,-32} slider count {1} -> {2}" -f $id, $oldSliders.Count, $newSliders.Count)
         $problems++
@@ -110,7 +149,10 @@ foreach ($id in ($newFeatures.Keys | Sort-Object)) {
     # "%.2fx" for a multiplier, "%.0f%%" for a percentage). Matching only '%\.\d+f' silently skipped
     # every suffixed slider, and a mutated step in one of them produced "no differences" - the check
     # looked like it had passed.
-    $oldSteps = [regex]::Matches($old, '"%[^"]*",\s*([-\d.]+)\)')
+    #
+    # Helper-built sliders take their step as the fourth numeric argument instead of after a format
+    # string, so those are collected separately.
+    $oldSteps = [regex]::Matches($oldExpanded, '"%[^"]*",\s*([-\d.]+)\)')
     $newSteps = [regex]::Matches($new.Text, '"%[^"]*",\s*([-\d.]+)\)')
     for ($i = 0; $i -lt [Math]::Min($oldSteps.Count, $newSteps.Count); $i++) {
         if ($oldSteps[$i].Groups[1].Value -ne $newSteps[$i].Groups[1].Value) {
@@ -119,19 +161,36 @@ foreach ($id in ($newFeatures.Keys | Sort-Object)) {
         }
     }
 
+    $helperPattern = '(?:effectParameter|colorParameter)\(\s*(?:cfg,\s*)?"[^"]+",\s*[-\d.]+,\s*[-\d.]+,\s*([-\d.]+)'
+    $oldHelperSteps = [regex]::Matches($oldExpanded, $helperPattern) | ForEach-Object { $_.Groups[1].Value }
+    $newHelperSteps = [regex]::Matches($new.Text, $helperPattern) | ForEach-Object { $_.Groups[1].Value }
+    if (($oldHelperSteps -join ',') -ne ($newHelperSteps -join ',')) {
+        Write-Host ("  {0,-32} helper slider steps [{1}] -> [{2}]" -f $id, ($oldHelperSteps -join ','), ($newHelperSteps -join ','))
+        $problems++
+    }
+
     # 3) Setting labels and Header subtitles, in order.
     #
     # Both halves matter. A Header's first string is its title and the second is the explanation
     # shown under it; comparing only the titles let a retyped subtitle through, and the subtitle is
     # also the i18n key - so the panel showed Chinese in English mode with nothing to flag it.
-    $oldLabels = ([regex]::Matches($old, 'new Setting\.\w+\("([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
+    #
+    # Settings can also live in a helper method the registration calls (post_process builds its four
+    # groups from antialiasingSettings/colorGradeSettings/motionBlurSettings/bloomSettings). Those
+    # bodies were already appended to $oldExpanded above.
+    $oldLabels = ([regex]::Matches($oldExpanded, 'new Setting\.\w+\("([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
     $newLabels = ([regex]::Matches($new.Text, 'new Setting\.\w+\("([^"]+)"') | ForEach-Object { $_.Groups[1].Value })
-    if (($oldLabels -join '|') -ne ($newLabels -join '|')) {
+    # Order is compared only when the old side had no helpers: expansion appends helper bodies in call
+    # order, which need not match the order the migrated class defines its methods in. Comparing the
+    # sorted sequence still catches a renamed, added or dropped label, which is what this check is for.
+    $oldCmp = if ($oldHasHelpers) { ($oldLabels | Sort-Object) -join '|' } else { $oldLabels -join '|' }
+    $newCmp = if ($oldHasHelpers) { ($newLabels | Sort-Object) -join '|' } else { $newLabels -join '|' }
+    if ($oldCmp -ne $newCmp) {
         Write-Host ("  {0,-32} labels [{1}] -> [{2}]" -f $id, ($oldLabels -join ','), ($newLabels -join ','))
         $problems++
     }
 
-    $oldHeaders = ([regex]::Matches($old, 'new Setting\.Header\("([^"]+)",\s*"([^"]+)"') | ForEach-Object { "$($_.Groups[1].Value) / $($_.Groups[2].Value)" })
+    $oldHeaders = ([regex]::Matches($oldExpanded, 'new Setting\.Header\("([^"]+)",\s*"([^"]+)"') | ForEach-Object { "$($_.Groups[1].Value) / $($_.Groups[2].Value)" })
     $newHeaders = ([regex]::Matches($new.Text, 'new Setting\.Header\("([^"]+)",\s*"([^"]+)"') | ForEach-Object { "$($_.Groups[1].Value) / $($_.Groups[2].Value)" })
     if (($oldHeaders -join '|') -ne ($newHeaders -join '|')) {
         Write-Host ("  {0,-32} headers [{1}] -> [{2}]" -f $id, ($oldHeaders -join ' ; '), ($newHeaders -join ' ; '))
