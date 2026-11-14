@@ -79,15 +79,20 @@ final class ModuleDefinitions {
     }
 
     private static void registerCrosshair(ModConfig cfg) {
+        // One instance for the life of this registration: it holds the typed preset name and the
+        // selected preset across page rebuilds, which is exactly the state a Setting cannot carry
+        // (settings are re-read from the config, and a half-typed name is not in the config).
+        dev.skypocket.crosshair.CrosshairPresetPanel presetPanel =
+                new dev.skypocket.crosshair.CrosshairPresetPanel(cfg, Ui2Theme.palette());
+
         ModuleRegistry.register(new Module("crosshair", "自定义准星", Category.RENDER,
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
                         new Setting.Header("预览", "实时预览准星形状与像素网格"),
-                        // The row is tall enough for a 286-unit grid plus breathing room, and both
-                        // widgets are square: the grid is fixed at preferredSize(), the preview is
-                        // given the leftover width but capped to the same height so the crosshair
-                        // inside it is not stranded in a 6:1 letterbox.
-                        new Setting.V2CustomSetting(300, (row, palette) -> {
+                        // Three columns: grid, preview, preset panel. The row is 300 tall and the
+                        // first two are square at preferredSize(); the panel takes the rest and is
+                        // stretched, because it is a vertical stack of controls rather than a canvas.
+                        new Setting.V2CustomSetting(300, (row, palette, host) -> {
                             int gridSize = CrosshairGrid.preferredSize();
                             // Only the cross-axis alignment is added; SettingsPage already built the
                             // row with the width, height and gap, and re-declaring those here would
@@ -100,9 +105,26 @@ final class ModuleDefinitions {
                                     .alignItems(Style.Align.CENTER)
                                     .build());
                             row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
-                                    Style.builder().width(gridSize).height(gridSize).build(), palette));
+                                    Style.builder().width(gridSize).height(gridSize)
+                                            .flexShrink(0f).build(), palette));
                             row.add(new CrosshairPreview(cfg, Style.builder()
-                                    .width(gridSize).height(gridSize).build(), palette));
+                                    .width(gridSize).height(gridSize)
+                                    .flexShrink(0f).build(), palette));
+
+                            // flexBasis(0) + grow, not width(100%): the panel's basis is the space
+                            // left over, not the whole row. A percentage width made its basis 968,
+                            // so the three children overflowed by about 600 and the shrink pass took
+                            // it out of the canvases - which is what squeezed the grid and the
+                            // preview down to roughly 190 units wide.
+                            dev.skypocket.ui.Box panel = new dev.skypocket.ui.Box(Style.builder()
+                                    .flexBasis(dev.skypocket.ui.Dimension.points(0f))
+                                    .flexGrow(1f)
+                                    .height(300f)
+                                    .direction(Style.Direction.COLUMN)
+                                    .gap(8f)
+                                    .build());
+                            presetPanel.build(panel, host);
+                            row.add(panel);
                         }),
                         new Setting.GroupSetting("外观", List.of(
                                 new Setting.BooleanSetting("描边", () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),

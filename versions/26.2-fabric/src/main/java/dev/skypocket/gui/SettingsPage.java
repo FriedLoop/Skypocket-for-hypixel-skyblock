@@ -55,7 +55,35 @@ public final class SettingsPage {
     private final float columnWidth;
     private final List<ColorField> colorFields = new ArrayList<>();
     private final List<Dropdown> dropdowns = new ArrayList<>();
+    /**
+     * Dropdowns owned by custom rows.
+     *
+     * <p>Kept apart from {@link #dropdowns} because they are registered while a row is being built
+     * rather than by {@code addSetting}, and because the list is rebuilt with the page: a row that is
+     * no longer shown must not keep its popup on the layer stack.
+     */
+    private final List<Dropdown> customDropdowns = new ArrayList<>();
     private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
+
+    /**
+     * The context handed to custom rows that own a popup.
+     *
+     * <p>Bound to this page's router so a row's floating layer is drawn and hit-tested with the same
+     * stack as the page's own dropdowns and colour pickers.
+     */
+    private final Setting.V2CustomSetting.Host customHost = new Setting.V2CustomSetting.Host() {
+        @Override
+        public void registerDropdown(Dropdown dropdown) {
+            if (dropdown != null && !customDropdowns.contains(dropdown)) {
+                customDropdowns.add(dropdown);
+            }
+        }
+
+        @Override
+        public void rebuild() {
+            SettingsPage.this.rebuild();
+        }
+    };
     private Box root;
     private ScrollView scroll;
     private InputRouter input;
@@ -89,6 +117,9 @@ public final class SettingsPage {
     public void rebuild() {
         colorFields.clear();
         dropdowns.clear();
+        // Custom-row dropdowns are re-registered by the rows that are built again below, so the old
+        // list has to go: keeping it would keep closed popups on the layer stack.
+        customDropdowns.clear();
         Box page = new Box(Style.builder()
                 .width(width)
                 .height(height)
@@ -157,6 +188,18 @@ public final class SettingsPage {
                 input.removeLayer(dropdown.popup());
             }
         }
+        // Custom rows own their popups, so the page cannot know them in advance; each row exposes
+        // its own dropdowns through the host and they follow the same open/close rule as the above.
+        for (Dropdown dropdown : customDropdowns) {
+            dropdown.layoutPopup(measurer, width, height);
+            if (dropdown.isOpen()) {
+                if (!input.layers().contains(dropdown.popup())) {
+                    input.addLayer(dropdown.popup());
+                }
+            } else {
+                input.removeLayer(dropdown.popup());
+            }
+        }
     }
 
     public void draw(GuiGraphicsExtractor graphics, float scaleX, float scaleY, boolean animating) {
@@ -191,6 +234,14 @@ public final class SettingsPage {
             }
         }
         for (Dropdown dropdown : dropdowns) {
+            if (dropdown.isOpen()) {
+                drawElement(painter, dropdown.popup());
+            }
+        }
+        // Custom-row popups are drawn here too. Registering them as input layers without adding them
+        // to this loop is why the preset dropdown took the arrow keys but showed nothing: it was
+        // receiving input and never being painted.
+        for (Dropdown dropdown : customDropdowns) {
             if (dropdown.isOpen()) {
                 drawElement(painter, dropdown.popup());
             }
@@ -403,6 +454,11 @@ public final class SettingsPage {
                 return true;
             }
         }
+        for (Dropdown dropdown : customDropdowns) {
+            if (dropdown.isOpen()) {
+                return true;
+            }
+        }
         return false;
     }
 
@@ -413,6 +469,9 @@ public final class SettingsPage {
         for (Dropdown dropdown : dropdowns) {
             dropdown.close();
         }
+        for (Dropdown dropdown : customDropdowns) {
+            dropdown.close();
+        }
         input.focus(null);
     }
 
@@ -421,6 +480,9 @@ public final class SettingsPage {
             field.closeIfFocusOutside(input.focused());
         }
         for (Dropdown dropdown : dropdowns) {
+            dropdown.closeIfFocusOutside(input.focused());
+        }
+        for (Dropdown dropdown : customDropdowns) {
             dropdown.closeIfFocusOutside(input.focused());
         }
     }
@@ -592,7 +654,13 @@ public final class SettingsPage {
                     .direction(Style.Direction.ROW)
                     .gap(15f)
                     .build());
-            custom.layout().layout(row, palette);
+            // A row with a popup is given the page's own router and rebuild hook, so its floating
+            // layer joins the layer stack that draws and hit-tests above everything else.
+            if (custom.hostedLayout() != null) {
+                custom.hostedLayout().layout(row, palette, customHost);
+            } else {
+                custom.layout().layout(row, palette);
+            }
             parent.add(row);
         } else if (setting instanceof Setting.ChoiceSetting choice) {
             List<String> options = new ArrayList<>();

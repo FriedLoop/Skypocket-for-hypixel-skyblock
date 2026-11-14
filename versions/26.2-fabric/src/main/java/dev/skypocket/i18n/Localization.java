@@ -572,6 +572,25 @@ public final class Localization {
         EN.put("字体与渲染调试选项", "Font and rendering debug options");
         EN.put("字体栅格、字重与渲染实验", "Font raster, weight and rendering experiments");
         EN.put("控制伤害飘字的显示时长、淡出与排版", "Control damage popup lifetime, fade and layout");
+
+        // ---- crosshair presets ----
+        EN.put("预设名", "Preset name");
+        EN.put("保存预设", "Save preset");
+        EN.put("载入预设", "Load preset");
+        EN.put("删除预设", "Delete preset");
+        EN.put("内置预设不可删除", "Built-in presets cannot be deleted");
+        EN.put("请输入预设名", "Enter a preset name");
+        EN.put("内置预设不可覆盖", "Built-in presets cannot be overwritten");
+        EN.put("已保存", "Saved");
+        EN.put("保存失败，见日志", "Save failed, see the log");
+        EN.put("读取失败，见日志", "Load failed, see the log");
+        EN.put("删除失败，见日志", "Delete failed, see the log");
+        EN.put("预设与当前网格不兼容", "Preset grid does not match the current grid");
+        EN.put("已载入", "Loaded");
+        EN.put("请先选择预设", "Select a preset first");
+        EN.put("已删除", "Deleted");
+        EN.put("经典十字", "Classic cross");
+        EN.put("空心方块", "Hollow square");
     }
 
     private Localization() {

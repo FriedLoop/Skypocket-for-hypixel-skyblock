@@ -647,19 +647,75 @@ public abstract class Setting {
 
     /** Custom layout expressed with UI v2 elements instead of legacy Minecraft widgets. */
     public static final class V2CustomSetting extends Setting {
+        /**
+         * What a custom row is given besides its container.
+         *
+         * <p>Rows that only lay out widgets ({@code parent}, {@code palette}) need nothing else, but a
+         * row with a popup - a dropdown whose option list has to float above the page - cannot work
+         * with those two alone: the popup has to join the page's input router and its layer stack, and
+         * a row that changes the settings page's structure has to ask for a rebuild. This is that
+         * channel, so the row does not have to reach back into {@code SettingsPage} by itself.
+         */
+        public interface Host {
+            /**
+             * Hands a dropdown to the page so it takes part in the layout/cache cycle.
+             *
+             * <p>Registering the popup directly would be wrong: the page positions and toggles every
+             * popup during {@code layout()}, after the row has been laid out and its bounds are
+             * known. A popup added any earlier would be positioned against stale bounds.
+             */
+            void registerDropdown(dev.skypocket.ui.widget.Dropdown dropdown);
+
+            /**
+             * Rebuilds the settings page on the next tick.
+             *
+             * <p>Needed when a row changes what other rows show - the page builds its widgets once,
+             * so a structural change has to be re-laid out rather than mutated.
+             */
+            void rebuild();
+        }
+
         @FunctionalInterface
         public interface Layout {
             void layout(dev.skypocket.ui.Box parent,
                         dev.skypocket.ui.widget.WidgetPalette palette);
         }
 
+        /** A layout that also receives the page context; used by rows with popups. */
+        @FunctionalInterface
+        public interface HostedLayout {
+            void layout(dev.skypocket.ui.Box parent,
+                        dev.skypocket.ui.widget.WidgetPalette palette,
+                        Host host);
+        }
+
         private final int height;
         private final Layout layout;
+        private final HostedLayout hostedLayout;
 
         public V2CustomSetting(int height, Layout layout) {
             super(null);
             this.height = height;
             this.layout = layout;
+            this.hostedLayout = null;
+        }
+
+        /**
+         * A custom row that needs the page context.
+         *
+         * <p>Separate from the two-argument constructor rather than replacing it: most rows do not
+         * need a host, and making every caller pass one would be noise.
+         */
+        public V2CustomSetting(int height, HostedLayout layout) {
+            super(null);
+            this.height = height;
+            this.layout = null;
+            this.hostedLayout = layout;
+        }
+
+        /** The host-aware layout, or {@code null} for a plain row. */
+        public HostedLayout hostedLayout() {
+            return hostedLayout;
         }
 
         public Layout layout() {
