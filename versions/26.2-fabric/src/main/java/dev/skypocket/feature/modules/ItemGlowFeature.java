@@ -29,6 +29,10 @@ public final class ItemGlowFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().itemGlowBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -37,12 +41,12 @@ public final class ItemGlowFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().itemGlowEnabled;
+        return ConfigManager.get().itemGlowBlock.itemGlowEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().itemGlowEnabled = value;
+        ConfigManager.get().itemGlowBlock.itemGlowEnabled = value;
     }
 
     @Override

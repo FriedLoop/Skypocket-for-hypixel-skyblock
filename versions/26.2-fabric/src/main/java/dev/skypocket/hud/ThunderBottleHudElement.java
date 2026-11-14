@@ -31,7 +31,7 @@ public final class ThunderBottleHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), cfg);
-        if (!cfg.thunderBottleEnabled || !ThunderBottleTracker.visible()) {
+        if (!cfg.thunderBottleBlock.thunderBottleEnabled || !ThunderBottleTracker.visible()) {
             return;
         }
         String line = ThunderBottleTracker.line();
@@ -40,15 +40,15 @@ public final class ThunderBottleHudElement {
         }
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.thunderBottleX, cfg.thunderBottleY);
-        pose.scale(cfg.thunderBottleScale, cfg.thunderBottleScale);
-        drawContents(graphics, cfg, cfg.thunderBottleScale, line,
+        pose.translate(cfg.thunderBottleBlock.thunderBottleX, cfg.thunderBottleBlock.thunderBottleY);
+        pose.scale(cfg.thunderBottleBlock.thunderBottleScale, cfg.thunderBottleBlock.thunderBottleScale);
+        drawContents(graphics, cfg, cfg.thunderBottleBlock.thunderBottleScale, line,
                 ThunderBottleTracker.icon());
         pose.popMatrix();
     }
 
     public static void preview(GuiGraphicsExtractor graphics, ModConfig cfg) {
-        if (!cfg.thunderBottleEnabled) {
+        if (!cfg.thunderBottleBlock.thunderBottleEnabled) {
             return;
         }
         String line = ThunderBottleTracker.line();
@@ -57,14 +57,14 @@ public final class ThunderBottleHudElement {
             line = ThunderBottleTracker.previewLine();
             icon = new ItemStack(Items.PLAYER_HEAD);
         }
-        drawContents(graphics, cfg, cfg.thunderBottleScale, line, icon);
+        drawContents(graphics, cfg, cfg.thunderBottleBlock.thunderBottleScale, line, icon);
     }
 
     private static void drawContents(GuiGraphicsExtractor graphics, ModConfig cfg, float scale,
                                     String line, ItemStack icon) {
         graphics.item(icon, 0, 0);
         int y = (ICON_SIZE - HudText.lineHeight(cfg)) / 2;
-        HudText.draw(graphics, cfg, line, TEXT_GAP, y, cfg.thunderBottleColor, true, scale);
+        HudText.draw(graphics, cfg, line, TEXT_GAP, y, cfg.thunderBottleBlock.thunderBottleColor, true, scale);
     }
 
     public static List<String> previewLines() {

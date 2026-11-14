@@ -24,6 +24,10 @@ public final class SkillDisplayFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().skillDisplayBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class SkillDisplayFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().skillDisplayEnabled;
+        return ConfigManager.get().skillDisplayBlock.skillDisplayEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().skillDisplayEnabled = value;
+        ConfigManager.get().skillDisplayBlock.skillDisplayEnabled = value;
     }
 
     @Override
@@ -47,13 +51,13 @@ public final class SkillDisplayFeature implements FeatureModule {
                 new Setting.Header("显示",
                         "显示最近获得经验的技能、当前 XP 和下一级需求，图标使用原版物品"),
                 new Setting.BooleanSetting("仅显示百分比",
-                        () -> cfg.skillDisplayPercentageOnly,
-                        v -> cfg.skillDisplayPercentageOnly = v),
+                        () -> cfg.skillDisplayBlock.skillDisplayPercentageOnly,
+                        v -> cfg.skillDisplayBlock.skillDisplayPercentageOnly = v),
                 new Setting.ColorSetting("文字颜色",
-                        () -> cfg.skillDisplayColor, v -> cfg.skillDisplayColor = v),
+                        () -> cfg.skillDisplayBlock.skillDisplayColor, v -> cfg.skillDisplayBlock.skillDisplayColor = v),
                 new Setting.SliderSetting("显示时长", 1, 8,
-                        () -> cfg.skillDisplayDurationMs / 1000.0,
-                        v -> cfg.skillDisplayDurationMs = (int) Math.round(v * 1000),
+                        () -> cfg.skillDisplayBlock.skillDisplayDurationMs / 1000.0,
+                        v -> cfg.skillDisplayBlock.skillDisplayDurationMs = (int) Math.round(v * 1000),
                         "%.0fs", 1));
     }
 }

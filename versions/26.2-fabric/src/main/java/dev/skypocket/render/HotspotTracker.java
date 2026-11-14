@@ -230,7 +230,7 @@ public final class HotspotTracker {
      * nearest hotspot centre and records its horizontal distance.
      */
     public static void onParticle(double x, double y, double z, String type) {
-        if (HOTSPOTS.isEmpty() || !ConfigManager.get().hotspotOverlayEnabled) {
+        if (HOTSPOTS.isEmpty() || !ConfigManager.get().fishingHotspotOverlayBlock.hotspotOverlayEnabled) {
             return;
         }
         // Only the two ring particle types ever form a circle; reject everything else
@@ -290,7 +290,7 @@ public final class HotspotTracker {
         if (mc.player == null) {
             return;
         }
-        AABB area = mc.player.getBoundingBox().inflate(ConfigManager.get().hotspotOverlayRange);
+        AABB area = mc.player.getBoundingBox().inflate(ConfigManager.get().fishingHotspotOverlayBlock.hotspotOverlayRange);
         List<Entity> entities = level.getEntities(mc.player, area,
                 e -> e instanceof ArmorStand || e instanceof Display.TextDisplay);
         List<Entity> hotspotMarkers = new ArrayList<>();

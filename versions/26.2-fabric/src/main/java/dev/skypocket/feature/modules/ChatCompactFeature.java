@@ -24,15 +24,19 @@ public final class ChatCompactFeature implements FeatureModule {
     public Category category() {
         return Category.NOTIFICATION;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().chatCompactBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().chatCompactEnabled;
+        return ConfigManager.get().chatCompactBlock.chatCompactEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().chatCompactEnabled = value;
+        ConfigManager.get().chatCompactBlock.chatCompactEnabled = value;
     }
 
     @Override
@@ -43,7 +47,7 @@ public final class ChatCompactFeature implements FeatureModule {
                 // The field is an int; the slider still reports a double, so it round-trips through
                 // Math.round exactly as the hand-written registration did.
                 new Setting.SliderSetting("压缩窗口(秒)", 1, 120,
-                        () -> cfg.chatCompactTimeoutSeconds,
-                        v -> cfg.chatCompactTimeoutSeconds = (int) Math.round(v), "%.0f", 1));
+                        () -> cfg.chatCompactBlock.chatCompactTimeoutSeconds,
+                        v -> cfg.chatCompactBlock.chatCompactTimeoutSeconds = (int) Math.round(v), "%.0f", 1));
     }
 }

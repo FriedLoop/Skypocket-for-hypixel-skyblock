@@ -87,7 +87,7 @@ public final class DamageSplashCompactor {
     /** Called after vanilla applied an entity data packet. */
     public static void onEntityData(ClientboundSetEntityDataPacket packet) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.damageSplashEnabled) {
+        if (!cfg.damageSplashCompactBlock.damageSplashEnabled) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -119,7 +119,7 @@ public final class DamageSplashCompactor {
         // and, worse, disappear when the server decides to clean it up.
         stand.discard();
 
-        Entity source = source(mc, stand, cfg.damageSplashRadius);
+        Entity source = source(mc, stand, cfg.damageSplashCompactBlock.damageSplashRadius);
         if (source == null) {
             return;
         }
@@ -127,7 +127,7 @@ public final class DamageSplashCompactor {
         String typeKey = (crit ? "crit:" : "dmg:") + palette;
         // With compaction off every splash stays its own run, so nothing is added together; the id keeps
         // otherwise identical splashes from sharing a key.
-        String key = cfg.damageSplashCompactEnabled
+        String key = cfg.damageSplashCompactBlock.damageSplashCompactEnabled
                 ? source.getId() + "|" + typeKey
                 : source.getId() + "|" + typeKey + "|#" + stand.getId();
         Run run = RUNS.get(key);
@@ -150,7 +150,7 @@ public final class DamageSplashCompactor {
         if (RUNS.isEmpty()) {
             return;
         }
-        if (!cfg.damageSplashEnabled) {
+        if (!cfg.damageSplashCompactBlock.damageSplashEnabled) {
             RUNS.clear();
             return;
         }
@@ -204,9 +204,9 @@ public final class DamageSplashCompactor {
         double rightZ = -facingX;
 
         double half = Math.abs(rightX) * box.getXsize() / 2.0 + Math.abs(rightZ) * box.getZsize() / 2.0;
-        double push = half + cfg.damageSplashRightOffset;
+        double push = half + cfg.damageSplashCompactBlock.damageSplashRightOffset;
 
-        double rowHeight = cfg.damageSplashRowHeight;
+        double rowHeight = cfg.damageSplashCompactBlock.damageSplashRowHeight;
         double stack = (total - 1) * rowHeight / 2.0;
         double y = centerY + stack - index * rowHeight;
 
@@ -280,9 +280,9 @@ public final class DamageSplashCompactor {
             return run.text;
         }
         ModConfig cfg = ConfigManager.get();
-        String number = cfg.damageSplashUppercase ? format(run.sum)
+        String number = cfg.damageSplashCompactBlock.damageSplashUppercase ? format(run.sum)
                 : String.format(java.util.Locale.ROOT, "%,d", run.sum);
-        String suffix = cfg.damageSplashShowCount && run.count > 1 ? " x" + run.count : "";
+        String suffix = cfg.damageSplashCompactBlock.damageSplashShowCount && run.count > 1 ? " x" + run.count : "";
         net.minecraft.network.chat.MutableComponent built;
         if (run.crit) {
             built = net.minecraft.network.chat.Component.literal("✧").withColor(0xFFFFFF);
@@ -314,15 +314,15 @@ public final class DamageSplashCompactor {
     }
 
     static long windowMs(ModConfig cfg) {
-        return Math.max(200, cfg.damageSplashWindowMs);
+        return Math.max(200, cfg.damageSplashCompactBlock.damageSplashWindowMs);
     }
 
     private static long lifetimeMs(ModConfig cfg) {
-        return Math.max(200, cfg.damageSplashLifetimeMs);
+        return Math.max(200, cfg.damageSplashCompactBlock.damageSplashLifetimeMs);
     }
 
     private static long fadeMs(ModConfig cfg) {
-        return Math.max(0, Math.min(cfg.damageSplashFadeMs, lifetimeMs(cfg)));
+        return Math.max(0, Math.min(cfg.damageSplashCompactBlock.damageSplashFadeMs, lifetimeMs(cfg)));
     }
 
     /** Only a name that is nothing but a damage number counts; name plates must not. */

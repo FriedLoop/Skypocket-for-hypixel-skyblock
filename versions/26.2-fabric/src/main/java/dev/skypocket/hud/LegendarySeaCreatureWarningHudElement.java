@@ -32,7 +32,7 @@ public final class LegendarySeaCreatureWarningHudElement {
             return;
         }
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.legendarySeaCreatureWarning || !SkyBlockDetector.isActive()) {
+        if (!cfg.legendarySeaCreatureWarningBlock.legendarySeaCreatureWarning || !SkyBlockDetector.isActive()) {
             return;
         }
         // Hypixel's spawn messages usually contain neither the rarity nor the words
@@ -40,13 +40,13 @@ public final class LegendarySeaCreatureWarningHudElement {
         if (!dev.skypocket.skyblock.SeaCreatureMessages.isLegendaryOrAbove(message.getString())) {
             return;
         }
-        visibleUntilMs = System.currentTimeMillis() + cfg.legendaryWarningDurationMs;
+        visibleUntilMs = System.currentTimeMillis() + cfg.legendarySeaCreatureWarningBlock.legendaryWarningDurationMs;
         SoundManager.play("minecraft:entity.experience_orb.pickup", 0.5f, 1.0f);
     }
 
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.legendarySeaCreatureWarning || System.currentTimeMillis() >= visibleUntilMs) {
+        if (!cfg.legendarySeaCreatureWarningBlock.legendarySeaCreatureWarning || System.currentTimeMillis() >= visibleUntilMs) {
             return;
         }
         String text = Localization.tr("传奇海怪出现!");
@@ -58,7 +58,7 @@ public final class LegendarySeaCreatureWarningHudElement {
         pose.pushMatrix();
         pose.translate(x, y);
         pose.scale(scale, scale);
-        HudText.draw(graphics, cfg, text, 0, 0, cfg.legendaryWarningColor, true, scale);
+        HudText.draw(graphics, cfg, text, 0, 0, cfg.legendarySeaCreatureWarningBlock.legendaryWarningColor, true, scale);
         pose.popMatrix();
     }
 }

@@ -3,6 +3,7 @@ package dev.skypocket.feature.modules;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.feature.FeatureModule;
+import dev.skypocket.feature.config.DayCountConfig;
 import dev.skypocket.feature.HudSpec;
 import dev.skypocket.gui.Category;
 import dev.skypocket.gui.setting.Setting;
@@ -32,15 +33,19 @@ public final class DayCountFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().dayCountBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().dayCountEnabled;
+        return ConfigManager.get().dayCountBlock.dayCountEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().dayCountEnabled = value;
+        ConfigManager.get().dayCountBlock.dayCountEnabled = value;
     }
 
     @Override
@@ -49,7 +54,7 @@ public final class DayCountFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "调整世界天数文字大小"),
                 new Setting.SliderSetting("大小", 0.25, 6.0,
-                        () -> cfg.dayCountScale, v -> cfg.dayCountScale = (float) v,
+                        () -> cfg.dayCountBlock.dayCountScale, v -> cfg.dayCountBlock.dayCountScale = (float) v,
                         "%.2f", ModConfig.SCALE_GRID));
     }
 
@@ -70,7 +75,7 @@ public final class DayCountFeature implements FeatureModule {
     }
 
     /** The config object the spec accessors receive. */
-    private static ModConfig cfg(Object ignored) {
-        return ConfigManager.get();
+    private static DayCountConfig cfg(Object ignored) {
+        return ConfigManager.get().dayCountBlock;
     }
 }

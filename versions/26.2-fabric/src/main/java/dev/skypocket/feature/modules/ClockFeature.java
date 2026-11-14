@@ -3,6 +3,7 @@ package dev.skypocket.feature.modules;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.feature.FeatureModule;
+import dev.skypocket.feature.config.ClockConfig;
 import dev.skypocket.feature.HudSpec;
 import dev.skypocket.gui.Category;
 import dev.skypocket.gui.setting.Setting;
@@ -37,15 +38,19 @@ public final class ClockFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().clockBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().clockEnabled;
+        return ConfigManager.get().clockBlock.clockEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().clockEnabled = value;
+        ConfigManager.get().clockBlock.clockEnabled = value;
     }
 
     @Override
@@ -54,9 +59,9 @@ public final class ClockFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "设置时间制式与时钟大小"),
                 new Setting.BooleanSetting("24 小时制",
-                        () -> cfg.clockFormat24h, v -> cfg.clockFormat24h = v),
+                        () -> cfg.clockBlock.clockFormat24h, v -> cfg.clockBlock.clockFormat24h = v),
                 new Setting.SliderSetting("时钟大小", 0.25, 6.0,
-                        () -> cfg.clockScale, v -> cfg.clockScale = (float) v,
+                        () -> cfg.clockBlock.clockScale, v -> cfg.clockBlock.clockScale = (float) v,
                         "%.2f", ModConfig.SCALE_GRID));
     }
 
@@ -79,7 +84,7 @@ public final class ClockFeature implements FeatureModule {
     }
 
     /** The config object the spec accessors receive. */
-    private static ModConfig cfg(Object ignored) {
-        return ConfigManager.get();
+    private static ClockConfig cfg(Object ignored) {
+        return ConfigManager.get().clockBlock;
     }
 }

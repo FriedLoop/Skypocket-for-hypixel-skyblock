@@ -42,32 +42,36 @@ public final class PostProcessFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().postProcessBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().postProcessEnabled;
+        return ConfigManager.get().postProcessBlock.postProcessEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().postProcessEnabled = value;
+        ConfigManager.get().postProcessBlock.postProcessEnabled = value;
     }
 
     @Override
     public List<Setting> settings() {
         ModConfig cfg = ConfigManager.get();
         List<Setting> settings = new ArrayList<>();
-        settings.add(new Setting.GroupSetting("抗锯齿", () -> cfg.antialiasingEnabled,
-                v -> cfg.antialiasingEnabled = v, antialiasingSettings(cfg))
+        settings.add(new Setting.GroupSetting("抗锯齿", () -> cfg.postProcessBlock.antialiasingEnabled,
+                v -> cfg.postProcessBlock.antialiasingEnabled = v, antialiasingSettings(cfg))
                 .subtitle("平滑边缘，并按强度调整锐化"));
-        settings.add(new Setting.GroupSetting("动态模糊", () -> cfg.motionBlurEnabled,
-                v -> cfg.motionBlurEnabled = v, motionBlurSettings(cfg))
+        settings.add(new Setting.GroupSetting("动态模糊", () -> cfg.postProcessBlock.motionBlurEnabled,
+                v -> cfg.postProcessBlock.motionBlurEnabled = v, motionBlurSettings(cfg))
                 .subtitle("移动视角时加入方向性模糊"));
-        settings.add(new Setting.GroupSetting("画面调色", () -> cfg.colorGradeEnabled,
-                v -> cfg.colorGradeEnabled = v, colorGradeSettings(cfg))
+        settings.add(new Setting.GroupSetting("画面调色", () -> cfg.postProcessBlock.colorGradeEnabled,
+                v -> cfg.postProcessBlock.colorGradeEnabled = v, colorGradeSettings(cfg))
                 .subtitle("调整画面亮度、对比度、饱和度与色调"));
-        settings.add(new Setting.GroupSetting("泛光", () -> cfg.bloomEnabled,
-                v -> cfg.bloomEnabled = v, bloomSettings(cfg))
+        settings.add(new Setting.GroupSetting("泛光", () -> cfg.postProcessBlock.bloomEnabled,
+                v -> cfg.postProcessBlock.bloomEnabled = v, bloomSettings(cfg))
                 .subtitle("让高亮区域产生柔和光晕"));
         return settings;
     }
@@ -81,13 +85,13 @@ public final class PostProcessFeature implements FeatureModule {
     private static List<Setting> antialiasingSettings(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.DropdownSetting("强度", AntialiasingRenderer::presets,
-                () -> cfg.antialiasingStrength, v -> cfg.antialiasingStrength = v));
+                () -> cfg.postProcessBlock.antialiasingStrength, v -> cfg.postProcessBlock.antialiasingStrength = v));
         settings.add(effectParameter("锐化", 0.00, 1.50, 0.05, "%.2f",
-                () -> cfg.antialiasingSharpen, v -> cfg.antialiasingSharpen = (float) v));
+                () -> cfg.postProcessBlock.antialiasingSharpen, v -> cfg.postProcessBlock.antialiasingSharpen = (float) v));
         settings.add(new Setting.BooleanSetting("光影下也生效",
-                () -> cfg.antialiasingWithShaders, v -> cfg.antialiasingWithShaders = v));
+                () -> cfg.postProcessBlock.antialiasingWithShaders, v -> cfg.postProcessBlock.antialiasingWithShaders = v));
         settings.add(new Setting.BooleanSetting("开界面时跳过",
-                () -> cfg.antialiasingSkipScreens, v -> cfg.antialiasingSkipScreens = v));
+                () -> cfg.postProcessBlock.antialiasingSkipScreens, v -> cfg.postProcessBlock.antialiasingSkipScreens = v));
         return settings;
     }
 
@@ -99,23 +103,23 @@ public final class PostProcessFeature implements FeatureModule {
     private static List<Setting> colorGradeSettings(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.DropdownSetting("套用预设", ColorGradeRenderer::presets,
-                () -> cfg.colorGradePreset, id -> applyColorGradePreset(cfg, id)));
+                () -> cfg.postProcessBlock.colorGradePreset, id -> applyColorGradePreset(cfg, id)));
         settings.add(colorParameter(cfg, "曝光", 0.80, 1.60, 0.01, "%.2f",
-                () -> cfg.colorGradeExposure, v -> cfg.colorGradeExposure = (float) v));
+                () -> cfg.postProcessBlock.colorGradeExposure, v -> cfg.postProcessBlock.colorGradeExposure = (float) v));
         settings.add(colorParameter(cfg, "对比度", 0.80, 1.60, 0.01, "%.2f",
-                () -> cfg.colorGradeContrast, v -> cfg.colorGradeContrast = (float) v));
+                () -> cfg.postProcessBlock.colorGradeContrast, v -> cfg.postProcessBlock.colorGradeContrast = (float) v));
         settings.add(colorParameter(cfg, "饱和度", 0.50, 1.80, 0.01, "%.2f",
-                () -> cfg.colorGradeSaturation, v -> cfg.colorGradeSaturation = (float) v));
+                () -> cfg.postProcessBlock.colorGradeSaturation, v -> cfg.postProcessBlock.colorGradeSaturation = (float) v));
         settings.add(colorParameter(cfg, "伽马", 0.80, 1.25, 0.01, "%.2f",
-                () -> cfg.colorGradeGamma, v -> cfg.colorGradeGamma = (float) v));
+                () -> cfg.postProcessBlock.colorGradeGamma, v -> cfg.postProcessBlock.colorGradeGamma = (float) v));
         settings.add(colorParameter(cfg, "黑位", -0.02, 0.03, 0.001, "%.3f",
-                () -> cfg.colorGradeLift, v -> cfg.colorGradeLift = (float) v));
+                () -> cfg.postProcessBlock.colorGradeLift, v -> cfg.postProcessBlock.colorGradeLift = (float) v));
         settings.add(colorParameter(cfg, "色温", 0.00, 1.00, 0.01, "%.2f",
-                () -> cfg.colorGradeTemperature, v -> cfg.colorGradeTemperature = (float) v));
+                () -> cfg.postProcessBlock.colorGradeTemperature, v -> cfg.postProcessBlock.colorGradeTemperature = (float) v));
         settings.add(colorParameter(cfg, "暗角", 0.00, 1.00, 0.01, "%.2f",
-                () -> cfg.colorGradeVignette, v -> cfg.colorGradeVignette = (float) v));
+                () -> cfg.postProcessBlock.colorGradeVignette, v -> cfg.postProcessBlock.colorGradeVignette = (float) v));
         settings.add(new Setting.BooleanSetting("开界面时跳过",
-                () -> cfg.colorGradeSkipScreens, v -> cfg.colorGradeSkipScreens = v));
+                () -> cfg.postProcessBlock.colorGradeSkipScreens, v -> cfg.postProcessBlock.colorGradeSkipScreens = v));
         return settings;
     }
 
@@ -127,15 +131,15 @@ public final class PostProcessFeature implements FeatureModule {
     private static List<Setting> motionBlurSettings(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(effectParameter("强度", 0.00, 1.00, 0.05, "%.2f",
-                () -> cfg.motionBlurStrength, v -> cfg.motionBlurStrength = (float) v));
+                () -> cfg.postProcessBlock.motionBlurStrength, v -> cfg.postProcessBlock.motionBlurStrength = (float) v));
         settings.add(effectParameter("曝光", 1, 50, 1, "%.0f",
-                () -> cfg.motionBlurExposureMs, v -> cfg.motionBlurExposureMs = (float) v));
+                () -> cfg.postProcessBlock.motionBlurExposureMs, v -> cfg.postProcessBlock.motionBlurExposureMs = (float) v));
         settings.add(effectParameter("最大半径", 4, 64, 2, "%.0f",
-                () -> cfg.motionBlurMaxRadius, v -> cfg.motionBlurMaxRadius = (float) v));
+                () -> cfg.postProcessBlock.motionBlurMaxRadius, v -> cfg.postProcessBlock.motionBlurMaxRadius = (float) v));
         settings.add(new Setting.BooleanSetting("开界面时跳过",
-                () -> cfg.motionBlurSkipScreens, v -> cfg.motionBlurSkipScreens = v));
+                () -> cfg.postProcessBlock.motionBlurSkipScreens, v -> cfg.postProcessBlock.motionBlurSkipScreens = v));
         settings.add(new Setting.BooleanSetting("调试：显示速度",
-                () -> cfg.motionBlurDebug, v -> cfg.motionBlurDebug = v));
+                () -> cfg.postProcessBlock.motionBlurDebug, v -> cfg.postProcessBlock.motionBlurDebug = v));
         return settings;
     }
 
@@ -146,11 +150,11 @@ public final class PostProcessFeature implements FeatureModule {
     private static List<Setting> bloomSettings(ModConfig cfg) {
         List<Setting> settings = new ArrayList<>();
         settings.add(effectParameter("强度", 0.00, 2.00, 0.05, "%.2f",
-                () -> cfg.bloomStrength, v -> cfg.bloomStrength = (float) v));
+                () -> cfg.postProcessBlock.bloomStrength, v -> cfg.postProcessBlock.bloomStrength = (float) v));
         settings.add(effectParameter("阈值", 0.00, 1.00, 0.02, "%.2f",
-                () -> cfg.bloomThreshold, v -> cfg.bloomThreshold = (float) v));
+                () -> cfg.postProcessBlock.bloomThreshold, v -> cfg.postProcessBlock.bloomThreshold = (float) v));
         settings.add(effectParameter("半径", 1.0, 64.0, 1.0, "%.1f",
-                () -> cfg.bloomRadius, v -> cfg.bloomRadius = (float) v));
+                () -> cfg.postProcessBlock.bloomRadius, v -> cfg.postProcessBlock.bloomRadius = (float) v));
         return settings;
     }
 
@@ -164,7 +168,7 @@ public final class PostProcessFeature implements FeatureModule {
                                                         DoubleSupplier getter, DoubleConsumer setter) {
         return new Setting.SliderSetting(label, min, max, getter, v -> {
             setter.accept(v);
-            cfg.colorGradePreset = ColorGradeRenderer.CUSTOM;
+            cfg.postProcessBlock.colorGradePreset = ColorGradeRenderer.CUSTOM;
         }, format, step);
     }
 

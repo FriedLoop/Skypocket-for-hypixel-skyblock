@@ -34,7 +34,7 @@ public final class HotspotOverlayRenderer {
 
     private static void collectSubmits(LevelRenderContext context) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.hotspotOverlayEnabled) {
+        if (!cfg.fishingHotspotOverlayBlock.hotspotOverlayEnabled) {
             HotspotTracker.clear();
             return;
         }
@@ -56,11 +56,11 @@ public final class HotspotOverlayRenderer {
         PoseStack poseStack = context.poseStack();
         Vec3 camera = context.levelState().cameraRenderState.pos;
 
-        HotspotOverlayStyle style = HotspotOverlayStyle.byLabel(cfg.hotspotOverlayStyle);
+        HotspotOverlayStyle style = HotspotOverlayStyle.byLabel(cfg.fishingHotspotOverlayBlock.hotspotOverlayStyle);
         poseStack.pushPose();
         poseStack.translate(-camera.x, -camera.y, -camera.z);
         for (HotspotTracker.Hotspot h : hotspots) {
-            int argb = h.type != null ? h.type.color(cfg) : cfg.hotspotOverlayColor;
+            int argb = h.type != null ? h.type.color(cfg) : cfg.fishingHotspotOverlayBlock.hotspotOverlayColor;
             switch (style) {
                 case CYLINDER -> renderCylinder(collector, poseStack, h, rgba(argb), cfg);
                 case FILLED_CIRCLE -> renderCircle(collector, poseStack, h, rgba(argb), cfg, true);
@@ -73,7 +73,7 @@ public final class HotspotOverlayRenderer {
     private static void renderCylinder(SubmitNodeCollector collector, PoseStack poseStack,
                                        HotspotTracker.Hotspot h, float[] c, ModConfig cfg) {
         double baseY = h.baseY;
-        double topY = baseY + cfg.hotspotOverlayHeight;
+        double topY = baseY + cfg.fishingHotspotOverlayBlock.hotspotOverlayHeight;
         double r = h.radius;
         double step = 2 * Math.PI / SEGMENTS;
 
@@ -93,7 +93,7 @@ public final class HotspotOverlayRenderer {
         // Crisp edge rings at the base and the top. The ring thickness intentionally reuses the
         // shared line-width setting; the cylinder has no separate wall-thickness parameter.
         float[] lc = {c[0], c[1], c[2], 1.0f};
-        float width = cfg.hotspotOverlayLineWidth;
+        float width = cfg.fishingHotspotOverlayBlock.hotspotOverlayLineWidth;
         collector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, vc) -> {
             for (int i = 0; i < SEGMENTS; i++) {
                 double a0 = i * step;
@@ -119,7 +119,7 @@ public final class HotspotOverlayRenderer {
         double r = h.radius;
         double step = 2 * Math.PI / SEGMENTS;
         float[] lc = {c[0], c[1], c[2], 1.0f};
-        float width = cfg.hotspotOverlayLineWidth;
+        float width = cfg.fishingHotspotOverlayBlock.hotspotOverlayLineWidth;
 
         if (filled) {
             collector.submitCustomGeometry(poseStack, RenderTypes.debugTriangleFan(), (pose, vc) -> {

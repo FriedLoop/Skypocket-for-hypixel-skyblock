@@ -54,15 +54,19 @@ public final class CrosshairFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().crosshairBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().crosshairEnabled;
+        return ConfigManager.get().crosshairBlock.crosshairEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().crosshairEnabled = value;
+        ConfigManager.get().crosshairBlock.crosshairEnabled = value;
     }
 
     @Override
@@ -84,7 +88,7 @@ public final class CrosshairFeature implements FeatureModule {
                     // flexShrink(0) on both canvases: they are the items that would otherwise give up
                     // space when the row overflows, and giving it up there is exactly wrong - the grid
                     // must stay square for its cells to line up, and the preview has to match it.
-                    row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
+                    row.add(new CrosshairGrid(cfg.crosshairBlock.crosshairGrid, cfg::getCrosshairColorARGB,
                             Style.builder().width(gridSize).height(gridSize)
                                     .flexShrink(0f).build(), palette));
                     row.add(new CrosshairPreview(cfg, Style.builder()
@@ -107,39 +111,39 @@ public final class CrosshairFeature implements FeatureModule {
 
                 new Setting.GroupSetting("外观", List.of(
                         new Setting.BooleanSetting("描边",
-                                () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),
+                                () -> cfg.crosshairBlock.crosshairStroke, v -> cfg.crosshairBlock.crosshairStroke = v),
                         new Setting.SliderSetting("描边宽度", 0.5, 4.0,
-                                () -> cfg.crosshairStrokeWidth,
-                                v -> cfg.crosshairStrokeWidth = (float) v, "%.1f", 0.1),
+                                () -> cfg.crosshairBlock.crosshairStrokeWidth,
+                                v -> cfg.crosshairBlock.crosshairStrokeWidth = (float) v, "%.1f", 0.1),
                         new Setting.ColorSetting("准星颜色", cfg::getCrosshairColorARGB, v -> {
-                            cfg.crosshairRed = ColorUtil.red(v);
-                            cfg.crosshairGreen = ColorUtil.green(v);
-                            cfg.crosshairBlue = ColorUtil.blue(v);
-                            cfg.crosshairAlpha = ColorUtil.alpha(v);
+                            cfg.crosshairBlock.crosshairRed = ColorUtil.red(v);
+                            cfg.crosshairBlock.crosshairGreen = ColorUtil.green(v);
+                            cfg.crosshairBlock.crosshairBlue = ColorUtil.blue(v);
+                            cfg.crosshairBlock.crosshairAlpha = ColorUtil.alpha(v);
                         }, true),
                         // Upper bound 3, matching ModConfig.sanitize's clamp: a larger cell would be
                         // clamped on the next load and the slider would snap back.
                         new Setting.SliderSetting("像素大小", 1, 3,
-                                () -> cfg.crosshairPixelSize,
-                                v -> cfg.crosshairPixelSize = (float) v, "%.0f", 1),
+                                () -> cfg.crosshairBlock.crosshairPixelSize,
+                                v -> cfg.crosshairBlock.crosshairPixelSize = (float) v, "%.0f", 1),
                         new Setting.SliderSetting("缩放", 0.25, 4.0,
-                                () -> cfg.crosshairScale,
-                                v -> cfg.crosshairScale = (float) v, "%.2f", ModConfig.SCALE_GRID)))
+                                () -> cfg.crosshairBlock.crosshairScale,
+                                v -> cfg.crosshairBlock.crosshairScale = (float) v, "%.2f", ModConfig.SCALE_GRID)))
                         .subtitle("调整准星线条、颜色、像素大小与缩放"),
 
                 // The switch is the feature's own flag: the renderer reads this field, so turning it
                 // off really does stop the tint.
-                new Setting.GroupSetting("目标变色", () -> cfg.crosshairEntityColorEnabled,
-                        v -> cfg.crosshairEntityColorEnabled = v, List.of(
+                new Setting.GroupSetting("目标变色", () -> cfg.crosshairBlock.crosshairEntityColorEnabled,
+                        v -> cfg.crosshairBlock.crosshairEntityColorEnabled = v, List.of(
                         new Setting.ColorSetting("友好颜色",
-                                () -> cfg.crosshairFriendlyColor, v -> cfg.crosshairFriendlyColor = v),
+                                () -> cfg.crosshairBlock.crosshairFriendlyColor, v -> cfg.crosshairBlock.crosshairFriendlyColor = v),
                         new Setting.ColorSetting("中立颜色",
-                                () -> cfg.crosshairNeutralColor, v -> cfg.crosshairNeutralColor = v),
+                                () -> cfg.crosshairBlock.crosshairNeutralColor, v -> cfg.crosshairBlock.crosshairNeutralColor = v),
                         new Setting.ColorSetting("敌对颜色",
-                                () -> cfg.crosshairHostileColor, v -> cfg.crosshairHostileColor = v),
+                                () -> cfg.crosshairBlock.crosshairHostileColor, v -> cfg.crosshairBlock.crosshairHostileColor = v),
                         new Setting.ColorSetting("箱子颜色",
-                                () -> cfg.crosshairContainerColor,
-                                v -> cfg.crosshairContainerColor = v)))
+                                () -> cfg.crosshairBlock.crosshairContainerColor,
+                                v -> cfg.crosshairBlock.crosshairContainerColor = v)))
                         .subtitle("按目标类型切换准星颜色"));
     }
 }

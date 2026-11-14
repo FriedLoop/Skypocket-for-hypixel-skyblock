@@ -80,16 +80,16 @@ public final class AntialiasingRenderer {
     /** Called once per frame, right after the level and before the HUD/GUI. */
     public static void process() {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.postProcessEnabled || !cfg.antialiasingEnabled) {
+        if (!cfg.postProcessBlock.postProcessEnabled || !cfg.postProcessBlock.antialiasingEnabled) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (cfg.antialiasingSkipScreens && mc.gui.screen() != null) {
+        if (cfg.postProcessBlock.antialiasingSkipScreens && mc.gui.screen() != null) {
             // The world sits behind a screen (and behind vanilla's menu blur), where the difference
             // is invisible - so the pass is skipped and the frames cost nothing.
             return;
         }
-        if (!cfg.antialiasingWithShaders && SHADER_MOD_LOADED) {
+        if (!cfg.postProcessBlock.antialiasingWithShaders && SHADER_MOD_LOADED) {
             return;
         }
         CHAIN.apply(parameters(cfg));
@@ -98,11 +98,11 @@ public final class AntialiasingRenderer {
 
     /** The current parameters, in the order the shaders and the template expect. */
     private static List<UniformValue> parameters(ModConfig cfg) {
-        float[] preset = PRESETS.get(cfg.antialiasingStrength);
+        float[] preset = PRESETS.get(cfg.postProcessBlock.antialiasingStrength);
         if (preset == null) {
             preset = PRESETS.get(STANDARD);
         }
         return LivePostChain.floats(preset[EDGE_THRESHOLD], preset[EDGE_THRESHOLD_MIN],
-                preset[SUBPIX], cfg.antialiasingSharpen);
+                preset[SUBPIX], cfg.postProcessBlock.antialiasingSharpen);
     }
 }

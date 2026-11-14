@@ -53,7 +53,7 @@ public final class SkillDisplayTracker {
             reset();
             return;
         }
-        if (!ConfigManager.get().skillDisplayEnabled) {
+        if (!ConfigManager.get().skillDisplayBlock.skillDisplayEnabled) {
             reset();
             return;
         }
@@ -119,7 +119,7 @@ public final class SkillDisplayTracker {
         percent = nextPercent;
         maxLevel = nextMax;
         visibleUntilMs = System.currentTimeMillis()
-                + ConfigManager.get().skillDisplayDurationMs;
+                + ConfigManager.get().skillDisplayBlock.skillDisplayDurationMs;
     }
 
     public static void reset() {
@@ -141,7 +141,7 @@ public final class SkillDisplayTracker {
             return null;
         }
         String prefix = "+" + gained + " " + skill.displayName() + " ";
-        if (ConfigManager.get().skillDisplayPercentageOnly && percent != null) {
+        if (ConfigManager.get().skillDisplayBlock.skillDisplayPercentageOnly && percent != null) {
             return prefix + "(" + formatPercent(percent) + "%)";
         }
         if (current != null && total != null) {
@@ -159,7 +159,7 @@ public final class SkillDisplayTracker {
 
     /** A sample for the HUD position editor. */
     public static String previewLine() {
-        if (ConfigManager.get().skillDisplayPercentageOnly) {
+        if (ConfigManager.get().skillDisplayBlock.skillDisplayPercentageOnly) {
             return "+50 Farming (24.69%)";
         }
         return "+50 Farming (12,345/50,000)";

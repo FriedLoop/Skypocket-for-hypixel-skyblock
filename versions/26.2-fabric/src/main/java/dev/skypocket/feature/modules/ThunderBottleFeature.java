@@ -24,6 +24,10 @@ public final class ThunderBottleFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().thunderBottleBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class ThunderBottleFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().thunderBottleEnabled;
+        return ConfigManager.get().thunderBottleBlock.thunderBottleEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().thunderBottleEnabled = value;
+        ConfigManager.get().thunderBottleBlock.thunderBottleEnabled = value;
     }
 
     @Override
@@ -46,6 +50,6 @@ public final class ThunderBottleFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "显示背包中的雷瓶、风暴瓶或飓风瓶充能"),
                 new Setting.ColorSetting("文字颜色",
-                        () -> cfg.thunderBottleColor, v -> cfg.thunderBottleColor = v));
+                        () -> cfg.thunderBottleBlock.thunderBottleColor, v -> cfg.thunderBottleBlock.thunderBottleColor = v));
     }
 }

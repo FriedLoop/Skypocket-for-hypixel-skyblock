@@ -24,6 +24,10 @@ public final class HideSpawnPointPlayersFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().hideSpawnPointPlayersBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class HideSpawnPointPlayersFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hideSpawnPointPlayers;
+        return ConfigManager.get().hideSpawnPointPlayersBlock.hideSpawnPointPlayers;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hideSpawnPointPlayers = value;
+        ConfigManager.get().hideSpawnPointPlayersBlock.hideSpawnPointPlayers = value;
     }
 
     @Override
@@ -46,7 +50,7 @@ public final class HideSpawnPointPlayersFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("行为", "隐藏站在 Hub 出生点的真实玩家"),
                 new Setting.SliderSetting("出生点范围", 0.1, 3.0,
-                        () -> cfg.hideSpawnPointRadius,
-                        v -> cfg.hideSpawnPointRadius = (float) v, "%.1f", 0.1));
+                        () -> cfg.hideSpawnPointPlayersBlock.hideSpawnPointRadius,
+                        v -> cfg.hideSpawnPointPlayersBlock.hideSpawnPointRadius = (float) v, "%.1f", 0.1));
     }
 }

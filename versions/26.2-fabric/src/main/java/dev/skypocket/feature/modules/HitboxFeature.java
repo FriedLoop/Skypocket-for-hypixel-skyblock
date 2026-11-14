@@ -25,15 +25,19 @@ public final class HitboxFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().hitboxBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hitboxEnabled;
+        return ConfigManager.get().hitboxBlock.hitboxEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hitboxEnabled = value;
+        ConfigManager.get().hitboxBlock.hitboxEnabled = value;
     }
 
     @Override
@@ -42,37 +46,37 @@ public final class HitboxFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "调整碰撞箱颜色、线宽和视线"),
                 new Setting.ColorSetting("颜色",
-                        () -> cfg.hitboxColor, v -> cfg.hitboxColor = v),
+                        () -> cfg.hitboxBlock.hitboxColor, v -> cfg.hitboxBlock.hitboxColor = v),
                 new Setting.SliderSetting("线宽", 0.5, 8.0,
-                        () -> cfg.hitboxLineWidth,
-                        v -> cfg.hitboxLineWidth = (float) v, "%.1f", 0.5),
+                        () -> cfg.hitboxBlock.hitboxLineWidth,
+                        v -> cfg.hitboxBlock.hitboxLineWidth = (float) v, "%.1f", 0.5),
                 new Setting.BooleanSetting("实体视线",
-                        () -> cfg.hitboxShowLineOfSight, v -> cfg.hitboxShowLineOfSight = v),
+                        () -> cfg.hitboxBlock.hitboxShowLineOfSight, v -> cfg.hitboxBlock.hitboxShowLineOfSight = v),
                 new Setting.ColorSetting("视线颜色",
-                        () -> cfg.lookRayColor, v -> cfg.lookRayColor = v),
+                        () -> cfg.hitboxBlock.lookRayColor, v -> cfg.hitboxBlock.lookRayColor = v),
                 new Setting.SliderSetting("视线长度", 1.0, 64.0,
-                        () -> cfg.lookRayLength,
-                        v -> cfg.lookRayLength = (float) v, "%.1f", 0.5),
+                        () -> cfg.hitboxBlock.lookRayLength,
+                        v -> cfg.hitboxBlock.lookRayLength = (float) v, "%.1f", 0.5),
 
                 new Setting.Header("过滤", "选择要显示碰撞箱的实体类型"),
                 new Setting.BooleanSetting("玩家",
-                        () -> cfg.hitboxShowPlayer, v -> cfg.hitboxShowPlayer = v),
+                        () -> cfg.hitboxBlock.hitboxShowPlayer, v -> cfg.hitboxBlock.hitboxShowPlayer = v),
                 new Setting.BooleanSetting("箭矢",
-                        () -> cfg.hitboxShowProjectile, v -> cfg.hitboxShowProjectile = v),
+                        () -> cfg.hitboxBlock.hitboxShowProjectile, v -> cfg.hitboxBlock.hitboxShowProjectile = v),
                 new Setting.BooleanSetting("敌对生物",
-                        () -> cfg.hitboxShowHostile, v -> cfg.hitboxShowHostile = v),
+                        () -> cfg.hitboxBlock.hitboxShowHostile, v -> cfg.hitboxBlock.hitboxShowHostile = v),
                 new Setting.BooleanSetting("中立生物",
-                        () -> cfg.hitboxShowNeutral, v -> cfg.hitboxShowNeutral = v),
+                        () -> cfg.hitboxBlock.hitboxShowNeutral, v -> cfg.hitboxBlock.hitboxShowNeutral = v),
                 new Setting.BooleanSetting("箱子",
-                        () -> cfg.hitboxShowContainer, v -> cfg.hitboxShowContainer = v),
+                        () -> cfg.hitboxBlock.hitboxShowContainer, v -> cfg.hitboxBlock.hitboxShowContainer = v),
                 new Setting.BooleanSetting("其他",
-                        () -> cfg.hitboxShowOther, v -> cfg.hitboxShowOther = v),
+                        () -> cfg.hitboxBlock.hitboxShowOther, v -> cfg.hitboxBlock.hitboxShowOther = v),
 
                 new Setting.Header("范围", "控制碰撞箱的显示距离"),
                 new Setting.BooleanSetting("不限距离",
-                        () -> cfg.hitboxUnlimitedRange, v -> cfg.hitboxUnlimitedRange = v),
+                        () -> cfg.hitboxBlock.hitboxUnlimitedRange, v -> cfg.hitboxBlock.hitboxUnlimitedRange = v),
                 new Setting.SliderSetting("范围", 1.0, 128.0,
-                        () -> cfg.hitboxRange,
-                        v -> cfg.hitboxRange = (float) v, "%.0f", 1));
+                        () -> cfg.hitboxBlock.hitboxRange,
+                        v -> cfg.hitboxBlock.hitboxRange = (float) v, "%.0f", 1));
     }
 }

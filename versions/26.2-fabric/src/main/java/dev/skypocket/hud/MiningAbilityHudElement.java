@@ -37,17 +37,17 @@ public final class MiningAbilityHudElement {
         MiningAbilityTracker.update(mc);
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(mc, cfg);
-        if (!cfg.miningAbilityReminderEnabled) {
+        if (!cfg.miningAbilityReminderBlock.miningAbilityReminderEnabled) {
             return;
         }
         String line = MiningAbilityTracker.hudLine();
         if (line != null) {
             Matrix3x2fStack pose = graphics.pose();
             pose.pushMatrix();
-            pose.translate(cfg.miningAbilityX, cfg.miningAbilityY);
-            pose.scale(cfg.miningAbilityScale, cfg.miningAbilityScale);
+            pose.translate(cfg.miningAbilityReminderBlock.miningAbilityX, cfg.miningAbilityReminderBlock.miningAbilityY);
+            pose.scale(cfg.miningAbilityReminderBlock.miningAbilityScale, cfg.miningAbilityReminderBlock.miningAbilityScale);
             HudText.draw(graphics, cfg, line, 0, 0, MiningAbilityTracker.hudColor(), true,
-                    cfg.miningAbilityScale);
+                    cfg.miningAbilityReminderBlock.miningAbilityScale);
             pose.popMatrix();
         }
         renderReminder(graphics, cfg);
@@ -64,21 +64,21 @@ public final class MiningAbilityHudElement {
             return;
         }
         int fade = remaining < 500 ? (int) (255 * remaining / 500) : 255;
-        int nameAlpha = (cfg.miningAbilityNameColor >>> 24) * fade / 255;
-        int availAlpha = (cfg.miningAbilityAvailableColor >>> 24) * fade / 255;
+        int nameAlpha = (cfg.miningAbilityReminderBlock.miningAbilityNameColor >>> 24) * fade / 255;
+        int availAlpha = (cfg.miningAbilityReminderBlock.miningAbilityAvailableColor >>> 24) * fade / 255;
         String name = ability.matchName + " ";
         String avail = Localization.tr("可用!");
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.miningAbilitySubtitleX, cfg.miningAbilitySubtitleY);
-        pose.scale(cfg.miningAbilitySubtitleScale, cfg.miningAbilitySubtitleScale);
+        pose.translate(cfg.miningAbilityReminderBlock.miningAbilitySubtitleX, cfg.miningAbilityReminderBlock.miningAbilitySubtitleY);
+        pose.scale(cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale, cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale);
         HudText.draw(graphics, cfg, name, 0, 0,
-                (nameAlpha << 24) | (cfg.miningAbilityNameColor & 0xFFFFFF), true,
-                cfg.miningAbilitySubtitleScale);
+                (nameAlpha << 24) | (cfg.miningAbilityReminderBlock.miningAbilityNameColor & 0xFFFFFF), true,
+                cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale);
         HudText.draw(graphics, cfg, avail,
-                HudText.width(cfg, name, cfg.miningAbilitySubtitleScale), 0,
-                (availAlpha << 24) | (cfg.miningAbilityAvailableColor & 0xFFFFFF), true,
-                cfg.miningAbilitySubtitleScale);
+                HudText.width(cfg, name, cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale), 0,
+                (availAlpha << 24) | (cfg.miningAbilityReminderBlock.miningAbilityAvailableColor & 0xFFFFFF), true,
+                cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale);
         pose.popMatrix();
     }
 

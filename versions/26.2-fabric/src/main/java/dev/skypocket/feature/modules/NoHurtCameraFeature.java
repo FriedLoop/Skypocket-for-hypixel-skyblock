@@ -30,15 +30,19 @@ public final class NoHurtCameraFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().noHurtCameraBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().noHurtCameraEnabled;
+        return ConfigManager.get().noHurtCameraBlock.noHurtCameraEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().noHurtCameraEnabled = value;
+        ConfigManager.get().noHurtCameraBlock.noHurtCameraEnabled = value;
     }
 
     @Override

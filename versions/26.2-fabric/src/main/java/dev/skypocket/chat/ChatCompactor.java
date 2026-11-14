@@ -57,12 +57,12 @@ public final class ChatCompactor {
         // Cleared first: a message that is not compacted must not leave the previous run's key behind,
         // or `remember` would attach the new line to the wrong message.
         pendingKey = null;
-        if (!cfg.chatCompactEnabled || text == null || isDivider(text)) {
+        if (!cfg.chatCompactBlock.chatCompactEnabled || text == null || isDivider(text)) {
             return text;
         }
 
         long now = System.currentTimeMillis();
-        long windowMs = Math.max(1, cfg.chatCompactTimeoutSeconds) * 1000L;
+        long windowMs = Math.max(1, cfg.chatCompactBlock.chatCompactTimeoutSeconds) * 1000L;
         Entry previous = SEEN.get(text);
 
         int count = 1;

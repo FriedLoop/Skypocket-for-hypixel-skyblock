@@ -74,8 +74,8 @@ public final class CrosshairPreview extends Control {
             // thing by roughly the panel scale (about 0.5 to 0.7 depending on resolution). Dividing
             // by the panel scale makes the previewed crosshair cover the same fraction of the screen
             // as the real one.
-            int pixel = Math.max(1, Math.round(cfg.crosshairPixelSize));
-            float scale = Math.max(0.25f, cfg.crosshairScale);
+            int pixel = Math.max(1, Math.round(cfg.crosshairBlock.crosshairPixelSize));
+            float scale = Math.max(0.25f, cfg.crosshairBlock.crosshairScale);
             float panelScale = Math.max(0.05f, ClickGuiMetrics.effectiveScale());
 
             // Leave a 2-unit inset so the outer ring of cells is not flush against the border.
@@ -85,8 +85,8 @@ public final class CrosshairPreview extends Control {
 
             CrosshairRenderer.render(mc.graphics(), x + w / 2, y + h / 2, pixel,
                     (scale / panelScale) * fit,
-                    cfg.crosshairGrid, cfg.getCrosshairColorARGB(), cfg.crosshairStroke,
-                    cfg.crosshairStrokeWidth);
+                    cfg.crosshairBlock.crosshairGrid, cfg.getCrosshairColorARGB(), cfg.crosshairBlock.crosshairStroke,
+                    cfg.crosshairBlock.crosshairStrokeWidth);
         }
     }
 }

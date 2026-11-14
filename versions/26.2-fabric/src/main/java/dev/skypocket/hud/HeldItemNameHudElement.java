@@ -49,8 +49,8 @@ public final class HeldItemNameHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker delta, HudElement vanilla) {
         ModConfig cfg = ConfigManager.get();
         float scale = scale(cfg);
-        if (!cfg.heldItemNameEnabled
-                || (scale == 1f && cfg.heldItemNameOffsetX == 0 && cfg.heldItemNameOffsetY == 0)) {
+        if (!cfg.heldItemNameBlock.heldItemNameEnabled
+                || (scale == 1f && cfg.heldItemNameBlock.heldItemNameOffsetX == 0 && cfg.heldItemNameBlock.heldItemNameOffsetY == 0)) {
             // Enabled but untouched is exactly the vanilla look, so hand it straight back: taking the
             // element over must not change anything until a value is actually moved.
             vanilla.extractRenderState(graphics, delta);
@@ -62,7 +62,7 @@ public final class HeldItemNameHudElement {
         pose.pushMatrix();
         // Point p lands on pivot + offset + scale * (p - pivot): the scale keeps the name centred on
         // the screen, and the offset then moves it without the two interfering.
-        pose.translate(pivotX + cfg.heldItemNameOffsetX, pivotY + cfg.heldItemNameOffsetY);
+        pose.translate(pivotX + cfg.heldItemNameBlock.heldItemNameOffsetX, pivotY + cfg.heldItemNameBlock.heldItemNameOffsetY);
         pose.scale(scale, scale);
         pose.translate(-pivotX, -pivotY);
         vanilla.extractRenderState(graphics, delta);
@@ -80,7 +80,7 @@ public final class HeldItemNameHudElement {
     }
 
     public static float scale(ModConfig cfg) {
-        return Math.max(0.25f, Math.min(6f, cfg.heldItemNameScale));
+        return Math.max(0.25f, Math.min(6f, cfg.heldItemNameBlock.heldItemNameScale));
     }
 
     /**
@@ -91,8 +91,8 @@ public final class HeldItemNameHudElement {
     public static void box(ModConfig cfg, int guiWidth, int guiHeight, int textWidth, int lineHeight,
                            int[] out) {
         float scale = scale(cfg);
-        out[0] = Math.round(pivotX(guiWidth) - textWidth * scale / 2f) + cfg.heldItemNameOffsetX;
-        out[1] = pivotY(guiHeight) + cfg.heldItemNameOffsetY;
+        out[0] = Math.round(pivotX(guiWidth) - textWidth * scale / 2f) + cfg.heldItemNameBlock.heldItemNameOffsetX;
+        out[1] = pivotY(guiHeight) + cfg.heldItemNameBlock.heldItemNameOffsetY;
         out[2] = Math.round(textWidth * scale);
         out[3] = Math.round(lineHeight * scale);
     }

@@ -12,7 +12,7 @@ public final class ThirdPersonCamera {
 
     public static boolean isActive() {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.thirdPersonThroughWalls) {
+        if (!cfg.thirdPersonBlock.thirdPersonThroughWalls) {
             return false;
         }
         Minecraft mc = Minecraft.getInstance();

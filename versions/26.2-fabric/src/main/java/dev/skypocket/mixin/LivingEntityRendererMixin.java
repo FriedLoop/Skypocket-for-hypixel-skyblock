@@ -18,8 +18,8 @@ public abstract class LivingEntityRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
     private void sky$setGlowColor(LivingEntity entity, LivingEntityRenderState state, float partialTick, CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.playerGlowEnabled && entity == Minecraft.getInstance().player) {
-            state.outlineColor = cfg.playerGlowColor;
+        if (cfg.playerGlowBlock.playerGlowEnabled && entity == Minecraft.getInstance().player) {
+            state.outlineColor = cfg.playerGlowBlock.playerGlowColor;
         }
     }
 }

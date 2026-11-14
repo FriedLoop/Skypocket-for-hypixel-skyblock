@@ -24,6 +24,10 @@ public final class ItemPickupLogFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().itemPickupLogBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class ItemPickupLogFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().pickupLogEnabled;
+        return ConfigManager.get().itemPickupLogBlock.pickupLogEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().pickupLogEnabled = value;
+        ConfigManager.get().itemPickupLogBlock.pickupLogEnabled = value;
     }
 
     @Override
@@ -46,10 +50,10 @@ public final class ItemPickupLogFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "显示最近拾取或失去的物品及数量"),
                 new Setting.ColorSetting("文字颜色",
-                        () -> cfg.pickupLogTextColor, v -> cfg.pickupLogTextColor = v),
+                        () -> cfg.itemPickupLogBlock.pickupLogTextColor, v -> cfg.itemPickupLogBlock.pickupLogTextColor = v),
                 new Setting.SliderSetting("显示时长", 1, 15,
-                        () -> cfg.pickupLogDurationMs / 1000.0,
-                        v -> cfg.pickupLogDurationMs = (int) Math.round(v * 1000),
+                        () -> cfg.itemPickupLogBlock.pickupLogDurationMs / 1000.0,
+                        v -> cfg.itemPickupLogBlock.pickupLogDurationMs = (int) Math.round(v * 1000),
                         "%.0fs", 1));
     }
 }

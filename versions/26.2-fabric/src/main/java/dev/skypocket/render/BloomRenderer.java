@@ -33,7 +33,7 @@ public final class BloomRenderer {
     /** Called once per frame, after {@link ColorGradeRenderer}. */
     public static void process() {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.postProcessEnabled || !cfg.bloomEnabled) {
+        if (!cfg.postProcessBlock.postProcessEnabled || !cfg.postProcessBlock.bloomEnabled) {
             return;
         }
         CHAIN.apply(parameters(cfg));
@@ -42,6 +42,6 @@ public final class BloomRenderer {
 
     /** The current parameters, in the order the shaders and the template expect. */
     private static List<UniformValue> parameters(ModConfig cfg) {
-        return LivePostChain.floats(cfg.bloomStrength, cfg.bloomThreshold, cfg.bloomRadius);
+        return LivePostChain.floats(cfg.postProcessBlock.bloomStrength, cfg.postProcessBlock.bloomThreshold, cfg.postProcessBlock.bloomRadius);
     }
 }

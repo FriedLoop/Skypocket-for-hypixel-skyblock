@@ -27,7 +27,7 @@ public abstract class EntityMixin {
     private void sky$glow(CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
         Minecraft mc = Minecraft.getInstance();
-        if (cfg.playerGlowEnabled
+        if (cfg.playerGlowBlock.playerGlowEnabled
                 && (Object) this == mc.player
                 && mc.options != null
                 && !mc.options.getCameraType().isFirstPerson()) {
@@ -38,7 +38,7 @@ public abstract class EntityMixin {
     @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$glowDragon(CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.dragonGlowEnabled && (Object) this instanceof EnderDragon && SkyBlockDetector.isActive()) {
+        if (cfg.dragonGlowBlock.dragonGlowEnabled && (Object) this instanceof EnderDragon && SkyBlockDetector.isActive()) {
             cir.setReturnValue(true);
         }
     }
@@ -46,7 +46,7 @@ public abstract class EntityMixin {
     @Inject(method = "isCurrentlyGlowing", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$glowDroppedItem(CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.itemGlowEnabled && (Object) this instanceof ItemEntity && SkyBlockDetector.isActive()) {
+        if (cfg.itemGlowBlock.itemGlowEnabled && (Object) this instanceof ItemEntity && SkyBlockDetector.isActive()) {
             cir.setReturnValue(true);
         }
     }

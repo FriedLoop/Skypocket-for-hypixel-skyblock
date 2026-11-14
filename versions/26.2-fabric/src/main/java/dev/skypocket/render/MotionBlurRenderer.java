@@ -106,8 +106,8 @@ public final class MotionBlurRenderer {
         ModConfig cfg = ConfigManager.get();
         long now = System.nanoTime();
         Minecraft mc = Minecraft.getInstance();
-        if (!cfg.postProcessEnabled || !cfg.motionBlurEnabled
-                || (cfg.motionBlurSkipScreens && mc.gui.screen() != null)) {
+        if (!cfg.postProcessBlock.postProcessEnabled || !cfg.postProcessBlock.motionBlurEnabled
+                || (cfg.postProcessBlock.motionBlurSkipScreens && mc.gui.screen() != null)) {
             hasHistory = false;
             smoothedFrameTime = 0f;
             lastScale = 0f;
@@ -140,7 +140,7 @@ public final class MotionBlurRenderer {
                 : smoothedFrameTime + (frameTime - smoothedFrameTime) * FRAME_TIME_SMOOTHING;
         float effectiveFrameTime = Math.max(smoothedFrameTime, MIN_FRAME_SECONDS);
         float scale = continuous
-                ? Math.min(cfg.motionBlurExposureMs / 1000.0f / effectiveFrameTime, MAX_SCALE)
+                ? Math.min(cfg.postProcessBlock.motionBlurExposureMs / 1000.0f / effectiveFrameTime, MAX_SCALE)
                 : 0f;
         // And the strength itself is rate-limited, so a leftover step cannot flash.
         if (scale > 0f && lastScale > 0f) {
@@ -244,14 +244,14 @@ public final class MotionBlurRenderer {
         // would make every frame look unchanged.
         values.add(new UniformValue.Matrix4x4Uniform(new Matrix4f(INVERSE)));
         values.add(new UniformValue.Matrix4x4Uniform(new Matrix4f(PREVIOUS)));
-        values.add(new UniformValue.FloatUniform(cfg.motionBlurStrength));
+        values.add(new UniformValue.FloatUniform(cfg.postProcessBlock.motionBlurStrength));
         values.add(new UniformValue.FloatUniform(scale));
-        values.add(new UniformValue.FloatUniform(cfg.motionBlurMaxRadius));
+        values.add(new UniformValue.FloatUniform(cfg.postProcessBlock.motionBlurMaxRadius));
         values.add(new UniformValue.FloatUniform(depthZeroToOne() ? 1f : 0f));
         values.add(new UniformValue.FloatUniform(farDepth(camera)));
         values.add(new UniformValue.FloatUniform(maxVelocity));
         values.add(new UniformValue.FloatUniform(parallaxBound(camera)));
-        values.add(new UniformValue.FloatUniform(cfg.motionBlurDebug ? 1f : 0f));
+        values.add(new UniformValue.FloatUniform(cfg.postProcessBlock.motionBlurDebug ? 1f : 0f));
         values.add(new UniformValue.FloatUniform((float) pos.x));
         values.add(new UniformValue.FloatUniform((float) pos.y));
         values.add(new UniformValue.FloatUniform((float) pos.z));
@@ -290,8 +290,8 @@ public final class MotionBlurRenderer {
         switch (state) {
             case 0 -> LOGGER.info("motion blur running: exposure={}ms frame={}ms scale={}"
                             + " maxVelocity={} maxParallax={} strength={} chain=live({})",
-                    cfg.motionBlurExposureMs, frameTime * 1000f, scale, maxVelocity, maxParallax,
-                    cfg.motionBlurStrength, CHAIN.liveUniforms() ? "writable" : "rebuilt");
+                    cfg.postProcessBlock.motionBlurExposureMs, frameTime * 1000f, scale, maxVelocity, maxParallax,
+                    cfg.postProcessBlock.motionBlurStrength, CHAIN.liveUniforms() ? "writable" : "rebuilt");
             case 1 -> LOGGER.info("motion blur idle: no frame-to-frame exposure yet"
                             + " (camera or history just reset)");
             case 2 -> LOGGER.info("motion blur idle: the post chain is not loaded"

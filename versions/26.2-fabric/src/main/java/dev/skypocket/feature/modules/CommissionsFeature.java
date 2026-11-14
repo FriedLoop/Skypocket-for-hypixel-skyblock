@@ -26,6 +26,10 @@ public final class CommissionsFeature implements FeatureModule {
     public Category category() {
         return Category.MINING;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().commissionsBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -34,12 +38,12 @@ public final class CommissionsFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().commissionsEnabled;
+        return ConfigManager.get().commissionsBlock.commissionsEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().commissionsEnabled = value;
+        ConfigManager.get().commissionsBlock.commissionsEnabled = value;
     }
 
     @Override
@@ -48,18 +52,18 @@ public final class CommissionsFeature implements FeatureModule {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.Header("显示", "调整委托列表的排序、缩放与颜色"));
         settings.add(new Setting.BooleanSetting("隐藏已完成的委托",
-                () -> cfg.commissionsHideDone, v -> cfg.commissionsHideDone = v));
+                () -> cfg.commissionsBlock.commissionsHideDone, v -> cfg.commissionsBlock.commissionsHideDone = v));
         settings.add(new Setting.BooleanSetting("未完成的置顶",
-                () -> cfg.commissionsPendingFirst, v -> cfg.commissionsPendingFirst = v));
+                () -> cfg.commissionsBlock.commissionsPendingFirst, v -> cfg.commissionsBlock.commissionsPendingFirst = v));
         settings.add(new Setting.SliderSetting("缩放", 0.25, 6.0,
-                () -> cfg.commissionsScale, v -> cfg.commissionsScale = (float) v,
+                () -> cfg.commissionsBlock.commissionsScale, v -> cfg.commissionsBlock.commissionsScale = (float) v,
                 "%.2f", ModConfig.SCALE_GRID));
         settings.add(new Setting.ColorSetting("标题颜色",
-                () -> cfg.commissionsHeaderColor, v -> cfg.commissionsHeaderColor = v));
+                () -> cfg.commissionsBlock.commissionsHeaderColor, v -> cfg.commissionsBlock.commissionsHeaderColor = v));
         settings.add(new Setting.ColorSetting("未完成颜色",
-                () -> cfg.commissionsStartColor, v -> cfg.commissionsStartColor = v));
+                () -> cfg.commissionsBlock.commissionsStartColor, v -> cfg.commissionsBlock.commissionsStartColor = v));
         settings.add(new Setting.ColorSetting("完成颜色",
-                () -> cfg.commissionsDoneColor, v -> cfg.commissionsDoneColor = v));
+                () -> cfg.commissionsBlock.commissionsDoneColor, v -> cfg.commissionsBlock.commissionsDoneColor = v));
         return settings;
     }
 }

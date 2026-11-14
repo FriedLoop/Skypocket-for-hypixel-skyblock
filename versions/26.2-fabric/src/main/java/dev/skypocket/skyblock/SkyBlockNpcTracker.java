@@ -26,7 +26,7 @@ public final class SkyBlockNpcTracker {
 
     public static void tick(Minecraft mc) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.hidePlayersNearNpcs || !SkyBlockDetector.isActive() || mc.level == null) {
+        if (!cfg.hidePlayersNearNpcsBlock.hidePlayersNearNpcs || !SkyBlockDetector.isActive() || mc.level == null) {
             positions = List.of();
             return;
         }
@@ -44,7 +44,7 @@ public final class SkyBlockNpcTracker {
         if (entity == null || positions.isEmpty()) {
             return false;
         }
-        double range = Math.max(0.5, Math.min(8.0, ConfigManager.get().hidePlayersNearNpcsRange));
+        double range = Math.max(0.5, Math.min(8.0, ConfigManager.get().hidePlayersNearNpcsBlock.hidePlayersNearNpcsRange));
         double rangeSq = range * range;
         for (Vec3 npc : positions) {
             if (entity.position().distanceToSqr(npc) <= rangeSq) {

@@ -20,7 +20,7 @@ public abstract class ItemEntityRendererMixin {
     private void sky$rarityOutline(ItemEntity entity, ItemEntityRenderState state, float partialTick,
                                    CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.itemGlowEnabled && SkyBlockDetector.isActive()) {
+        if (cfg.itemGlowBlock.itemGlowEnabled && SkyBlockDetector.isActive()) {
             state.outlineColor = SkyBlockRarity.of(entity.getItem()).color();
         }
     }

@@ -103,7 +103,7 @@ public final class VanillaStatsStyle {
         }
         int mana = PlayerStatsTracker.mana();
         int overflow = PlayerStatsTracker.overflowMana();
-        boolean blink = cfg.statsManaBlink && mana <= perSlot * 2f && blinks();
+        boolean blink = cfg.statsDisplayBlock.statsManaBlink && mana <= perSlot * 2f && blinks();
         Identifier container = blink ? MANA_CONTAINER_BLINK : MANA_CONTAINER;
         for (int slot = 0; slot < PER_ROW * ROWS; slot++) {
             int x = rightX - slot % PER_ROW * STEP - SLOT;

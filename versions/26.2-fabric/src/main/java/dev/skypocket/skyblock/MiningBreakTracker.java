@@ -159,7 +159,7 @@ public final class MiningBreakTracker {
 
     /** True when the module is on (checked before every hook does any work). */
     public static boolean enabled() {
-        return ConfigManager.get().miningBreakPredictEnabled;
+        return ConfigManager.get().miningBreakPredictBlock.miningBreakPredictEnabled;
     }
 
     /** Destroy hook: the block the client is destroying (start or continue). */
@@ -290,8 +290,8 @@ public final class MiningBreakTracker {
         phase = Phase.ASSERTED;
         assertedMs = now;
         ModConfig cfg = ConfigManager.get();
-        if (cfg.miningBreakSoundVolume > 0f) {
-            SoundManager.play(cfg.miningBreakSound, cfg.miningBreakSoundVolume, cfg.miningBreakSoundPitch);
+        if (cfg.miningBreakPredictBlock.miningBreakSoundVolume > 0f) {
+            SoundManager.play(cfg.miningBreakPredictBlock.miningBreakSound, cfg.miningBreakPredictBlock.miningBreakSoundVolume, cfg.miningBreakPredictBlock.miningBreakSoundPitch);
         }
     }
 
@@ -363,7 +363,7 @@ public final class MiningBreakTracker {
      * {@code ceil} to stay a small fraction of it.
      */
     private static void addFitSample(double observed) {
-        if (!ConfigManager.get().miningAutoScale) {
+        if (!ConfigManager.get().miningBreakPredictBlock.miningAutoScale) {
             // No point fitting a correction that is not applied: it only made the number wander.
             return;
         }
@@ -394,7 +394,7 @@ public final class MiningBreakTracker {
             FIT_COUNT[i] = 0;
             FIT_INDEX[i] = 0;
         }
-        ConfigManager.get().miningCategoryScale.clear();
+        ConfigManager.get().miningBreakPredictBlock.miningCategoryScale.clear();
         for (int b = 0; b < BUCKET_COUNT; b++) {
             RATIO_COUNT[b] = 0;
             RATIO_NEXT[b] = 0;
@@ -489,9 +489,9 @@ public final class MiningBreakTracker {
         }
         ModConfig cfg = ConfigManager.get();
         MiningBlocks.Category type = MiningBlocks.Category.values()[category];
-        Double old = cfg.miningCategoryScale.get(type.name());
+        Double old = cfg.miningBreakPredictBlock.miningCategoryScale.get(type.name());
         if (old == null || Math.abs(old - scale) > 0.005) {
-            cfg.miningCategoryScale.put(type.name(), scale);
+            cfg.miningBreakPredictBlock.miningCategoryScale.put(type.name(), scale);
             MiningStrengthTable.markDirty();
         }
     }
@@ -501,7 +501,7 @@ public final class MiningBreakTracker {
         if (blockId == null) {
             return 1.0;
         }
-        Double scale = ConfigManager.get().miningCategoryScale
+        Double scale = ConfigManager.get().miningBreakPredictBlock.miningCategoryScale
                 .get(MiningBlocks.categoryOf(blockId).name());
         return scale == null || scale <= 0 ? 1.0 : scale;
     }
@@ -510,7 +510,7 @@ public final class MiningBreakTracker {
     public static String debugScales() {
         StringBuilder out = new StringBuilder();
         for (MiningBlocks.Category type : MiningBlocks.Category.values()) {
-            Double scale = ConfigManager.get().miningCategoryScale.get(type.name());
+            Double scale = ConfigManager.get().miningBreakPredictBlock.miningCategoryScale.get(type.name());
             if (out.length() > 0) {
                 out.append("  ");
             }
@@ -549,7 +549,7 @@ public final class MiningBreakTracker {
         if (parsed <= 0) {
             return -1;
         }
-        return ConfigManager.get().miningAutoScale ? parsed / timingScale(blockId) : parsed;
+        return ConfigManager.get().miningBreakPredictBlock.miningAutoScale ? parsed / timingScale(blockId) : parsed;
     }
 
     /**
@@ -569,7 +569,7 @@ public final class MiningBreakTracker {
         }
             // The server begins counting on the first tick boundary after it receives the start, not the
         // moment it receives it: start the model from that boundary when the grid is known.
-        String target = ConfigManager.get().miningAlignTarget;
+        String target = ConfigManager.get().miningBreakPredictBlock.miningAlignTarget;
         double delay = switch (target) {
             case "server" -> oneWayMs();
             case "client" -> rttMs();
@@ -580,7 +580,7 @@ public final class MiningBreakTracker {
             // Zero-latency goal: no grid snapping either, because the press is not on the grid.
             model = seconds * 1000.0 + biasMs();
         } else {
-            double start = ConfigManager.get().miningPhaseAlign && phaseMs() >= 0
+            double start = ConfigManager.get().miningBreakPredictBlock.miningPhaseAlign && phaseMs() >= 0
                     ? toTickBoundary(startMs + delay)
                     : startMs + delay;
             model = (start - startMs) + seconds * 1000.0 + biasMs();
@@ -634,7 +634,7 @@ public final class MiningBreakTracker {
         return (phase < 0 ? "-" : String.format("%.0fms", phase)) + "(" + phaseCount + ")";
     }
     private static double biasMs() {
-        return ConfigManager.get().miningBreakBiasTicks * TICK_MS;
+        return ConfigManager.get().miningBreakPredictBlock.miningBreakBiasTicks * TICK_MS;
     }
 
     /** Only display when the block's strength is known and it is not instant-break. */

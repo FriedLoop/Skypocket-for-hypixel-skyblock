@@ -36,20 +36,20 @@ public final class ClockHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig config = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), config);
-        if (!config.clockEnabled) {
+        if (!config.clockBlock.clockEnabled) {
             return;
         }
         String text = formatTime(config);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(config.clockX, config.clockY);
-        pose.scale(config.clockScale, config.clockScale);
-        HudText.draw(graphics, config, text, 0, 0, 0xFFFFFFFF, true, config.clockScale);
+        pose.translate(config.clockBlock.clockX, config.clockBlock.clockY);
+        pose.scale(config.clockBlock.clockScale, config.clockBlock.clockScale);
+        HudText.draw(graphics, config, text, 0, 0, 0xFFFFFFFF, true, config.clockBlock.clockScale);
         pose.popMatrix();
     }
 
     /** Formats the current wall-clock time according to the 12/24h setting. */
     public static String formatTime(ModConfig config) {
-        return LocalTime.now().format(config.clockFormat24h ? H24 : H12);
+        return LocalTime.now().format(config.clockBlock.clockFormat24h ? H24 : H12);
     }
 }

@@ -24,6 +24,10 @@ public final class HidePlayersNearNpcsFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().hidePlayersNearNpcsBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class HidePlayersNearNpcsFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hidePlayersNearNpcs;
+        return ConfigManager.get().hidePlayersNearNpcsBlock.hidePlayersNearNpcs;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hidePlayersNearNpcs = value;
+        ConfigManager.get().hidePlayersNearNpcsBlock.hidePlayersNearNpcs = value;
     }
 
     @Override
@@ -46,7 +50,7 @@ public final class HidePlayersNearNpcsFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("行为", "隐藏站在 SkyBlock NPC 附近的真实玩家"),
                 new Setting.SliderSetting("NPC 附近范围", 0.5, 8.0,
-                        () -> cfg.hidePlayersNearNpcsRange,
-                        v -> cfg.hidePlayersNearNpcsRange = (float) v, "%.1f", 0.5));
+                        () -> cfg.hidePlayersNearNpcsBlock.hidePlayersNearNpcsRange,
+                        v -> cfg.hidePlayersNearNpcsBlock.hidePlayersNearNpcsRange = (float) v, "%.1f", 0.5));
     }
 }

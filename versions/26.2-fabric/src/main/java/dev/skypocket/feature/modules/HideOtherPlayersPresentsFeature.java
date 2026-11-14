@@ -24,6 +24,10 @@ public final class HideOtherPlayersPresentsFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().hideOtherPlayersPresentsBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class HideOtherPlayersPresentsFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hideOtherPlayersPresents;
+        return ConfigManager.get().hideOtherPlayersPresentsBlock.hideOtherPlayersPresents;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hideOtherPlayersPresents = value;
+        ConfigManager.get().hideOtherPlayersPresentsBlock.hideOtherPlayersPresents = value;
     }
 
     @Override

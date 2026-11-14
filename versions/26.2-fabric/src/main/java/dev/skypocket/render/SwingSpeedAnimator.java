@@ -55,10 +55,10 @@ public final class SwingSpeedAnimator {
     /** Whether the custom clock should drive the swing (otherwise vanilla is used). */
     public static boolean isCustomActive() {
         ModConfig config = ConfigManager.get();
-        if (!config.handItemEnabled) {
+        if (!config.handItemBlock.handItemEnabled) {
             return false;
         }
-        return config.swingIgnoreHaste || config.swingSpeed != 100;
+        return config.handItemBlock.swingIgnoreHaste || config.handItemBlock.swingSpeed != 100;
     }
 
     /**
@@ -98,7 +98,7 @@ public final class SwingSpeedAnimator {
             progress = 1.0f;
             return;
         }
-        float speed = ConfigManager.get().swingSpeed / 100.0f;
+        float speed = ConfigManager.get().handItemBlock.swingSpeed / 100.0f;
         progress = Math.min(1.0f, progress + speed / duration);
     }
 
@@ -117,7 +117,7 @@ public final class SwingSpeedAnimator {
      */
     public static int customDurationTicks() {
         // tick() advances by speed / duration per tick, so the whole animation lasts duration / speed.
-        float speed = ConfigManager.get().swingSpeed / 100.0f;
+        float speed = ConfigManager.get().handItemBlock.swingSpeed / 100.0f;
         float base = currentDuration();
         if (speed <= 0.0f) {
             return Math.max(1, Math.round(base));
@@ -142,7 +142,7 @@ public final class SwingSpeedAnimator {
         ItemStack stack = player.getItemInHand(hand);
         int base = stack.getSwingAnimation().duration();
 //#endif
-        if (ConfigManager.get().swingIgnoreHaste) {
+        if (ConfigManager.get().handItemBlock.swingIgnoreHaste) {
             return base;
         }
         if (MobEffectUtil.hasDigSpeed(player)) {

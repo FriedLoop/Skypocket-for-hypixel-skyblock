@@ -34,7 +34,7 @@ public final class MiningStrengthTable {
 
     /** The floor in effect, from the config so 4 and 5 can be compared in game. */
     public static int minBreakTicks() {
-        return Math.max(1, ConfigManager.get().miningMinBreakTicks);
+        return Math.max(1, ConfigManager.get().miningBreakPredictBlock.miningMinBreakTicks);
     }
 
     /** Agreeing observations required before a resolved strength is trusted. */
@@ -112,7 +112,7 @@ public final class MiningStrengthTable {
     }
 
     private static String rounding() {
-        String mode = ConfigManager.get().miningTickRounding;
+        String mode = ConfigManager.get().miningBreakPredictBlock.miningTickRounding;
         return mode == null ? "ceil" : mode;
     }
 
@@ -256,9 +256,9 @@ public final class MiningStrengthTable {
 
     private static Map<String, Integer> resolved() {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.miningResolvedStrength == null) {
-            cfg.miningResolvedStrength = new HashMap<>();
+        if (cfg.miningBreakPredictBlock.miningResolvedStrength == null) {
+            cfg.miningBreakPredictBlock.miningResolvedStrength = new HashMap<>();
         }
-        return cfg.miningResolvedStrength;
+        return cfg.miningBreakPredictBlock.miningResolvedStrength;
     }
 }

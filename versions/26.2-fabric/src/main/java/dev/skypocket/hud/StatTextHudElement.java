@@ -62,7 +62,7 @@ public final class StatTextHudElement {
         if (!enabled(cfg, kind) || !StatsOverlayRenderer.active()) {
             return;
         }
-        if ((kind == Kind.HEALTH || kind == Kind.MANA) && cfg.statsModernStyle) {
+        if ((kind == Kind.HEALTH || kind == Kind.MANA) && cfg.statsDisplayBlock.statsModernStyle) {
             return; // the modern bars print these two themselves; the rows here are the classic readout
         }
         String line = line(kind, cfg);
@@ -141,26 +141,26 @@ public final class StatTextHudElement {
     private static final Map<Kind, Fields> FIELDS = new EnumMap<>(Kind.class);
 
     static {
-        put(Kind.HEALTH, c -> c.statsHealthTextX, (c, v) -> c.statsHealthTextX = v,
-                c -> c.statsHealthTextY, (c, v) -> c.statsHealthTextY = v,
-                c -> c.statsHealthTextScale, (c, v) -> c.statsHealthTextScale = (float) v,
-                c -> c.statsHealthTextEnabled);
-        put(Kind.MANA, c -> c.statsManaTextX, (c, v) -> c.statsManaTextX = v,
-                c -> c.statsManaTextY, (c, v) -> c.statsManaTextY = v,
-                c -> c.statsManaTextScale, (c, v) -> c.statsManaTextScale = (float) v,
-                c -> c.statsManaTextEnabled);
-        put(Kind.DEFENSE, c -> c.statsDefenseX, (c, v) -> c.statsDefenseX = v,
-                c -> c.statsDefenseY, (c, v) -> c.statsDefenseY = v,
-                c -> c.statsDefenseScale, (c, v) -> c.statsDefenseScale = (float) v,
-                c -> c.statsDefenseEnabled);
-        put(Kind.SPEED, c -> c.statsSpeedX, (c, v) -> c.statsSpeedX = v,
-                c -> c.statsSpeedY, (c, v) -> c.statsSpeedY = v,
-                c -> c.statsSpeedScale, (c, v) -> c.statsSpeedScale = (float) v,
-                c -> c.statsSpeedEnabled);
-        put(Kind.VITALITY, c -> c.statsVitalityX, (c, v) -> c.statsVitalityX = v,
-                c -> c.statsVitalityY, (c, v) -> c.statsVitalityY = v,
-                c -> c.statsVitalityScale, (c, v) -> c.statsVitalityScale = (float) v,
-                c -> c.statsVitalityEnabled);
+        put(Kind.HEALTH, c -> c.statsDisplayBlock.statsHealthTextX, (c, v) -> c.statsDisplayBlock.statsHealthTextX = v,
+                c -> c.statsDisplayBlock.statsHealthTextY, (c, v) -> c.statsDisplayBlock.statsHealthTextY = v,
+                c -> c.statsDisplayBlock.statsHealthTextScale, (c, v) -> c.statsDisplayBlock.statsHealthTextScale = (float) v,
+                c -> c.statsDisplayBlock.statsHealthTextEnabled);
+        put(Kind.MANA, c -> c.statsDisplayBlock.statsManaTextX, (c, v) -> c.statsDisplayBlock.statsManaTextX = v,
+                c -> c.statsDisplayBlock.statsManaTextY, (c, v) -> c.statsDisplayBlock.statsManaTextY = v,
+                c -> c.statsDisplayBlock.statsManaTextScale, (c, v) -> c.statsDisplayBlock.statsManaTextScale = (float) v,
+                c -> c.statsDisplayBlock.statsManaTextEnabled);
+        put(Kind.DEFENSE, c -> c.statsDisplayBlock.statsDefenseX, (c, v) -> c.statsDisplayBlock.statsDefenseX = v,
+                c -> c.statsDisplayBlock.statsDefenseY, (c, v) -> c.statsDisplayBlock.statsDefenseY = v,
+                c -> c.statsDisplayBlock.statsDefenseScale, (c, v) -> c.statsDisplayBlock.statsDefenseScale = (float) v,
+                c -> c.statsDisplayBlock.statsDefenseEnabled);
+        put(Kind.SPEED, c -> c.statsDisplayBlock.statsSpeedX, (c, v) -> c.statsDisplayBlock.statsSpeedX = v,
+                c -> c.statsDisplayBlock.statsSpeedY, (c, v) -> c.statsDisplayBlock.statsSpeedY = v,
+                c -> c.statsDisplayBlock.statsSpeedScale, (c, v) -> c.statsDisplayBlock.statsSpeedScale = (float) v,
+                c -> c.statsDisplayBlock.statsSpeedEnabled);
+        put(Kind.VITALITY, c -> c.statsDisplayBlock.statsVitalityX, (c, v) -> c.statsDisplayBlock.statsVitalityX = v,
+                c -> c.statsDisplayBlock.statsVitalityY, (c, v) -> c.statsDisplayBlock.statsVitalityY = v,
+                c -> c.statsDisplayBlock.statsVitalityScale, (c, v) -> c.statsDisplayBlock.statsVitalityScale = (float) v,
+                c -> c.statsDisplayBlock.statsVitalityEnabled);
     }
 
     private static void put(Kind kind, ToIntFunction<ModConfig> x, ObjIntConsumer<ModConfig> sx,
@@ -201,11 +201,11 @@ public final class StatTextHudElement {
     /** The row's own colour - the position editor previews it instead of assuming white. */
     public static int color(ModConfig cfg, Kind kind) {
         return switch (kind) {
-            case HEALTH -> cfg.statsHealthColor;
-            case MANA -> cfg.statsManaColor;
-            case DEFENSE -> cfg.statsDefenseColor;
-            case SPEED -> cfg.statsSpeedColor;
-            case VITALITY -> cfg.statsVitalityColor;
+            case HEALTH -> cfg.statsDisplayBlock.statsHealthColor;
+            case MANA -> cfg.statsDisplayBlock.statsManaColor;
+            case DEFENSE -> cfg.statsDisplayBlock.statsDefenseColor;
+            case SPEED -> cfg.statsDisplayBlock.statsSpeedColor;
+            case VITALITY -> cfg.statsDisplayBlock.statsVitalityColor;
         };
     }
 

@@ -25,15 +25,19 @@ public final class FpsTpsPingFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().fpsTpsPingBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().fpsTpsPingEnabled;
+        return ConfigManager.get().fpsTpsPingBlock.fpsTpsPingEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().fpsTpsPingEnabled = value;
+        ConfigManager.get().fpsTpsPingBlock.fpsTpsPingEnabled = value;
     }
 
     @Override
@@ -42,21 +46,21 @@ public final class FpsTpsPingFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "选择显示项目、大小与排版"),
                 new Setting.BooleanSetting("FPS",
-                        () -> cfg.fpsTpsPingShowFps, v -> cfg.fpsTpsPingShowFps = v),
+                        () -> cfg.fpsTpsPingBlock.fpsTpsPingShowFps, v -> cfg.fpsTpsPingBlock.fpsTpsPingShowFps = v),
                 new Setting.BooleanSetting("TPS",
-                        () -> cfg.fpsTpsPingShowTps, v -> cfg.fpsTpsPingShowTps = v),
+                        () -> cfg.fpsTpsPingBlock.fpsTpsPingShowTps, v -> cfg.fpsTpsPingBlock.fpsTpsPingShowTps = v),
                 new Setting.BooleanSetting("Ping",
-                        () -> cfg.fpsTpsPingShowPing, v -> cfg.fpsTpsPingShowPing = v),
+                        () -> cfg.fpsTpsPingBlock.fpsTpsPingShowPing, v -> cfg.fpsTpsPingBlock.fpsTpsPingShowPing = v),
                 new Setting.SliderSetting("大小", 0.25, 6.0,
-                        () -> cfg.fpsTpsPingScale,
-                        v -> cfg.fpsTpsPingScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
+                        () -> cfg.fpsTpsPingBlock.fpsTpsPingScale,
+                        v -> cfg.fpsTpsPingBlock.fpsTpsPingScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
                 // A boolean field shown as a two-option choice: index 0 is vertical. The explicit
                 // touch() is the original code's, and it matters because a ChoiceSetting does not go
                 // through the usual setter wrapper.
                 new Setting.ChoiceSetting("排版", List.of("竖向排版", "横向排版"),
-                        () -> cfg.fpsTpsPingVertical ? 0 : 1,
+                        () -> cfg.fpsTpsPingBlock.fpsTpsPingVertical ? 0 : 1,
                         index -> {
-                            cfg.fpsTpsPingVertical = index == 0;
+                            cfg.fpsTpsPingBlock.fpsTpsPingVertical = index == 0;
                             ConfigManager.touch();
                         }));
     }

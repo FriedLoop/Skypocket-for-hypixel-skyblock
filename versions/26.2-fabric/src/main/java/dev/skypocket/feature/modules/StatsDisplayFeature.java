@@ -41,6 +41,10 @@ public final class StatsDisplayFeature implements FeatureModule {
     public Category category() {
         return Category.HUD;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().statsDisplayBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -49,12 +53,12 @@ public final class StatsDisplayFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().statsEnabled;
+        return ConfigManager.get().statsDisplayBlock.statsEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().statsEnabled = value;
+        ConfigManager.get().statsDisplayBlock.statsEnabled = value;
     }
 
     @Override
@@ -64,9 +68,9 @@ public final class StatsDisplayFeature implements FeatureModule {
                 new Setting.Header("显示风格",
                         "经典沿用原版图标，现代改用条；切换后只显示对应风格的设置"),
                 new Setting.ChoiceSetting("风格", List.of("经典", "现代"),
-                        () -> cfg.statsModernStyle ? 1 : 0,
+                        () -> cfg.statsDisplayBlock.statsModernStyle ? 1 : 0,
                         index -> {
-                            cfg.statsModernStyle = index == 1;
+                            cfg.statsDisplayBlock.statsModernStyle = index == 1;
                             rebuildPanelAfterStyleChange();
                         }, true),
 
@@ -74,161 +78,161 @@ public final class StatsDisplayFeature implements FeatureModule {
                 // presentation and must not visually own the vanilla-element toggles.
                 new Setting.Header("原版元素", "隐藏原版元素，避免和本模块重复绘制"),
                 new Setting.BooleanSetting("隐藏原版生命条",
-                        () -> cfg.statsHideVanillaHealth, v -> cfg.statsHideVanillaHealth = v)
+                        () -> cfg.statsDisplayBlock.statsHideVanillaHealth, v -> cfg.statsDisplayBlock.statsHideVanillaHealth = v)
                         .hint("本模块会自己画血量，留着会两层叠在一起"),
                 new Setting.BooleanSetting("隐藏原版饥饿条",
-                        () -> cfg.statsHideVanillaFood, v -> cfg.statsHideVanillaFood = v)
+                        () -> cfg.statsDisplayBlock.statsHideVanillaFood, v -> cfg.statsDisplayBlock.statsHideVanillaFood = v)
                         .hint("饥饿那一行被法力占用"),
                 new Setting.BooleanSetting("隐藏原版空气泡",
-                        () -> cfg.statsHideVanillaAir, v -> cfg.statsHideVanillaAir = v)
+                        () -> cfg.statsDisplayBlock.statsHideVanillaAir, v -> cfg.statsDisplayBlock.statsHideVanillaAir = v)
                         .hint("它会正好落在法力的第二行上"),
                 new Setting.BooleanSetting("隐藏原版盔甲条",
-                        () -> cfg.statsHideVanillaArmor, v -> cfg.statsHideVanillaArmor = v)
+                        () -> cfg.statsDisplayBlock.statsHideVanillaArmor, v -> cfg.statsDisplayBlock.statsHideVanillaArmor = v)
                         .hint("它和本模块的布局不冲突，所以默认留着"),
                 new Setting.BooleanSetting("隐藏原版动作栏",
-                        () -> cfg.statsHideVanillaActionBar, v -> cfg.statsHideVanillaActionBar = v)
+                        () -> cfg.statsDisplayBlock.statsHideVanillaActionBar, v -> cfg.statsDisplayBlock.statsHideVanillaActionBar = v)
                         .hint("只隐藏绘制：数值仍然在读取，显示照常更新"),
 
                 // Style-independent rows first, style-specific blocks last.
                 new Setting.Header("颜色", "现代风格的条与经典风格的数值文字共用同一套"),
                 new Setting.ColorSetting("生命颜色",
-                        () -> cfg.statsHealthColor, v -> cfg.statsHealthColor = v),
+                        () -> cfg.statsDisplayBlock.statsHealthColor, v -> cfg.statsDisplayBlock.statsHealthColor = v),
                 new Setting.ColorSetting("吸收颜色",
-                        () -> cfg.statsAbsorptionColor, v -> cfg.statsAbsorptionColor = v),
+                        () -> cfg.statsDisplayBlock.statsAbsorptionColor, v -> cfg.statsDisplayBlock.statsAbsorptionColor = v),
                 new Setting.ColorSetting("法力颜色",
-                        () -> cfg.statsManaColor, v -> cfg.statsManaColor = v),
+                        () -> cfg.statsDisplayBlock.statsManaColor, v -> cfg.statsDisplayBlock.statsManaColor = v),
                 new Setting.ColorSetting("溢出法力颜色",
-                        () -> cfg.statsOverflowColor, v -> cfg.statsOverflowColor = v),
+                        () -> cfg.statsDisplayBlock.statsOverflowColor, v -> cfg.statsDisplayBlock.statsOverflowColor = v),
                 new Setting.ColorSetting("空气颜色",
-                        () -> cfg.statsAirColor, v -> cfg.statsAirColor = v),
+                        () -> cfg.statsDisplayBlock.statsAirColor, v -> cfg.statsDisplayBlock.statsAirColor = v),
                 new Setting.ColorSetting("防御颜色",
-                        () -> cfg.statsDefenseColor, v -> cfg.statsDefenseColor = v),
+                        () -> cfg.statsDisplayBlock.statsDefenseColor, v -> cfg.statsDisplayBlock.statsDefenseColor = v),
                 new Setting.ColorSetting("速度颜色",
-                        () -> cfg.statsSpeedColor, v -> cfg.statsSpeedColor = v),
+                        () -> cfg.statsDisplayBlock.statsSpeedColor, v -> cfg.statsDisplayBlock.statsSpeedColor = v),
                 new Setting.ColorSetting("活力颜色",
-                        () -> cfg.statsVitalityColor, v -> cfg.statsVitalityColor = v),
+                        () -> cfg.statsDisplayBlock.statsVitalityColor, v -> cfg.statsDisplayBlock.statsVitalityColor = v),
 
                 // Classic-only: the modern style renders these values inside its bars, so separate
                 // text rows would duplicate the same responsibility.
                 new Setting.Header("经典文字行", "仅经典风格；现代风格的条已经直接显示这些数值")
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("防御文字",
-                        () -> cfg.statsDefenseEnabled, v -> cfg.statsDefenseEnabled = v)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsDefenseEnabled, v -> cfg.statsDisplayBlock.statsDefenseEnabled = v)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("速度文字",
-                        () -> cfg.statsSpeedEnabled, v -> cfg.statsSpeedEnabled = v)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsSpeedEnabled, v -> cfg.statsDisplayBlock.statsSpeedEnabled = v)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("活力文字",
-                        () -> cfg.statsVitalityEnabled, v -> cfg.statsVitalityEnabled = v)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsVitalityEnabled, v -> cfg.statsDisplayBlock.statsVitalityEnabled = v)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("防御文字大小", 0.25, 6.0,
-                        () -> cfg.statsDefenseScale,
-                        v -> cfg.statsDefenseScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsDefenseScale,
+                        v -> cfg.statsDisplayBlock.statsDefenseScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("速度文字大小", 0.25, 6.0,
-                        () -> cfg.statsSpeedScale,
-                        v -> cfg.statsSpeedScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsSpeedScale,
+                        v -> cfg.statsDisplayBlock.statsSpeedScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("活力文字大小", 0.25, 6.0,
-                        () -> cfg.statsVitalityScale,
-                        v -> cfg.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsVitalityScale,
+                        v -> cfg.statsDisplayBlock.statsVitalityScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
 
                 new Setting.Header("经典布局",
                         "原版图标 + 精确数值；两行文字的位置在「HUD 位置调整」页里拖")
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("法力不足时闪烁",
-                        () -> cfg.statsManaBlink, v -> cfg.statsManaBlink = v)
+                        () -> cfg.statsDisplayBlock.statsManaBlink, v -> cfg.statsDisplayBlock.statsManaBlink = v)
                         .hint("剩余不足两格时按原版节奏闪烁")
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("生命数值",
-                        () -> cfg.statsHealthTextEnabled, v -> cfg.statsHealthTextEnabled = v)
+                        () -> cfg.statsDisplayBlock.statsHealthTextEnabled, v -> cfg.statsDisplayBlock.statsHealthTextEnabled = v)
                         .hint("20 格图标表达不了一个点；这里给出精确值与吸收量")
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("生命数值大小", 0.25, 6.0,
-                        () -> cfg.statsHealthTextScale,
-                        v -> cfg.statsHealthTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsHealthTextScale,
+                        v -> cfg.statsDisplayBlock.statsHealthTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("法力数值",
-                        () -> cfg.statsManaTextEnabled, v -> cfg.statsManaTextEnabled = v)
+                        () -> cfg.statsDisplayBlock.statsManaTextEnabled, v -> cfg.statsDisplayBlock.statsManaTextEnabled = v)
                         .hint("精确值与溢出法力")
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("法力数值大小", 0.25, 6.0,
-                        () -> cfg.statsManaTextScale,
-                        v -> cfg.statsManaTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> !cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsManaTextScale,
+                        v -> cfg.statsDisplayBlock.statsManaTextScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> !cfg.statsDisplayBlock.statsModernStyle),
 
                 // Modern-only: the geometry all six bars share, then a switch and a size for each.
                 // Position comes from the HUD position editor, where every bar is its own target.
                 new Setting.Header("现代条",
                         "位置在「HUD 位置调整」页里逐条拖拽与缩放，这里只管粗细与开关")
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("条上显示数值",
-                        () -> cfg.statsBarShowValues, v -> cfg.statsBarShowValues = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsBarShowValues, v -> cfg.statsDisplayBlock.statsBarShowValues = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("生命条",
-                        () -> cfg.statsHealthBarEnabled, v -> cfg.statsHealthBarEnabled = v)
+                        () -> cfg.statsDisplayBlock.statsHealthBarEnabled, v -> cfg.statsDisplayBlock.statsHealthBarEnabled = v)
                         .hint("吸收血量作为第二层叠在它上面")
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("生命条大小", 0.25, 6.0,
-                        () -> cfg.statsHealthBarScale,
-                        v -> cfg.statsHealthBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsHealthBarScale,
+                        v -> cfg.statsDisplayBlock.statsHealthBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("法力条",
-                        () -> cfg.statsManaBarEnabled, v -> cfg.statsManaBarEnabled = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsManaBarEnabled, v -> cfg.statsDisplayBlock.statsManaBarEnabled = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("法力条大小", 0.25, 6.0,
-                        () -> cfg.statsManaBarScale,
-                        v -> cfg.statsManaBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsManaBarScale,
+                        v -> cfg.statsDisplayBlock.statsManaBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("防御条",
-                        () -> cfg.statsDefenseBarEnabled, v -> cfg.statsDefenseBarEnabled = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsDefenseBarEnabled, v -> cfg.statsDisplayBlock.statsDefenseBarEnabled = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("防御条大小", 0.25, 6.0,
-                        () -> cfg.statsDefenseBarScale,
-                        v -> cfg.statsDefenseBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsDefenseBarScale,
+                        v -> cfg.statsDisplayBlock.statsDefenseBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("速度条",
-                        () -> cfg.statsSpeedBarEnabled, v -> cfg.statsSpeedBarEnabled = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsSpeedBarEnabled, v -> cfg.statsDisplayBlock.statsSpeedBarEnabled = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("速度条大小", 0.25, 6.0,
-                        () -> cfg.statsSpeedBarScale,
-                        v -> cfg.statsSpeedBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsSpeedBarScale,
+                        v -> cfg.statsDisplayBlock.statsSpeedBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("活力条",
-                        () -> cfg.statsVitalityBarEnabled, v -> cfg.statsVitalityBarEnabled = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsVitalityBarEnabled, v -> cfg.statsDisplayBlock.statsVitalityBarEnabled = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("活力条大小", 0.25, 6.0,
-                        () -> cfg.statsVitalityBarScale,
-                        v -> cfg.statsVitalityBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsVitalityBarScale,
+                        v -> cfg.statsDisplayBlock.statsVitalityBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.BooleanSetting("空气条",
-                        () -> cfg.statsAirBarEnabled, v -> cfg.statsAirBarEnabled = v)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsAirBarEnabled, v -> cfg.statsDisplayBlock.statsAirBarEnabled = v)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.SliderSetting("空气条大小", 0.25, 6.0,
-                        () -> cfg.statsAirBarScale,
-                        v -> cfg.statsAirBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        () -> cfg.statsDisplayBlock.statsAirBarScale,
+                        v -> cfg.statsDisplayBlock.statsAirBarScale = (float) v, "%.2f", ModConfig.SCALE_GRID)
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
 
                 // Advanced is its own card: a different kind of operation from the bar switches above.
                 new Setting.Header("重置与恢复", "重置条位置与恢复默认颜色")
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.ActionSetting(() -> Localization.tr("重置条位置"),
                         () -> StatsBarHudElement.resetToDefaults(cfg))
-                        .visibleWhen(() -> cfg.statsModernStyle),
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle),
                 new Setting.ActionSetting(() -> Localization.tr("恢复默认颜色"),
                         () -> {
-                            cfg.statsHealthColor = ColorDefaults.STATS_HEALTH;
-                            cfg.statsAbsorptionColor = ColorDefaults.STATS_ABSORPTION;
-                            cfg.statsManaColor = ColorDefaults.STATS_MANA;
-                            cfg.statsOverflowColor = ColorDefaults.STATS_OVERFLOW;
-                            cfg.statsAirColor = ColorDefaults.STATS_AIR;
-                            cfg.statsDefenseColor = ColorDefaults.STATS_DEFENSE;
-                            cfg.statsSpeedColor = ColorDefaults.STATS_SPEED;
-                            cfg.statsVitalityColor = ColorDefaults.STATS_VITALITY;
+                            cfg.statsDisplayBlock.statsHealthColor = ColorDefaults.STATS_HEALTH;
+                            cfg.statsDisplayBlock.statsAbsorptionColor = ColorDefaults.STATS_ABSORPTION;
+                            cfg.statsDisplayBlock.statsManaColor = ColorDefaults.STATS_MANA;
+                            cfg.statsDisplayBlock.statsOverflowColor = ColorDefaults.STATS_OVERFLOW;
+                            cfg.statsDisplayBlock.statsAirColor = ColorDefaults.STATS_AIR;
+                            cfg.statsDisplayBlock.statsDefenseColor = ColorDefaults.STATS_DEFENSE;
+                            cfg.statsDisplayBlock.statsSpeedColor = ColorDefaults.STATS_SPEED;
+                            cfg.statsDisplayBlock.statsVitalityColor = ColorDefaults.STATS_VITALITY;
                             rebuildPanelAfterStyleChange();
                         })
-                        .visibleWhen(() -> cfg.statsModernStyle));
+                        .visibleWhen(() -> cfg.statsDisplayBlock.statsModernStyle));
     }
 
     /**

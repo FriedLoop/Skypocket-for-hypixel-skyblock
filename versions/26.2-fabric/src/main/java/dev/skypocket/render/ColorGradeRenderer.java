@@ -68,29 +68,29 @@ public final class ColorGradeRenderer {
     public static void applyPreset(ModConfig cfg, String id) {
         float[] preset = PRESETS.get(id);
         if (preset == null) {
-            cfg.colorGradePreset = CUSTOM;
+            cfg.postProcessBlock.colorGradePreset = CUSTOM;
             return;
         }
-        cfg.colorGradeExposure = preset[EXPOSURE];
-        cfg.colorGradeContrast = preset[CONTRAST];
-        cfg.colorGradeSaturation = preset[SATURATION];
-        cfg.colorGradeGamma = preset[GAMMA];
-        cfg.colorGradeLift = preset[LIFT];
-        cfg.colorGradeTemperature = preset[TEMPERATURE];
-        cfg.colorGradeVignette = preset[VIGNETTE];
-        cfg.colorGradePreset = id;
+        cfg.postProcessBlock.colorGradeExposure = preset[EXPOSURE];
+        cfg.postProcessBlock.colorGradeContrast = preset[CONTRAST];
+        cfg.postProcessBlock.colorGradeSaturation = preset[SATURATION];
+        cfg.postProcessBlock.colorGradeGamma = preset[GAMMA];
+        cfg.postProcessBlock.colorGradeLift = preset[LIFT];
+        cfg.postProcessBlock.colorGradeTemperature = preset[TEMPERATURE];
+        cfg.postProcessBlock.colorGradeVignette = preset[VIGNETTE];
+        cfg.postProcessBlock.colorGradePreset = id;
     }
 
     /** Called once per frame, right after the level and before the HUD/GUI. */
     public static void process() {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.postProcessEnabled || !cfg.colorGradeEnabled) {
+        if (!cfg.postProcessBlock.postProcessEnabled || !cfg.postProcessBlock.colorGradeEnabled) {
             return;
         }
         // Track the parameters before the skip check: the sliders are dragged with a screen open, and
         // the chain has to be current by the time that screen closes even if the pass is skipped.
         CHAIN.apply(parameters(cfg));
-        if (cfg.colorGradeSkipScreens && Minecraft.getInstance().gui.screen() != null) {
+        if (cfg.postProcessBlock.colorGradeSkipScreens && Minecraft.getInstance().gui.screen() != null) {
             return;
         }
         WorldPostChain.process(CHAIN.chain());
@@ -98,8 +98,8 @@ public final class ColorGradeRenderer {
 
     /** The current parameters, in the order the shader and the template expect. */
     private static List<UniformValue> parameters(ModConfig cfg) {
-        return LivePostChain.floats(cfg.colorGradeExposure, cfg.colorGradeContrast,
-                cfg.colorGradeSaturation, cfg.colorGradeGamma, cfg.colorGradeLift,
-                cfg.colorGradeTemperature, cfg.colorGradeVignette);
+        return LivePostChain.floats(cfg.postProcessBlock.colorGradeExposure, cfg.postProcessBlock.colorGradeContrast,
+                cfg.postProcessBlock.colorGradeSaturation, cfg.postProcessBlock.colorGradeGamma, cfg.postProcessBlock.colorGradeLift,
+                cfg.postProcessBlock.colorGradeTemperature, cfg.postProcessBlock.colorGradeVignette);
     }
 }

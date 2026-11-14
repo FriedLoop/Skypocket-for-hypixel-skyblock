@@ -11,7 +11,7 @@ import dev.skypocket.config.ModConfig;
  * a "load preset" button has to be able to offer.
  *
  * <p>The grid is stored as {@code boolean[]} of {@code GRID * GRID} entries, row-major, matching how
- * {@code ModConfig.crosshairGrid} already works so applying a preset is a plain copy.
+ * {@code ModConfig.crosshairBlock.crosshairGrid} already works so applying a preset is a plain copy.
  *
  * @param name        file name without extension; also what the picker shows
  * @param grid        row-major cells, {@code GRID * GRID} entries
@@ -31,8 +31,8 @@ public record CrosshairPreset(String name, boolean[] grid, float pixelSize, floa
      * reference would make every saved preset follow later edits.
      */
     public static CrosshairPreset fromConfig(String name, ModConfig cfg) {
-        return new CrosshairPreset(name, cfg.crosshairGrid.clone(), cfg.crosshairPixelSize,
-                cfg.crosshairScale, cfg.crosshairStroke, cfg.crosshairStrokeWidth,
+        return new CrosshairPreset(name, cfg.crosshairBlock.crosshairGrid.clone(), cfg.crosshairBlock.crosshairPixelSize,
+                cfg.crosshairBlock.crosshairScale, cfg.crosshairBlock.crosshairStroke, cfg.crosshairBlock.crosshairStrokeWidth,
                 cfg.getCrosshairColorARGB());
     }
 
@@ -57,15 +57,15 @@ public record CrosshairPreset(String name, boolean[] grid, float pixelSize, floa
         if (grid == null || grid.length != ModConfig.GRID * ModConfig.GRID) {
             return false;
         }
-        cfg.crosshairPixelSize = pixelSize;
-        cfg.crosshairScale = scale;
-        cfg.crosshairStroke = stroke;
-        cfg.crosshairStrokeWidth = strokeWidth;
-        cfg.crosshairRed = (color >> 16) & 0xFF;
-        cfg.crosshairGreen = (color >> 8) & 0xFF;
-        cfg.crosshairBlue = color & 0xFF;
-        cfg.crosshairAlpha = (color >>> 24) & 0xFF;
-        System.arraycopy(grid, 0, cfg.crosshairGrid, 0, grid.length);
+        cfg.crosshairBlock.crosshairPixelSize = pixelSize;
+        cfg.crosshairBlock.crosshairScale = scale;
+        cfg.crosshairBlock.crosshairStroke = stroke;
+        cfg.crosshairBlock.crosshairStrokeWidth = strokeWidth;
+        cfg.crosshairBlock.crosshairRed = (color >> 16) & 0xFF;
+        cfg.crosshairBlock.crosshairGreen = (color >> 8) & 0xFF;
+        cfg.crosshairBlock.crosshairBlue = color & 0xFF;
+        cfg.crosshairBlock.crosshairAlpha = (color >>> 24) & 0xFF;
+        System.arraycopy(grid, 0, cfg.crosshairBlock.crosshairGrid, 0, grid.length);
         return true;
     }
 

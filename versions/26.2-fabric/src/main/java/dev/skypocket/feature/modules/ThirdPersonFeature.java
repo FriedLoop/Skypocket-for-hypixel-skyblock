@@ -36,15 +36,19 @@ public final class ThirdPersonFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().thirdPersonBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().thirdPersonThroughWalls;
+        return ConfigManager.get().thirdPersonBlock.thirdPersonThroughWalls;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().thirdPersonThroughWalls = value;
+        ConfigManager.get().thirdPersonBlock.thirdPersonThroughWalls = value;
     }
 
     @Override

@@ -29,7 +29,7 @@ public final class SkillDisplayHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), cfg);
-        if (!cfg.skillDisplayEnabled || !SkillDisplayTracker.visible()) {
+        if (!cfg.skillDisplayBlock.skillDisplayEnabled || !SkillDisplayTracker.visible()) {
             return;
         }
         String line = line();
@@ -39,9 +39,9 @@ public final class SkillDisplayHudElement {
         }
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.skillDisplayX, cfg.skillDisplayY);
-        pose.scale(cfg.skillDisplayScale, cfg.skillDisplayScale);
-        drawContents(graphics, cfg, cfg.skillDisplayScale, line, skill);
+        pose.translate(cfg.skillDisplayBlock.skillDisplayX, cfg.skillDisplayBlock.skillDisplayY);
+        pose.scale(cfg.skillDisplayBlock.skillDisplayScale, cfg.skillDisplayBlock.skillDisplayScale);
+        drawContents(graphics, cfg, cfg.skillDisplayBlock.skillDisplayScale, line, skill);
         pose.popMatrix();
     }
 
@@ -59,7 +59,7 @@ public final class SkillDisplayHudElement {
                                     String line, SkillDisplayTracker.Skill skill) {
         graphics.item(skill.icon(), 0, 0);
         int y = (ICON_SIZE - HudText.lineHeight(cfg)) / 2;
-        HudText.draw(graphics, cfg, line, TEXT_GAP, y, cfg.skillDisplayColor, true, scale);
+        HudText.draw(graphics, cfg, line, TEXT_GAP, y, cfg.skillDisplayBlock.skillDisplayColor, true, scale);
     }
 
     /** Editor preview uses the same icon/text layout as the live HUD. */
@@ -70,7 +70,7 @@ public final class SkillDisplayHudElement {
             skill = SkillDisplayTracker.Skill.FARMING;
             line = SkillDisplayTracker.previewLine();
         }
-        drawContents(graphics, cfg, cfg.skillDisplayScale, line, skill);
+        drawContents(graphics, cfg, cfg.skillDisplayBlock.skillDisplayScale, line, skill);
     }
 
 }

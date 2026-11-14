@@ -27,15 +27,15 @@ public final class DayCountHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), cfg);
-        if (!cfg.dayCountEnabled) {
+        if (!cfg.dayCountBlock.dayCountEnabled) {
             return;
         }
         String text = format(cfg);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.dayCountX, cfg.dayCountY);
-        pose.scale(cfg.dayCountScale, cfg.dayCountScale);
-        HudText.draw(graphics, cfg, text, 0, 0, 0xFFFFFFFF, true, cfg.dayCountScale);
+        pose.translate(cfg.dayCountBlock.dayCountX, cfg.dayCountBlock.dayCountY);
+        pose.scale(cfg.dayCountBlock.dayCountScale, cfg.dayCountBlock.dayCountScale);
+        HudText.draw(graphics, cfg, text, 0, 0, 0xFFFFFFFF, true, cfg.dayCountBlock.dayCountScale);
         pose.popMatrix();
     }
 

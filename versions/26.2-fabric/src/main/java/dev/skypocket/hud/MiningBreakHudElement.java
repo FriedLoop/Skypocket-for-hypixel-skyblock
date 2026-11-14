@@ -35,7 +35,7 @@ public final class MiningBreakHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         Minecraft mc = Minecraft.getInstance();
-        if (!cfg.miningBreakPredictEnabled || mc.player == null) {
+        if (!cfg.miningBreakPredictBlock.miningBreakPredictEnabled || mc.player == null) {
             MiningBreakTracker.reset();
             MiningSpeedTracker.reset();
             return;
@@ -47,7 +47,7 @@ public final class MiningBreakHudElement {
         }
         MiningBreakTracker.update(mc);
 
-        if (cfg.miningBreakDebugHud) {
+        if (cfg.miningBreakPredictBlock.miningBreakDebugHud) {
             drawDebug(graphics, mc);
         }
     }
@@ -105,7 +105,7 @@ public final class MiningBreakHudElement {
         y += step;
         // observed/model per duration bucket: falling = additive offset, flat = wrong speed.
         HudText.draw(graphics, ConfigManager.get(), "obs/model " + MiningBreakTracker.debugRatios()
-                + "  (" + ConfigManager.get().miningTickRounding + ")", x, y, color, true);
+                + "  (" + ConfigManager.get().miningBreakPredictBlock.miningTickRounding + ")", x, y, color, true);
     }
 
     private static String fmt(double v) {

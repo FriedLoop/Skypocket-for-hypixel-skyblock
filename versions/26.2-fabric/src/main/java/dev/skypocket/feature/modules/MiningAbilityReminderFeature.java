@@ -27,6 +27,10 @@ public final class MiningAbilityReminderFeature implements FeatureModule {
     public Category category() {
         return Category.MINING;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().miningAbilityReminderBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -35,12 +39,12 @@ public final class MiningAbilityReminderFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().miningAbilityReminderEnabled;
+        return ConfigManager.get().miningAbilityReminderBlock.miningAbilityReminderEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().miningAbilityReminderEnabled = value;
+        ConfigManager.get().miningAbilityReminderBlock.miningAbilityReminderEnabled = value;
     }
 
     @Override
@@ -49,25 +53,25 @@ public final class MiningAbilityReminderFeature implements FeatureModule {
         List<Setting> settings = new ArrayList<>();
         settings.add(new Setting.Header("提醒", "调整技能名与可用颜色、缩放和提醒音效"));
         settings.add(new Setting.ColorSetting("技能名颜色",
-                () -> cfg.miningAbilityNameColor, v -> cfg.miningAbilityNameColor = v));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityNameColor, v -> cfg.miningAbilityReminderBlock.miningAbilityNameColor = v));
         settings.add(new Setting.ColorSetting("可用颜色",
-                () -> cfg.miningAbilityAvailableColor, v -> cfg.miningAbilityAvailableColor = v));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityAvailableColor, v -> cfg.miningAbilityReminderBlock.miningAbilityAvailableColor = v));
         settings.add(new Setting.SliderSetting("冷却缩放", 0.25, 6.0,
-                () -> cfg.miningAbilityScale,
-                v -> cfg.miningAbilityScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityScale,
+                v -> cfg.miningAbilityReminderBlock.miningAbilityScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
         settings.add(new Setting.SliderSetting("提醒缩放", 0.25, 6.0,
-                () -> cfg.miningAbilitySubtitleScale,
-                v -> cfg.miningAbilitySubtitleScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
+                () -> cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale,
+                v -> cfg.miningAbilityReminderBlock.miningAbilitySubtitleScale = (float) v, "%.2f", ModConfig.SCALE_GRID));
         settings.add(new Setting.DropdownSetting("提醒音效", SoundManager::listAllSounds,
-                () -> cfg.miningAbilityReminderSound,
-                v -> cfg.miningAbilityReminderSound = v));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityReminderSound,
+                v -> cfg.miningAbilityReminderBlock.miningAbilityReminderSound = v));
         // Volume is stored as a 0..2 gain and shown as 0..200%.
         settings.add(new Setting.SliderSetting("音量", 0, 200,
-                () -> cfg.miningAbilityReminderVolume * 100,
-                v -> cfg.miningAbilityReminderVolume = (float) (v / 100.0), "%.0f%%", 1));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityReminderVolume * 100,
+                v -> cfg.miningAbilityReminderBlock.miningAbilityReminderVolume = (float) (v / 100.0), "%.0f%%", 1));
         settings.add(new Setting.SliderSetting("音高", 0.5, 2.0,
-                () -> cfg.miningAbilityReminderPitch,
-                v -> cfg.miningAbilityReminderPitch = (float) v, "%.2f", 0.05));
+                () -> cfg.miningAbilityReminderBlock.miningAbilityReminderPitch,
+                v -> cfg.miningAbilityReminderBlock.miningAbilityReminderPitch = (float) v, "%.2f", 0.05));
         return settings;
     }
 }

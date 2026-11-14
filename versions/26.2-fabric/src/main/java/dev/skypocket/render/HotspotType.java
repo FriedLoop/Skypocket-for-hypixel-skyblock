@@ -12,15 +12,15 @@ import java.util.function.ToIntFunction;
  */
 public enum HotspotType {
     FISHING_SPEED("Fishing Speed", "钓鱼速度",
-            cfg -> cfg.hotspotColorFishingSpeed, (cfg, v) -> cfg.hotspotColorFishingSpeed = v),
+            cfg -> cfg.fishingHotspotOverlayBlock.hotspotColorFishingSpeed, (cfg, v) -> cfg.fishingHotspotOverlayBlock.hotspotColorFishingSpeed = v),
     SEA_CREATURE("Sea Creature Chance", "海洋生物几率",
-            cfg -> cfg.hotspotColorSeaCreature, (cfg, v) -> cfg.hotspotColorSeaCreature = v),
+            cfg -> cfg.fishingHotspotOverlayBlock.hotspotColorSeaCreature, (cfg, v) -> cfg.fishingHotspotOverlayBlock.hotspotColorSeaCreature = v),
     DOUBLE_HOOK("Double Hook Chance", "双重上钩几率",
-            cfg -> cfg.hotspotColorDoubleHook, (cfg, v) -> cfg.hotspotColorDoubleHook = v),
+            cfg -> cfg.fishingHotspotOverlayBlock.hotspotColorDoubleHook, (cfg, v) -> cfg.fishingHotspotOverlayBlock.hotspotColorDoubleHook = v),
     TROPHY("Trophy Chance", "奖杯几率",
-            cfg -> cfg.hotspotColorTrophy, (cfg, v) -> cfg.hotspotColorTrophy = v),
+            cfg -> cfg.fishingHotspotOverlayBlock.hotspotColorTrophy, (cfg, v) -> cfg.fishingHotspotOverlayBlock.hotspotColorTrophy = v),
     TREASURE("Treasure Chance", "宝藏几率",
-            cfg -> cfg.hotspotColorTreasure, (cfg, v) -> cfg.hotspotColorTreasure = v);
+            cfg -> cfg.fishingHotspotOverlayBlock.hotspotColorTreasure, (cfg, v) -> cfg.fishingHotspotOverlayBlock.hotspotColorTreasure = v);
 
     /** Substring of the stat line identifying this kind. */
     public final String matchKey;

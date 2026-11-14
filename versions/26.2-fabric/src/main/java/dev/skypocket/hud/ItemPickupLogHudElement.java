@@ -29,7 +29,7 @@ public final class ItemPickupLogHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), cfg);
-        if (!cfg.pickupLogEnabled) {
+        if (!cfg.itemPickupLogBlock.pickupLogEnabled) {
             return;
         }
         List<ItemPickupTracker.Entry> entries = ItemPickupTracker.entries();
@@ -38,17 +38,17 @@ public final class ItemPickupLogHudElement {
         }
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.pickupLogX, cfg.pickupLogY);
-        pose.scale(cfg.pickupLogScale, cfg.pickupLogScale);
+        pose.translate(cfg.itemPickupLogBlock.pickupLogX, cfg.itemPickupLogBlock.pickupLogY);
+        pose.scale(cfg.itemPickupLogBlock.pickupLogScale, cfg.itemPickupLogBlock.pickupLogScale);
         int y = 0;
         int lineHeight = HudText.lineHeight(cfg) + LINE_GAP;
         for (ItemPickupTracker.Entry entry : entries) {
             String count = count(entry.amount);
             HudText.draw(graphics, cfg, count, 0, y, countColor(entry.amount), true,
-                    cfg.pickupLogScale);
-            int x = HudText.width(cfg, count, cfg.pickupLogScale) + TEXT_GAP;
+                    cfg.itemPickupLogBlock.pickupLogScale);
+            int x = HudText.width(cfg, count, cfg.itemPickupLogBlock.pickupLogScale) + TEXT_GAP;
             HudText.draw(graphics, cfg, entry.name, x, y, entry.rarityColor, true,
-                    cfg.pickupLogScale);
+                    cfg.itemPickupLogBlock.pickupLogScale);
             y += lineHeight;
         }
         pose.popMatrix();

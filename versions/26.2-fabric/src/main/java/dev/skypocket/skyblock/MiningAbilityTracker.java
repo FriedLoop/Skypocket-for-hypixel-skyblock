@@ -91,7 +91,7 @@ public final class MiningAbilityTracker {
     /** Per-frame entry from the HUD element; polls the tab list at a fixed interval. */
     public static void update(Minecraft mc) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.miningAbilityReminderEnabled) {
+        if (!cfg.miningAbilityReminderBlock.miningAbilityReminderEnabled) {
             return;
         }
         if (!SkyBlockDetector.isActive()) {
@@ -111,7 +111,7 @@ public final class MiningAbilityTracker {
     }
 
     private static void onChat(String text) {
-        if (!ConfigManager.get().miningAbilityReminderEnabled || text == null) {
+        if (!ConfigManager.get().miningAbilityReminderBlock.miningAbilityReminderEnabled || text == null) {
             return;
         }
         for (MiningAbility a : MiningAbility.values()) {
@@ -223,8 +223,8 @@ public final class MiningAbilityTracker {
         ModConfig cfg = ConfigManager.get();
         reminderAbility = a;
         reminderUntilMs = System.currentTimeMillis() + REMINDER_DURATION_MS;
-        SoundManager.play(cfg.miningAbilityReminderSound,
-                cfg.miningAbilityReminderVolume, cfg.miningAbilityReminderPitch);
+        SoundManager.play(cfg.miningAbilityReminderBlock.miningAbilityReminderSound,
+                cfg.miningAbilityReminderBlock.miningAbilityReminderVolume, cfg.miningAbilityReminderBlock.miningAbilityReminderPitch);
     }
 
     /** Milliseconds left in the current reminder display window (<= 0 = inactive). */

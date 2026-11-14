@@ -38,7 +38,7 @@ public abstract class HudMixin {
     @Inject(method = "extractHearts", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceHearts(GuiGraphicsExtractor graphics, Player player, int i, int j, int k,
                                    int l, float f, int m, int n, int o, boolean bl, CallbackInfo ci) {
-        if (hide(cfg -> cfg.statsHideVanillaHealth)) {
+        if (hide(cfg -> cfg.statsDisplayBlock.statsHideVanillaHealth)) {
             ci.cancel();
         }
     }
@@ -46,7 +46,7 @@ public abstract class HudMixin {
     @Inject(method = "extractFood", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceFood(GuiGraphicsExtractor graphics, Player player, int i, int j,
                                  CallbackInfo ci) {
-        if (hide(cfg -> cfg.statsHideVanillaFood)) {
+        if (hide(cfg -> cfg.statsDisplayBlock.statsHideVanillaFood)) {
             ci.cancel();
         }
     }
@@ -54,7 +54,7 @@ public abstract class HudMixin {
     @Inject(method = "extractAirBubbles", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$replaceAir(GuiGraphicsExtractor graphics, Player player, int i, int j, int k,
                                 CallbackInfo ci) {
-        if (hide(cfg -> cfg.statsHideVanillaAir)) {
+        if (hide(cfg -> cfg.statsDisplayBlock.statsHideVanillaAir)) {
             ci.cancel();
         }
     }
@@ -63,7 +63,7 @@ public abstract class HudMixin {
     @Inject(method = "extractArmor", at = @At("HEAD"), cancellable = true, require = 0)
     private static void sky$replaceArmor(GuiGraphicsExtractor graphics, Player player, int i, int j,
                                          int k, int l, CallbackInfo ci) {
-        if (hide(cfg -> cfg.statsHideVanillaArmor)) {
+        if (hide(cfg -> cfg.statsDisplayBlock.statsHideVanillaArmor)) {
             ci.cancel();
         }
     }
@@ -75,7 +75,7 @@ public abstract class HudMixin {
     @Inject(method = "extractOverlayMessage", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$hideActionBar(GuiGraphicsExtractor graphics, net.minecraft.client.DeltaTracker delta,
                                    CallbackInfo ci) {
-        if (hide(cfg -> cfg.statsHideVanillaActionBar)) {
+        if (hide(cfg -> cfg.statsDisplayBlock.statsHideVanillaActionBar)) {
             ci.cancel();
         }
     }

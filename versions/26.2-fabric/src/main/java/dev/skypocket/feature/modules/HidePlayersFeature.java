@@ -24,15 +24,19 @@ public final class HidePlayersFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().hidePlayersBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hideNearbyPlayersEnabled;
+        return ConfigManager.get().hidePlayersBlock.hideNearbyPlayersEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hideNearbyPlayersEnabled = value;
+        ConfigManager.get().hidePlayersBlock.hideNearbyPlayersEnabled = value;
     }
 
     @Override
@@ -41,7 +45,7 @@ public final class HidePlayersFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("行为", "设置隐藏附近玩家的范围"),
                 new Setting.SliderSetting("范围", 0, 10,
-                        () -> cfg.hideNearbyPlayersRange,
-                        v -> cfg.hideNearbyPlayersRange = (float) v, "%.1f", 0.1));
+                        () -> cfg.hidePlayersBlock.hideNearbyPlayersRange,
+                        v -> cfg.hidePlayersBlock.hideNearbyPlayersRange = (float) v, "%.1f", 0.1));
     }
 }

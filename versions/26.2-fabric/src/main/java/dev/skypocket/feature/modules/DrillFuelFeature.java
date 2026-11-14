@@ -24,6 +24,10 @@ public final class DrillFuelFeature implements FeatureModule {
     public Category category() {
         return Category.MINING;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().drillFuelBarBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class DrillFuelFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().drillFuelBarEnabled;
+        return ConfigManager.get().drillFuelBarBlock.drillFuelBarEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().drillFuelBarEnabled = value;
+        ConfigManager.get().drillFuelBarBlock.drillFuelBarEnabled = value;
     }
 
     @Override
@@ -46,15 +50,15 @@ public final class DrillFuelFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("显示", "手持钻头时显示燃料条，使用现有条形纹理"),
                 new Setting.BooleanSetting("显示数字",
-                        () -> cfg.drillFuelShowNumber, v -> cfg.drillFuelShowNumber = v),
+                        () -> cfg.drillFuelBarBlock.drillFuelShowNumber, v -> cfg.drillFuelBarBlock.drillFuelShowNumber = v),
                 new Setting.ColorSetting("燃料条颜色",
-                        () -> cfg.drillFuelBarColor, v -> cfg.drillFuelBarColor = v),
+                        () -> cfg.drillFuelBarBlock.drillFuelBarColor, v -> cfg.drillFuelBarBlock.drillFuelBarColor = v),
                 // Width and height are ints; the slider still reports a double and truncates.
                 new Setting.SliderSetting("宽度", 40, 400,
-                        () -> cfg.drillFuelBarWidth, v -> cfg.drillFuelBarWidth = (int) v,
+                        () -> cfg.drillFuelBarBlock.drillFuelBarWidth, v -> cfg.drillFuelBarBlock.drillFuelBarWidth = (int) v,
                         "%.0f", 1),
                 new Setting.SliderSetting("高度", 8, 20,
-                        () -> cfg.drillFuelBarHeight, v -> cfg.drillFuelBarHeight = (int) v,
+                        () -> cfg.drillFuelBarBlock.drillFuelBarHeight, v -> cfg.drillFuelBarBlock.drillFuelBarHeight = (int) v,
                         "%.0f", 1));
     }
 }

@@ -25,15 +25,19 @@ public final class BlockOutlineFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().blockOutlineBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().blockOutlineEnabled;
+        return ConfigManager.get().blockOutlineBlock.blockOutlineEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().blockOutlineEnabled = value;
+        ConfigManager.get().blockOutlineBlock.blockOutlineEnabled = value;
     }
 
     @Override
@@ -44,21 +48,21 @@ public final class BlockOutlineFeature implements FeatureModule {
                 // Colours are stored as four separate channels, so the setting reads them via the
                 // getter and writes them back channel by channel. `true` marks it as supporting alpha.
                 new Setting.ColorSetting("描边颜色", cfg::getBlockOutlineColorARGB, v -> {
-                    cfg.blockOutlineRed = ColorUtil.red(v);
-                    cfg.blockOutlineGreen = ColorUtil.green(v);
-                    cfg.blockOutlineBlue = ColorUtil.blue(v);
-                    cfg.blockOutlineAlpha = ColorUtil.alpha(v);
+                    cfg.blockOutlineBlock.blockOutlineRed = ColorUtil.red(v);
+                    cfg.blockOutlineBlock.blockOutlineGreen = ColorUtil.green(v);
+                    cfg.blockOutlineBlock.blockOutlineBlue = ColorUtil.blue(v);
+                    cfg.blockOutlineBlock.blockOutlineAlpha = ColorUtil.alpha(v);
                 }, true),
                 new Setting.SliderSetting("描边厚度", 0.5, 6.0,
-                        () -> cfg.blockOutlineThickness,
-                        v -> cfg.blockOutlineThickness = (float) v, "%.2f", 0.1),
+                        () -> cfg.blockOutlineBlock.blockOutlineThickness,
+                        v -> cfg.blockOutlineBlock.blockOutlineThickness = (float) v, "%.2f", 0.1),
                 new Setting.BooleanSetting("方块面调色",
-                        () -> cfg.blockOutlineFaceTint, v -> cfg.blockOutlineFaceTint = v),
+                        () -> cfg.blockOutlineBlock.blockOutlineFaceTint, v -> cfg.blockOutlineBlock.blockOutlineFaceTint = v),
                 new Setting.ColorSetting("面颜色", cfg::getBlockOutlineFaceColorARGB, v -> {
-                    cfg.blockOutlineFaceRed = ColorUtil.red(v);
-                    cfg.blockOutlineFaceGreen = ColorUtil.green(v);
-                    cfg.blockOutlineFaceBlue = ColorUtil.blue(v);
-                    cfg.blockOutlineFaceAlpha = ColorUtil.alpha(v);
+                    cfg.blockOutlineBlock.blockOutlineFaceRed = ColorUtil.red(v);
+                    cfg.blockOutlineBlock.blockOutlineFaceGreen = ColorUtil.green(v);
+                    cfg.blockOutlineBlock.blockOutlineFaceBlue = ColorUtil.blue(v);
+                    cfg.blockOutlineBlock.blockOutlineFaceAlpha = ColorUtil.alpha(v);
                 }, true));
     }
 }

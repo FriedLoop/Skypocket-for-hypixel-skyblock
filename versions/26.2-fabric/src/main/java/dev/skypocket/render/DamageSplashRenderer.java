@@ -47,7 +47,7 @@ public final class DamageSplashRenderer {
 
     private static void render(LevelRenderContext context) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.damageSplashEnabled) {
+        if (!cfg.damageSplashCompactBlock.damageSplashEnabled) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();

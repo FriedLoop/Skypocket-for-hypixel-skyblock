@@ -58,7 +58,7 @@ public final class CommissionHudElement {
         CommissionTracker.update(mc);
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(mc, cfg);
-        if (!cfg.commissionsEnabled || !SkyBlockDetector.isActive()) {
+        if (!cfg.commissionsBlock.commissionsEnabled || !SkyBlockDetector.isActive()) {
             return;
         }
         List<Line> lines = lines(cfg);
@@ -67,12 +67,12 @@ public final class CommissionHudElement {
         }
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.commissionsX, cfg.commissionsY);
-        pose.scale(cfg.commissionsScale, cfg.commissionsScale);
+        pose.translate(cfg.commissionsBlock.commissionsX, cfg.commissionsBlock.commissionsY);
+        pose.scale(cfg.commissionsBlock.commissionsScale, cfg.commissionsBlock.commissionsScale);
         int lineH = lineHeight(mc);
         int y = 0;
         for (Line line : lines) {
-            HudText.draw(graphics, cfg, line.text(), 0, y, line.color(), true, cfg.commissionsScale);
+            HudText.draw(graphics, cfg, line.text(), 0, y, line.color(), true, cfg.commissionsBlock.commissionsScale);
             y += lineH;
         }
         pose.popMatrix();
@@ -93,7 +93,7 @@ public final class CommissionHudElement {
     private static List<Line> lines(ModConfig cfg) {
         List<Line> tasks = new ArrayList<>();
         for (CommissionTracker.Entry entry : ordered(cfg)) {
-            if (cfg.commissionsHideDone && entry.done()) {
+            if (cfg.commissionsBlock.commissionsHideDone && entry.done()) {
                 continue;
             }
             tasks.add(new Line(entry.name() + ": " + entry.value(), progressColor(cfg, entry)));
@@ -102,7 +102,7 @@ public final class CommissionHudElement {
             return List.of();
         }
         List<Line> out = new ArrayList<>(tasks.size() + 1);
-        out.add(new Line(HEADER, cfg.commissionsHeaderColor));
+        out.add(new Line(HEADER, cfg.commissionsBlock.commissionsHeaderColor));
         out.addAll(tasks);
         return out;
     }
@@ -110,7 +110,7 @@ public final class CommissionHudElement {
     /** Tab order by default; with "pending first" the finished ones sink to the bottom (stable). */
     private static List<CommissionTracker.Entry> ordered(ModConfig cfg) {
         List<CommissionTracker.Entry> entries = CommissionTracker.entries();
-        if (!cfg.commissionsPendingFirst || entries.size() < 2) {
+        if (!cfg.commissionsBlock.commissionsPendingFirst || entries.size() < 2) {
             return entries;
         }
         List<CommissionTracker.Entry> sorted = new ArrayList<>(entries);
@@ -135,8 +135,8 @@ public final class CommissionHudElement {
             return 0xFFFFFFFF;
         }
         float t = ColorUtil.clamp(entry.progress(), 0f, 1f);
-        int from = cfg.commissionsStartColor;
-        int to = cfg.commissionsDoneColor;
+        int from = cfg.commissionsBlock.commissionsStartColor;
+        int to = cfg.commissionsBlock.commissionsDoneColor;
         float[] a = ColorUtil.rgbToHsv(ColorUtil.red(from), ColorUtil.green(from), ColorUtil.blue(from));
         float[] b = ColorUtil.rgbToHsv(ColorUtil.red(to), ColorUtil.green(to), ColorUtil.blue(to));
         float hue = a[0] + shortestHueDelta(a[0], b[0]) * t;

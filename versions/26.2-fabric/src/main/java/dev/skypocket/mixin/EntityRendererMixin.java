@@ -34,9 +34,9 @@ public abstract class EntityRendererMixin {
 //#endif
                                        CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        boolean nearby = cfg.hideNearbyPlayersEnabled && cfg.hideNearbyPlayersRange > 0;
-        boolean spawn = cfg.hideSpawnPointPlayers;
-        boolean nearNpc = cfg.hidePlayersNearNpcs;
+        boolean nearby = cfg.hidePlayersBlock.hideNearbyPlayersEnabled && cfg.hidePlayersBlock.hideNearbyPlayersRange > 0;
+        boolean spawn = cfg.hideSpawnPointPlayersBlock.hideSpawnPointPlayers;
+        boolean nearNpc = cfg.hidePlayersNearNpcsBlock.hidePlayersNearNpcs;
         if (!nearby && !spawn && !nearNpc) {
             return;
         }
@@ -54,19 +54,19 @@ public abstract class EntityRendererMixin {
             return;
         }
 
-        if (cfg.hideSpawnPointPlayers && SkyBlockDetector.isActive()
+        if (cfg.hideSpawnPointPlayersBlock.hideSpawnPointPlayers && SkyBlockDetector.isActive()
                 && entity.position().distanceToSqr(0.5, 77.0, -0.5)
-                <= (double) cfg.hideSpawnPointRadius * cfg.hideSpawnPointRadius) {
+                <= (double) cfg.hideSpawnPointPlayersBlock.hideSpawnPointRadius * cfg.hideSpawnPointPlayersBlock.hideSpawnPointRadius) {
             cir.setReturnValue(false);
             return;
         }
-        if (cfg.hidePlayersNearNpcs && SkyBlockDetector.isActive()
+        if (cfg.hidePlayersNearNpcsBlock.hidePlayersNearNpcs && SkyBlockDetector.isActive()
                 && SkyBlockNpcTracker.isNearNpc(entity)) {
             cir.setReturnValue(false);
             return;
         }
 
-        double range = cfg.hideNearbyPlayersRange;
+        double range = cfg.hidePlayersBlock.hideNearbyPlayersRange;
         if (nearby && entity.distanceToSqr(mc.player) < range * range) {
             cir.setReturnValue(false);
         }
@@ -79,7 +79,7 @@ public abstract class EntityRendererMixin {
 //#endif
                                        CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.hideOtherPlayersPresents && SkyBlockDetector.isActive()
+        if (cfg.hideOtherPlayersPresentsBlock.hideOtherPlayersPresents && SkyBlockDetector.isActive()
                 && entity instanceof net.minecraft.world.entity.decoration.ArmorStand stand
                 && JerryPresentTracker.shouldHide(stand)) {
             cir.setReturnValue(false);

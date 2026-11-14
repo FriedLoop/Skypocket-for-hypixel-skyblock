@@ -33,7 +33,7 @@ public final class FpsTpsPingHudElement {
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         ModConfig cfg = ConfigManager.get();
         HudPositionSync.sync(Minecraft.getInstance(), cfg);
-        if (!cfg.fpsTpsPingEnabled) {
+        if (!cfg.fpsTpsPingBlock.fpsTpsPingEnabled) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -42,12 +42,12 @@ public final class FpsTpsPingHudElement {
 
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        pose.translate(cfg.fpsTpsPingX, cfg.fpsTpsPingY);
-        pose.scale(cfg.fpsTpsPingScale, cfg.fpsTpsPingScale);
+        pose.translate(cfg.fpsTpsPingBlock.fpsTpsPingX, cfg.fpsTpsPingBlock.fpsTpsPingY);
+        pose.scale(cfg.fpsTpsPingBlock.fpsTpsPingScale, cfg.fpsTpsPingBlock.fpsTpsPingScale);
         int y = 0;
         int lineH = lineHeight(mc, cfg);
         for (String line : lines) {
-            HudText.draw(graphics, cfg, line, 0, y, 0xFFFFFFFF, true, cfg.fpsTpsPingScale);
+            HudText.draw(graphics, cfg, line, 0, y, 0xFFFFFFFF, true, cfg.fpsTpsPingBlock.fpsTpsPingScale);
             y += lineH;
         }
         pose.popMatrix();
@@ -56,7 +56,7 @@ public final class FpsTpsPingHudElement {
     /** Lines as actually laid out: three stacked lines, or one joined horizontal line. */
     public static String[] layoutLines(Minecraft mc, ModConfig cfg) {
         String[] lines = lines(mc, cfg);
-        if (cfg.fpsTpsPingVertical) {
+        if (cfg.fpsTpsPingBlock.fpsTpsPingVertical) {
             return lines;
         }
         return new String[]{String.join("   ", lines)};
@@ -65,19 +65,19 @@ public final class FpsTpsPingHudElement {
     /** Unscaled height of a single laid-out line (horizontal layout has no inter-line gap). */
     public static int lineHeight(Minecraft mc, ModConfig cfg) {
         // The parameter stays for the position editor's call shape; the font is chosen centrally.
-        return cfg.fpsTpsPingVertical ? HudText.lineHeight(cfg) + 2 : HudText.lineHeight(cfg);
+        return cfg.fpsTpsPingBlock.fpsTpsPingVertical ? HudText.lineHeight(cfg) + 2 : HudText.lineHeight(cfg);
     }
 
     /** The display lines for the enabled readouts, built from live client data. */
     public static String[] lines(Minecraft mc, ModConfig cfg) {
         List<String> result = new ArrayList<>();
-        if (cfg.fpsTpsPingShowFps) {
+        if (cfg.fpsTpsPingBlock.fpsTpsPingShowFps) {
             result.add("FPS: " + mc.getFps());
         }
-        if (cfg.fpsTpsPingShowTps) {
+        if (cfg.fpsTpsPingBlock.fpsTpsPingShowTps) {
             result.add("TPS: " + String.format("%.1f", TpsEstimator.tps()));
         }
-        if (cfg.fpsTpsPingShowPing) {
+        if (cfg.fpsTpsPingBlock.fpsTpsPingShowPing) {
             int ping = ping(mc);
             result.add(ping < 0 ? "Ping: N/A" : "Ping: " + ping + "ms");
         }

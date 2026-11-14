@@ -24,15 +24,19 @@ public final class PlayerGlowFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().playerGlowBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().playerGlowEnabled;
+        return ConfigManager.get().playerGlowBlock.playerGlowEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().playerGlowEnabled = value;
+        ConfigManager.get().playerGlowBlock.playerGlowEnabled = value;
     }
 
     @Override
@@ -41,6 +45,6 @@ public final class PlayerGlowFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("外观", "调整玩家发光的颜色"),
                 new Setting.ColorSetting("发光颜色",
-                        () -> cfg.playerGlowColor, v -> cfg.playerGlowColor = v));
+                        () -> cfg.playerGlowBlock.playerGlowColor, v -> cfg.playerGlowBlock.playerGlowColor = v));
     }
 }

@@ -24,15 +24,19 @@ public final class ScrollableTooltipsFeature implements FeatureModule {
     public Category category() {
         return Category.RENDER;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().scrollableTooltipsBlock;
+    }
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().scrollableTooltipsEnabled;
+        return ConfigManager.get().scrollableTooltipsBlock.scrollableTooltipsEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().scrollableTooltipsEnabled = value;
+        ConfigManager.get().scrollableTooltipsBlock.scrollableTooltipsEnabled = value;
     }
 
     @Override
@@ -41,10 +45,10 @@ public final class ScrollableTooltipsFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("行为", "设置提示框的滚动方式与灵敏度"),
                 new Setting.BooleanSetting("始终可滚动",
-                        () -> cfg.scrollableTooltipsAlwaysScroll,
-                        v -> cfg.scrollableTooltipsAlwaysScroll = v),
+                        () -> cfg.scrollableTooltipsBlock.scrollableTooltipsAlwaysScroll,
+                        v -> cfg.scrollableTooltipsBlock.scrollableTooltipsAlwaysScroll = v),
                 new Setting.SliderSetting("滚动灵敏度", 0.25, 4.0,
-                        () -> cfg.scrollableTooltipsSensitivity,
-                        v -> cfg.scrollableTooltipsSensitivity = (float) v, "%.2fx", 0.05));
+                        () -> cfg.scrollableTooltipsBlock.scrollableTooltipsSensitivity,
+                        v -> cfg.scrollableTooltipsBlock.scrollableTooltipsSensitivity = (float) v, "%.2fx", 0.05));
     }
 }

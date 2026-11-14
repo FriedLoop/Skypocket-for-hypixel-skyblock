@@ -23,8 +23,8 @@ public abstract class EnderDragonRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"), require = 0)
     private void sky$setDragonGlowColor(EnderDragon dragon, EnderDragonRenderState state, float partialTick, CallbackInfo ci) {
         ModConfig cfg = ConfigManager.get();
-        if (cfg.dragonGlowEnabled && SkyBlockDetector.isActive()) {
-            state.outlineColor = cfg.dragonGlowColor;
+        if (cfg.dragonGlowBlock.dragonGlowEnabled && SkyBlockDetector.isActive()) {
+            state.outlineColor = cfg.dragonGlowBlock.dragonGlowColor;
         }
     }
 }

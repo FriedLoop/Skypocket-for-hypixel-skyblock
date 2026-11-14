@@ -55,7 +55,7 @@ public final class MentionAlert {
 
     private static void onMessage(String text, String senderName, boolean isPlayerChat) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.mentionAlertEnabled) {
+        if (!cfg.mentionAlertBlock.mentionAlertEnabled) {
             return;
         }
         if (text == null || text.isEmpty()) {
@@ -81,7 +81,7 @@ public final class MentionAlert {
             return;
         }
         if (text.toLowerCase().contains(token.toLowerCase())) {
-            SoundManager.play(cfg.mentionAlertSound, cfg.mentionAlertVolume, cfg.mentionAlertPitch);
+            SoundManager.play(cfg.mentionAlertBlock.mentionAlertSound, cfg.mentionAlertBlock.mentionAlertVolume, cfg.mentionAlertBlock.mentionAlertPitch);
         }
     }
 
@@ -104,14 +104,14 @@ public final class MentionAlert {
 
     /** The custom text in full, or the first N characters of the game ID. */
     private static String resolveToken(ModConfig cfg, String gameId) {
-        String custom = cfg.mentionAlertCustomText;
+        String custom = cfg.mentionAlertBlock.mentionAlertCustomText;
         if (custom != null && !custom.isBlank()) {
             return custom.trim();
         }
         if (gameId == null || gameId.isEmpty()) {
             return "";
         }
-        int len = Math.min(Math.max(1, cfg.mentionAlertNameLength), gameId.length());
+        int len = Math.min(Math.max(1, cfg.mentionAlertBlock.mentionAlertNameLength), gameId.length());
         return gameId.substring(0, len);
     }
 

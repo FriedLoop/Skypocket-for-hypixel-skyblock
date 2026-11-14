@@ -33,7 +33,7 @@ public final class TooltipScroller {
         ModConfig cfg = ConfigManager.get();
         int visible = screenHeight - 2 * MARGIN;
         boolean overflow = tooltipHeight > visible;
-        if (!overflow && !cfg.scrollableTooltipsAlwaysScroll) {
+        if (!overflow && !cfg.scrollableTooltipsBlock.scrollableTooltipsAlwaysScroll) {
             return new Vector2i(px, py);
         }
         resetIfChanged(mouseX, mouseY, tooltipHeight);
@@ -58,7 +58,7 @@ public final class TooltipScroller {
 
     /** Applies a mouse-wheel scroll; positive {@code verticalAmount} scrolls up. */
     public static void scroll(double verticalAmount) {
-        float sensitivity = ConfigManager.get().scrollableTooltipsSensitivity;
+        float sensitivity = ConfigManager.get().scrollableTooltipsBlock.scrollableTooltipsSensitivity;
         scrollOffset -= (int) Math.round(verticalAmount * BASE_SCROLL_STEP * sensitivity);
     }
 

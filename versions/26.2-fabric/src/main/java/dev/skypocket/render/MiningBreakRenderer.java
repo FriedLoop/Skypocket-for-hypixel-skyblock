@@ -54,7 +54,7 @@ public final class MiningBreakRenderer {
 
     private static void collectSubmits(LevelRenderContext context) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.miningBreakPredictEnabled || !cfg.miningBreakOutlineEnabled) {
+        if (!cfg.miningBreakPredictBlock.miningBreakPredictEnabled || !cfg.miningBreakPredictBlock.miningBreakOutlineEnabled) {
             return;
         }
         if (!SkyBlockDetector.isActive()) {
@@ -66,7 +66,7 @@ public final class MiningBreakRenderer {
             return;
         }
         float progress = MiningBreakTracker.progress();
-        float alpha = MiningBreakTracker.alpha() * (ColorUtil.alpha(cfg.miningBreakOutlineColor) / 255f);
+        float alpha = MiningBreakTracker.alpha() * (ColorUtil.alpha(cfg.miningBreakPredictBlock.miningBreakOutlineColor) / 255f);
         if (progress < 0f || alpha <= 0.01f) {
             return;
         }
@@ -74,9 +74,9 @@ public final class MiningBreakRenderer {
         BlockState state = mc.level.getBlockState(pos);
         List<AABB> boxes = state.getShape(mc.level, pos).toAabbs();
         float[] color = {
-                ColorUtil.red(cfg.miningBreakOutlineColor) / 255f,
-                ColorUtil.green(cfg.miningBreakOutlineColor) / 255f,
-                ColorUtil.blue(cfg.miningBreakOutlineColor) / 255f,
+                ColorUtil.red(cfg.miningBreakPredictBlock.miningBreakOutlineColor) / 255f,
+                ColorUtil.green(cfg.miningBreakPredictBlock.miningBreakOutlineColor) / 255f,
+                ColorUtil.blue(cfg.miningBreakPredictBlock.miningBreakOutlineColor) / 255f,
                 alpha
         };
 

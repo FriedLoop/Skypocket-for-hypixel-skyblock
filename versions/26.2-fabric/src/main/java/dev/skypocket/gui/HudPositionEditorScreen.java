@@ -124,25 +124,25 @@ public class HudPositionEditorScreen extends Screen {
     }
 
     static {
-        put(Target.CLOCK, c -> c.clockX, (c, v) -> c.clockX = v,
-                c -> c.clockY, (c, v) -> c.clockY = v,
-                c -> c.clockScale, (c, v) -> c.clockScale = (float) v);
-        put(Target.DAY_COUNT, c -> c.dayCountX, (c, v) -> c.dayCountX = v,
-                c -> c.dayCountY, (c, v) -> c.dayCountY = v,
-                c -> c.dayCountScale, (c, v) -> c.dayCountScale = (float) v);
-        put(Target.FPS_TPS_PING, c -> c.fpsTpsPingX, (c, v) -> c.fpsTpsPingX = v,
-                c -> c.fpsTpsPingY, (c, v) -> c.fpsTpsPingY = v,
-                c -> c.fpsTpsPingScale, (c, v) -> c.fpsTpsPingScale = (float) v);
-        put(Target.MINING_ABILITY, c -> c.miningAbilityX, (c, v) -> c.miningAbilityX = v,
-                c -> c.miningAbilityY, (c, v) -> c.miningAbilityY = v,
-                c -> c.miningAbilityScale, (c, v) -> c.miningAbilityScale = (float) v);
-        put(Target.MINING_ABILITY_SUBTITLE, c -> c.miningAbilitySubtitleX,
-                (c, v) -> c.miningAbilitySubtitleX = v,
-                c -> c.miningAbilitySubtitleY, (c, v) -> c.miningAbilitySubtitleY = v,
-                c -> c.miningAbilitySubtitleScale, (c, v) -> c.miningAbilitySubtitleScale = (float) v);
-        put(Target.COMMISSION, c -> c.commissionsX, (c, v) -> c.commissionsX = v,
-                c -> c.commissionsY, (c, v) -> c.commissionsY = v,
-                c -> c.commissionsScale, (c, v) -> c.commissionsScale = (float) v);
+        put(Target.CLOCK, c -> c.clockBlock.clockX, (c, v) -> c.clockBlock.clockX = v,
+                c -> c.clockBlock.clockY, (c, v) -> c.clockBlock.clockY = v,
+                c -> c.clockBlock.clockScale, (c, v) -> c.clockBlock.clockScale = (float) v);
+        put(Target.DAY_COUNT, c -> c.dayCountBlock.dayCountX, (c, v) -> c.dayCountBlock.dayCountX = v,
+                c -> c.dayCountBlock.dayCountY, (c, v) -> c.dayCountBlock.dayCountY = v,
+                c -> c.dayCountBlock.dayCountScale, (c, v) -> c.dayCountBlock.dayCountScale = (float) v);
+        put(Target.FPS_TPS_PING, c -> c.fpsTpsPingBlock.fpsTpsPingX, (c, v) -> c.fpsTpsPingBlock.fpsTpsPingX = v,
+                c -> c.fpsTpsPingBlock.fpsTpsPingY, (c, v) -> c.fpsTpsPingBlock.fpsTpsPingY = v,
+                c -> c.fpsTpsPingBlock.fpsTpsPingScale, (c, v) -> c.fpsTpsPingBlock.fpsTpsPingScale = (float) v);
+        put(Target.MINING_ABILITY, c -> c.miningAbilityReminderBlock.miningAbilityX, (c, v) -> c.miningAbilityReminderBlock.miningAbilityX = v,
+                c -> c.miningAbilityReminderBlock.miningAbilityY, (c, v) -> c.miningAbilityReminderBlock.miningAbilityY = v,
+                c -> c.miningAbilityReminderBlock.miningAbilityScale, (c, v) -> c.miningAbilityReminderBlock.miningAbilityScale = (float) v);
+        put(Target.MINING_ABILITY_SUBTITLE, c -> c.miningAbilityReminderBlock.miningAbilitySubtitleX,
+                (c, v) -> c.miningAbilityReminderBlock.miningAbilitySubtitleX = v,
+                c -> c.miningAbilityReminderBlock.miningAbilitySubtitleY, (c, v) -> c.miningAbilityReminderBlock.miningAbilitySubtitleY = v,
+                c -> c.miningAbilityReminderBlock.miningAbilitySubtitleScale, (c, v) -> c.miningAbilityReminderBlock.miningAbilitySubtitleScale = (float) v);
+        put(Target.COMMISSION, c -> c.commissionsBlock.commissionsX, (c, v) -> c.commissionsBlock.commissionsX = v,
+                c -> c.commissionsBlock.commissionsY, (c, v) -> c.commissionsBlock.commissionsY = v,
+                c -> c.commissionsBlock.commissionsScale, (c, v) -> c.commissionsBlock.commissionsScale = (float) v);
         // Stat rows delegate to the shared stat store, exactly like the bars: the field names live in
         // one table (StatTextHudElement), not repeated here.
         putStat(Target.STAT_DEFENSE, StatTextHudElement.Kind.DEFENSE);
@@ -150,25 +150,25 @@ public class HudPositionEditorScreen extends Screen {
         putStat(Target.STAT_VITALITY, StatTextHudElement.Kind.VITALITY);
         putStat(Target.STAT_HEALTH, StatTextHudElement.Kind.HEALTH);
         putStat(Target.STAT_MANA, StatTextHudElement.Kind.MANA);
-        put(Target.SKILL_DISPLAY, c -> c.skillDisplayX, (c, v) -> c.skillDisplayX = v,
-                c -> c.skillDisplayY, (c, v) -> c.skillDisplayY = v,
-                c -> c.skillDisplayScale, (c, v) -> c.skillDisplayScale = (float) v);
-        put(Target.DRILL_FUEL_BAR, c -> c.drillFuelBarX, (c, v) -> c.drillFuelBarX = v,
-                c -> c.drillFuelBarY, (c, v) -> c.drillFuelBarY = v,
-                c -> c.drillFuelBarScale, (c, v) -> c.drillFuelBarScale = (float) v);
-        put(Target.THUNDER_BOTTLE, c -> c.thunderBottleX, (c, v) -> c.thunderBottleX = v,
-                c -> c.thunderBottleY, (c, v) -> c.thunderBottleY = v,
-                c -> c.thunderBottleScale, (c, v) -> c.thunderBottleScale = (float) v);
-        put(Target.ITEM_PICKUP_LOG, c -> c.pickupLogX, (c, v) -> c.pickupLogX = v,
-                c -> c.pickupLogY, (c, v) -> c.pickupLogY = v,
-                c -> c.pickupLogScale, (c, v) -> c.pickupLogScale = (float) v);
+        put(Target.SKILL_DISPLAY, c -> c.skillDisplayBlock.skillDisplayX, (c, v) -> c.skillDisplayBlock.skillDisplayX = v,
+                c -> c.skillDisplayBlock.skillDisplayY, (c, v) -> c.skillDisplayBlock.skillDisplayY = v,
+                c -> c.skillDisplayBlock.skillDisplayScale, (c, v) -> c.skillDisplayBlock.skillDisplayScale = (float) v);
+        put(Target.DRILL_FUEL_BAR, c -> c.drillFuelBarBlock.drillFuelBarX, (c, v) -> c.drillFuelBarBlock.drillFuelBarX = v,
+                c -> c.drillFuelBarBlock.drillFuelBarY, (c, v) -> c.drillFuelBarBlock.drillFuelBarY = v,
+                c -> c.drillFuelBarBlock.drillFuelBarScale, (c, v) -> c.drillFuelBarBlock.drillFuelBarScale = (float) v);
+        put(Target.THUNDER_BOTTLE, c -> c.thunderBottleBlock.thunderBottleX, (c, v) -> c.thunderBottleBlock.thunderBottleX = v,
+                c -> c.thunderBottleBlock.thunderBottleY, (c, v) -> c.thunderBottleBlock.thunderBottleY = v,
+                c -> c.thunderBottleBlock.thunderBottleScale, (c, v) -> c.thunderBottleBlock.thunderBottleScale = (float) v);
+        put(Target.ITEM_PICKUP_LOG, c -> c.itemPickupLogBlock.pickupLogX, (c, v) -> c.itemPickupLogBlock.pickupLogX = v,
+                c -> c.itemPickupLogBlock.pickupLogY, (c, v) -> c.itemPickupLogBlock.pickupLogY = v,
+                c -> c.itemPickupLogBlock.pickupLogScale, (c, v) -> c.itemPickupLogBlock.pickupLogScale = (float) v);
         // Stored as an offset from the hotbar anchor: shift it by however far the requested position is
         // from where it currently lands, so the writer stays right no matter how the box is computed.
         put(Target.HELD_ITEM_NAME, c -> heldItemNameBox(c)[0],
-                (c, v) -> c.heldItemNameOffsetX += v - heldItemNameBox(c)[0],
+                (c, v) -> c.heldItemNameBlock.heldItemNameOffsetX += v - heldItemNameBox(c)[0],
                 c -> heldItemNameBox(c)[1],
-                (c, v) -> c.heldItemNameOffsetY += v - heldItemNameBox(c)[1],
-                HeldItemNameHudElement::scale, (c, v) -> c.heldItemNameScale = (float) v);
+                (c, v) -> c.heldItemNameBlock.heldItemNameOffsetY += v - heldItemNameBox(c)[1],
+                HeldItemNameHudElement::scale, (c, v) -> c.heldItemNameBlock.heldItemNameScale = (float) v);
         putBar(Target.BAR_HEALTH, StatsBarHudElement.Kind.HEALTH);
         putBar(Target.BAR_MANA, StatsBarHudElement.Kind.MANA);
         putBar(Target.BAR_DEFENSE, StatsBarHudElement.Kind.DEFENSE);
@@ -400,28 +400,28 @@ public class HudPositionEditorScreen extends Screen {
         StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(t.name());
         if (bar != null) {
             // The bars are the modern style's readout: the classic style never draws them.
-            return cfg.statsModernStyle && StatsBarHudElement.enabled(cfg, bar);
+            return cfg.statsDisplayBlock.statsModernStyle && StatsBarHudElement.enabled(cfg, bar);
         }
         return switch (t) {
-            case CLOCK -> cfg.clockEnabled;
-            case DAY_COUNT -> cfg.dayCountEnabled;
-            case FPS_TPS_PING -> cfg.fpsTpsPingEnabled;
+            case CLOCK -> cfg.clockBlock.clockEnabled;
+            case DAY_COUNT -> cfg.dayCountBlock.dayCountEnabled;
+            case FPS_TPS_PING -> cfg.fpsTpsPingBlock.fpsTpsPingEnabled;
             // The subtitle shares the reminder's switch: it is that element's second line.
-            case MINING_ABILITY, MINING_ABILITY_SUBTITLE -> cfg.miningAbilityReminderEnabled;
-            case COMMISSION -> cfg.commissionsEnabled;
-            case STAT_DEFENSE -> cfg.statsDefenseEnabled;
-            case STAT_SPEED -> cfg.statsSpeedEnabled;
-            case STAT_VITALITY -> cfg.statsVitalityEnabled;
+            case MINING_ABILITY, MINING_ABILITY_SUBTITLE -> cfg.miningAbilityReminderBlock.miningAbilityReminderEnabled;
+            case COMMISSION -> cfg.commissionsBlock.commissionsEnabled;
+            case STAT_DEFENSE -> cfg.statsDisplayBlock.statsDefenseEnabled;
+            case STAT_SPEED -> cfg.statsDisplayBlock.statsSpeedEnabled;
+            case STAT_VITALITY -> cfg.statsDisplayBlock.statsVitalityEnabled;
             // Health and mana have two homes. The text rows are the classic readout and are suppressed
             // in the modern style (the bars print those two numbers themselves), so exactly one of the
             // pair is on the screen at a time - which is also what stops them overlapping here.
-            case STAT_HEALTH -> !cfg.statsModernStyle && cfg.statsHealthTextEnabled;
-            case STAT_MANA -> !cfg.statsModernStyle && cfg.statsManaTextEnabled;
-            case SKILL_DISPLAY -> cfg.skillDisplayEnabled;
-            case DRILL_FUEL_BAR -> cfg.drillFuelBarEnabled;
-            case THUNDER_BOTTLE -> cfg.thunderBottleEnabled;
-            case ITEM_PICKUP_LOG -> cfg.pickupLogEnabled;
-            case HELD_ITEM_NAME -> cfg.heldItemNameEnabled;
+            case STAT_HEALTH -> !cfg.statsDisplayBlock.statsModernStyle && cfg.statsDisplayBlock.statsHealthTextEnabled;
+            case STAT_MANA -> !cfg.statsDisplayBlock.statsModernStyle && cfg.statsDisplayBlock.statsManaTextEnabled;
+            case SKILL_DISPLAY -> cfg.skillDisplayBlock.skillDisplayEnabled;
+            case DRILL_FUEL_BAR -> cfg.drillFuelBarBlock.drillFuelBarEnabled;
+            case THUNDER_BOTTLE -> cfg.thunderBottleBlock.thunderBottleEnabled;
+            case ITEM_PICKUP_LOG -> cfg.itemPickupLogBlock.pickupLogEnabled;
+            case HELD_ITEM_NAME -> cfg.heldItemNameBlock.heldItemNameEnabled;
             // Bars are handled above; anything new defaults to visible rather than disappearing silently.
             default -> true;
         };
@@ -774,7 +774,7 @@ public class HudPositionEditorScreen extends Screen {
         StatsBarHudElement.Kind bar = StatsBarHudElement.kindOf(selected.name());
         if (selected == Target.DRILL_FUEL_BAR) {
             rows.add(String.format(Localization.tr("尺寸 %d×%d  缩放 %.2f"),
-                    cfg.drillFuelBarWidth, cfg.drillFuelBarHeight, scale(selected, cfg)));
+                    cfg.drillFuelBarBlock.drillFuelBarWidth, cfg.drillFuelBarBlock.drillFuelBarHeight, scale(selected, cfg)));
         } else {
             rows.add(bar == null
                     ? String.format(Localization.tr("缩放 %.2f"), scale(selected, cfg))
@@ -1128,12 +1128,12 @@ public class HudPositionEditorScreen extends Screen {
                 float s = Math.max(0.01f, scale(resizeTarget, cfg));
                 int w = (resizeMode & 1) != 0
                         ? Math.round((float) ((event.x() - resizeOriginX) / s))
-                        : cfg.drillFuelBarWidth;
+                        : cfg.drillFuelBarBlock.drillFuelBarWidth;
                 int h = (resizeMode & 2) != 0
                         ? Math.round((float) ((event.y() - resizeOriginY) / s))
-                        : cfg.drillFuelBarHeight;
-                cfg.drillFuelBarWidth = Math.max(40, Math.min(400, w));
-                cfg.drillFuelBarHeight = Math.max(8, Math.min(20, h));
+                        : cfg.drillFuelBarBlock.drillFuelBarHeight;
+                cfg.drillFuelBarBlock.drillFuelBarWidth = Math.max(40, Math.min(400, w));
+                cfg.drillFuelBarBlock.drillFuelBarHeight = Math.max(8, Math.min(20, h));
                 return true;
             }
             if (resizeMode != 0 && resizeBar != null) {

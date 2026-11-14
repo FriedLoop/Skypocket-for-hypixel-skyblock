@@ -25,7 +25,7 @@ public final class ItemPickupTracker {
     }
 
     public static void tick(Minecraft mc) {
-        if (!ConfigManager.get().pickupLogEnabled
+        if (!ConfigManager.get().itemPickupLogBlock.pickupLogEnabled
                 || !dev.skypocket.net.SkyBlockDetector.isActive()
                 || mc.player == null || mc.level == null) {
             clear();
@@ -36,7 +36,7 @@ public final class ItemPickupTracker {
             lastLevel = mc.level;
         }
         long now = System.currentTimeMillis();
-        long lifespan = ConfigManager.get().pickupLogDurationMs;
+        long lifespan = ConfigManager.get().itemPickupLogBlock.pickupLogDurationMs;
         ENTRIES.removeIf(entry -> now - entry.timestamp > lifespan);
 
         // Rearranging items in the player inventory is not a pickup/loss. Freeze a baseline when

@@ -33,7 +33,7 @@ public final class BlockOutlineRenderer {
 
     private static boolean beforeBlockOutline(LevelRenderContext context, BlockOutlineRenderState outline) {
         ModConfig config = ConfigManager.get();
-        if (!config.blockOutlineEnabled) {
+        if (!config.blockOutlineBlock.blockOutlineEnabled) {
             return true; // keep vanilla behaviour
         }
 
@@ -48,7 +48,7 @@ public final class BlockOutlineRenderer {
         poseStack.pushPose();
         poseStack.translate(pos.getX() - camera.x, pos.getY() - camera.y, pos.getZ() - camera.z);
 
-        if (config.blockOutlineFaceTint) {
+        if (config.blockOutlineBlock.blockOutlineFaceTint) {
             float[] faceColor = rgb(config.getBlockOutlineFaceColorARGB());
             for (AABB box : outline.shape().toAabbs()) {
                 collector.submitCustomGeometry(poseStack, RenderTypes.debugFilledBox(),
@@ -57,7 +57,7 @@ public final class BlockOutlineRenderer {
         }
 
         collector.submitShapeOutline(poseStack, outline.shape(), RenderTypes.secondaryBlockOutline(),
-                config.getBlockOutlineColorARGB(), config.blockOutlineThickness, outline.isTranslucent());
+                config.getBlockOutlineColorARGB(), config.blockOutlineBlock.blockOutlineThickness, outline.isTranslucent());
 
         poseStack.popPose();
         return false; // cancel the vanilla outline

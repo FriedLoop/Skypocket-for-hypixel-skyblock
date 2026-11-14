@@ -24,6 +24,10 @@ public final class DragonGlowFeature implements FeatureModule {
     public Category category() {
         return Category.ESP;
     }
+    @Override
+    public Object config() {
+        return ConfigManager.get().dragonGlowBlock;
+    }
 
     @Override
     public boolean skyBlockOnly() {
@@ -32,12 +36,12 @@ public final class DragonGlowFeature implements FeatureModule {
 
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().dragonGlowEnabled;
+        return ConfigManager.get().dragonGlowBlock.dragonGlowEnabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().dragonGlowEnabled = value;
+        ConfigManager.get().dragonGlowBlock.dragonGlowEnabled = value;
     }
 
     @Override
@@ -46,6 +50,6 @@ public final class DragonGlowFeature implements FeatureModule {
         return List.of(
                 new Setting.Header("外观", "调整末影龙发光的颜色"),
                 new Setting.ColorSetting("发光颜色",
-                        () -> cfg.dragonGlowColor, v -> cfg.dragonGlowColor = v));
+                        () -> cfg.dragonGlowBlock.dragonGlowColor, v -> cfg.dragonGlowBlock.dragonGlowColor = v));
     }
 }

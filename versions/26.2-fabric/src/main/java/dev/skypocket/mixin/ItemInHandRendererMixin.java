@@ -31,7 +31,7 @@ public abstract class ItemInHandRendererMixin {
     @Inject(method = "swingArm", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$removeSwingThrust(float attack, PoseStack poseStack, int invert, HumanoidArm arm, CallbackInfo ci) {
         ModConfig config = ConfigManager.get();
-        if (!config.handItemEnabled || !config.handItemDisableSwing) {
+        if (!config.handItemBlock.handItemEnabled || !config.handItemBlock.handItemDisableSwing) {
             return;
         }
         ci.cancel();
@@ -64,17 +64,17 @@ public abstract class ItemInHandRendererMixin {
     @Inject(method = "applyItemArmTransform", at = @At("TAIL"), require = 0)
     private void sky$applyHandTransform(PoseStack poseStack, HumanoidArm arm, float inverseArmHeight, CallbackInfo ci) {
         ModConfig config = ConfigManager.get();
-        if (!config.handItemEnabled) {
+        if (!config.handItemBlock.handItemEnabled) {
             return;
         }
-        if (config.handItemDisableReequip) {
+        if (config.handItemBlock.handItemDisableReequip) {
             poseStack.translate(0.0f, 0.6f * inverseArmHeight, 0.0f);
         }
-        poseStack.translate(config.handItemOffsetX, config.handItemOffsetY, config.handItemOffsetZ);
-        rotate(poseStack, Axis.XP, config.handItemRotateX);
-        rotate(poseStack, Axis.YP, config.handItemRotateY);
-        rotate(poseStack, Axis.ZP, config.handItemRotateZ);
-        float s = Math.max(0.01f, config.handItemScale);
+        poseStack.translate(config.handItemBlock.handItemOffsetX, config.handItemBlock.handItemOffsetY, config.handItemBlock.handItemOffsetZ);
+        rotate(poseStack, Axis.XP, config.handItemBlock.handItemRotateX);
+        rotate(poseStack, Axis.YP, config.handItemBlock.handItemRotateY);
+        rotate(poseStack, Axis.ZP, config.handItemBlock.handItemRotateZ);
+        float s = Math.max(0.01f, config.handItemBlock.handItemScale);
         poseStack.scale(s, s, s);
     }
     /**

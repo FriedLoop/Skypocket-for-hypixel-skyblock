@@ -26,7 +26,7 @@ public abstract class GameRendererMixin {
     /** Cosmetic toggle: a missing {@code bobHurt} only loses "no hurt camera". */
     @Inject(method = "bobHurt", at = @At("HEAD"), cancellable = true, require = 0)
     private void sky$disableHurtShake(CameraRenderState state, PoseStack poseStack, CallbackInfo ci) {
-        if (ConfigManager.get().noHurtCameraEnabled && !state.entityRenderState.isDeadOrDying) {
+        if (ConfigManager.get().noHurtCameraBlock.noHurtCameraEnabled && !state.entityRenderState.isDeadOrDying) {
             ci.cancel();
         }
     }

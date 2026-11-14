@@ -34,8 +34,8 @@ public final class ConfigManager {
             // v0 -> v1: the bars gained artwork authored for a 20 px height. 6 was the old default and
             // crushed the design into a dark line; a height chosen deliberately (8 or more) is left alone.
             cfg -> {
-                if (cfg.statsBarHeight == 6) {
-                    cfg.statsBarHeight = 20;
+                if (cfg.statsDisplayBlock.statsBarHeight == 6) {
+                    cfg.statsDisplayBlock.statsBarHeight = 20;
                 }
             },
             // v1 -> v2: hudSkyPocketFont was added; the field default is off, so no conversion.
@@ -64,7 +64,7 @@ public final class ConfigManager {
             // rejected by sanitize() (which resets a wrong-length grid to the default), silently
             // throwing away the player's drawn crosshair - so it is reshaped here instead.
             cfg -> {
-                cfg.crosshairGrid = regridCrosshair(cfg.crosshairGrid,
+                cfg.crosshairBlock.crosshairGrid = regridCrosshair(cfg.crosshairBlock.crosshairGrid,
                         ModConfig.LEGACY_GRID_15, ModConfig.GRID);
             });
 

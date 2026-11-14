@@ -24,7 +24,7 @@ public abstract class GuiGraphicsExtractorMixin {
     private Vector2ic sky$scrollableTooltipPosition(ClientTooltipPositioner positioner,
             int screenWidth, int screenHeight, int mouseX, int mouseY, int tooltipWidth, int tooltipHeight) {
         Vector2ic pos = positioner.positionTooltip(screenWidth, screenHeight, mouseX, mouseY, tooltipWidth, tooltipHeight);
-        if (!ConfigManager.get().scrollableTooltipsEnabled) {
+        if (!ConfigManager.get().scrollableTooltipsBlock.scrollableTooltipsEnabled) {
             return pos;
         }
         return TooltipScroller.adjust(pos.x(), pos.y(), tooltipHeight, screenHeight, mouseX, mouseY);

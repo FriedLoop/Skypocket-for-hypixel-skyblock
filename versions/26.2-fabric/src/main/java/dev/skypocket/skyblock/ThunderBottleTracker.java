@@ -26,7 +26,7 @@ public final class ThunderBottleTracker {
     }
 
     public static void tick(Minecraft mc) {
-        if (!ConfigManager.get().thunderBottleEnabled || !SkyBlockDetector.isActive()
+        if (!ConfigManager.get().thunderBottleBlock.thunderBottleEnabled || !SkyBlockDetector.isActive()
                 || mc.player == null) {
             clear();
             return;

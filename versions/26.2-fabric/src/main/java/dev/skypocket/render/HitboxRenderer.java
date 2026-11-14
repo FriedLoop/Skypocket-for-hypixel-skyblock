@@ -55,7 +55,7 @@ public final class HitboxRenderer {
 
     private static void collectSubmits(LevelRenderContext context) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.hitboxEnabled) {
+        if (!cfg.hitboxBlock.hitboxEnabled) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -68,10 +68,10 @@ public final class HitboxRenderer {
         Vec3 camera = context.levelState().cameraRenderState.pos;
 
         Iterable<Entity> entities;
-        if (cfg.hitboxUnlimitedRange) {
+        if (cfg.hitboxBlock.hitboxUnlimitedRange) {
             entities = mc.level.entitiesForRendering();
         } else {
-            AABB area = mc.player.getBoundingBox().inflate(cfg.hitboxRange);
+            AABB area = mc.player.getBoundingBox().inflate(cfg.hitboxBlock.hitboxRange);
             entities = mc.level.getEntities(mc.player, area, e -> e != mc.player);
         }
 
@@ -83,17 +83,17 @@ public final class HitboxRenderer {
                 continue;
             }
             collector.submitShapeOutline(poseStack, Shapes.create(e.getBoundingBox()), RenderTypes.lines(),
-                    cfg.hitboxColor, cfg.hitboxLineWidth, false);
-            if (cfg.hitboxShowLineOfSight && e instanceof LivingEntity living) {
+                    cfg.hitboxBlock.hitboxColor, cfg.hitboxBlock.hitboxLineWidth, false);
+            if (cfg.hitboxBlock.hitboxShowLineOfSight && e instanceof LivingEntity living) {
                 renderLookRay(collector, poseStack, living, cfg);
             }
         }
 
-        if (cfg.hitboxShowContainer) {
+        if (cfg.hitboxBlock.hitboxShowContainer) {
             refreshContainerCache(mc, cfg);
             for (AABB box : containerCache) {
                 collector.submitShapeOutline(poseStack, Shapes.create(box), RenderTypes.lines(),
-                        cfg.hitboxColor, cfg.hitboxLineWidth, false);
+                        cfg.hitboxBlock.hitboxColor, cfg.hitboxBlock.hitboxLineWidth, false);
             }
         }
 
@@ -119,7 +119,7 @@ public final class HitboxRenderer {
             return;
         }
         containerCache.clear();
-        double scanRange = Math.min(cfg.hitboxUnlimitedRange ? CONTAINER_SCAN_CAP : cfg.hitboxRange, CONTAINER_SCAN_CAP);
+        double scanRange = Math.min(cfg.hitboxBlock.hitboxUnlimitedRange ? CONTAINER_SCAN_CAP : cfg.hitboxBlock.hitboxRange, CONTAINER_SCAN_CAP);
         AABB area = mc.player.getBoundingBox().inflate(scanRange);
         BlockPos min = BlockPos.containing(area.minX, area.minY, area.minZ);
         BlockPos max = BlockPos.containing(area.maxX, area.maxY, area.maxZ);
@@ -139,19 +139,19 @@ public final class HitboxRenderer {
 
     private static boolean isCategoryEnabled(ModConfig cfg, HitboxClassifier.Category cat) {
         return switch (cat) {
-            case PLAYER -> cfg.hitboxShowPlayer;
-            case PROJECTILE -> cfg.hitboxShowProjectile;
-            case HOSTILE -> cfg.hitboxShowHostile;
-            case NEUTRAL -> cfg.hitboxShowNeutral;
-            case OTHER -> cfg.hitboxShowOther;
+            case PLAYER -> cfg.hitboxBlock.hitboxShowPlayer;
+            case PROJECTILE -> cfg.hitboxBlock.hitboxShowProjectile;
+            case HOSTILE -> cfg.hitboxBlock.hitboxShowHostile;
+            case NEUTRAL -> cfg.hitboxBlock.hitboxShowNeutral;
+            case OTHER -> cfg.hitboxBlock.hitboxShowOther;
         };
     }
 
     private static void renderLookRay(SubmitNodeCollector collector, PoseStack poseStack, LivingEntity e, ModConfig cfg) {
         Vec3 start = e.getEyePosition();
-        Vec3 end = start.add(e.getViewVector(1.0f).scale(cfg.lookRayLength));
-        float[] color = rgb(cfg.lookRayColor);
-        float width = cfg.hitboxLineWidth;
+        Vec3 end = start.add(e.getViewVector(1.0f).scale(cfg.hitboxBlock.lookRayLength));
+        float[] color = rgb(cfg.hitboxBlock.lookRayColor);
+        float width = cfg.hitboxBlock.hitboxLineWidth;
         collector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, vc) -> {
             vc.addVertex(pose, (float) start.x, (float) start.y, (float) start.z)
                     .setColor(color[0], color[1], color[2], color[3]).setNormal(0f, 0f, 1f).setLineWidth(width);

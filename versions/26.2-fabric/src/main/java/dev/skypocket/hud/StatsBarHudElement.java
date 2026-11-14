@@ -85,7 +85,7 @@ public final class StatsBarHudElement {
 
     private static void render(GuiGraphicsExtractor graphics, Kind kind) {
         ModConfig cfg = ConfigManager.get();
-        if (editorPreview || !cfg.statsModernStyle || !enabled(cfg, kind)
+        if (editorPreview || !cfg.statsDisplayBlock.statsModernStyle || !enabled(cfg, kind)
                 || !StatsOverlayRenderer.active()) {
             return;
         }
@@ -122,13 +122,13 @@ public final class StatsBarHudElement {
             case HEALTH -> {
                 fraction = fraction(PlayerStatsTracker.health(), PlayerStatsTracker.maxHealth());
                 overlay = fraction(PlayerStatsTracker.absorption(), PlayerStatsTracker.maxHealth());
-                overlayColor = cfg.statsAbsorptionColor;
+                overlayColor = cfg.statsDisplayBlock.statsAbsorptionColor;
                 label = PlayerStatsTracker.health() + "/" + PlayerStatsTracker.maxHealth();
             }
             case MANA -> {
                 fraction = fraction(PlayerStatsTracker.mana(), PlayerStatsTracker.maxMana());
                 overlay = PlayerStatsTracker.overflowFraction();
-                overlayColor = cfg.statsOverflowColor;
+                overlayColor = cfg.statsDisplayBlock.statsOverflowColor;
                 // Same convention as the classic readout and as health itself: the number is the total,
                 // the overflow only shows in the number, the bar keeps it as the second layer.
                 label = PlayerStatsTracker.mana() + PlayerStatsTracker.overflowMana() + "/"
@@ -159,7 +159,7 @@ public final class StatsBarHudElement {
         // follows the bar's position, height and scale automatically.
         drawIcon(graphics, cfg, kind, -iconWidth(cfg, kind), (height - iconSize(cfg, kind)) / 2);
         bar(graphics, cfg, width, height, fraction, color, overlay, overlayColor, label,
-                cfg.statsBarShowValues);
+                cfg.statsDisplayBlock.statsBarShowValues);
         pose.popMatrix();
     }
 
@@ -187,12 +187,12 @@ public final class StatsBarHudElement {
     /** The bar's own colour, from the settings - also used by the position editor's preview. */
     public static int color(ModConfig cfg, Kind kind) {
         return switch (kind) {
-            case HEALTH -> cfg.statsHealthColor;
-            case MANA -> cfg.statsManaColor;
-            case DEFENSE -> cfg.statsDefenseColor;
-            case SPEED -> cfg.statsSpeedColor;
-            case VITALITY -> cfg.statsVitalityColor;
-            case AIR -> cfg.statsAirColor;
+            case HEALTH -> cfg.statsDisplayBlock.statsHealthColor;
+            case MANA -> cfg.statsDisplayBlock.statsManaColor;
+            case DEFENSE -> cfg.statsDisplayBlock.statsDefenseColor;
+            case SPEED -> cfg.statsDisplayBlock.statsSpeedColor;
+            case VITALITY -> cfg.statsDisplayBlock.statsVitalityColor;
+            case AIR -> cfg.statsDisplayBlock.statsAirColor;
         };
     }
 
@@ -509,11 +509,11 @@ public final class StatsBarHudElement {
     // ---- Shared geometry and per-bar state, also used by the position editor ----
 
     public static int width(ModConfig cfg) {
-        return Math.max(16, cfg.statsBarWidth);
+        return Math.max(16, cfg.statsDisplayBlock.statsBarWidth);
     }
 
     public static int height(ModConfig cfg) {
-        return Math.max(3, cfg.statsBarHeight);
+        return Math.max(3, cfg.statsDisplayBlock.statsBarHeight);
     }
 
     /**
@@ -524,27 +524,27 @@ public final class StatsBarHudElement {
      * one pair of methods, so a resized bar can never disagree with its own frame.
      */
     public static int width(ModConfig cfg, Kind kind) {
-        int[] own = cfg.statsBarWidths;
+        int[] own = cfg.statsDisplayBlock.statsBarWidths;
         int value = own != null && kind.ordinal() < own.length ? own[kind.ordinal()] : 0;
         return value > 0 ? value : width(cfg);
     }
 
     public static int height(ModConfig cfg, Kind kind) {
-        int[] own = cfg.statsBarHeights;
+        int[] own = cfg.statsDisplayBlock.statsBarHeights;
         int value = own != null && kind.ordinal() < own.length ? own[kind.ordinal()] : 0;
         return value > 0 ? value : height(cfg);
     }
 
     /** Stores a bar's own size; 0 falls back to the shared default (see {@link #width(ModConfig, Kind)}). */
     public static void setSize(ModConfig cfg, Kind kind, int width, int height) {
-        if (cfg.statsBarWidths == null || cfg.statsBarHeights == null
-                || kind.ordinal() >= cfg.statsBarWidths.length
-                || kind.ordinal() >= cfg.statsBarHeights.length) {
+        if (cfg.statsDisplayBlock.statsBarWidths == null || cfg.statsDisplayBlock.statsBarHeights == null
+                || kind.ordinal() >= cfg.statsDisplayBlock.statsBarWidths.length
+                || kind.ordinal() >= cfg.statsDisplayBlock.statsBarHeights.length) {
             return;
         }
-        cfg.statsBarWidths[kind.ordinal()] = Math.max(ModConfig.BAR_MIN_W,
+        cfg.statsDisplayBlock.statsBarWidths[kind.ordinal()] = Math.max(ModConfig.BAR_MIN_W,
                 Math.min(ModConfig.BAR_MAX_W, width));
-        cfg.statsBarHeights[kind.ordinal()] = Math.max(ModConfig.BAR_MIN_H,
+        cfg.statsDisplayBlock.statsBarHeights[kind.ordinal()] = Math.max(ModConfig.BAR_MIN_H,
                 Math.min(ModConfig.BAR_MAX_H, height));
     }
 
@@ -587,11 +587,11 @@ public final class StatsBarHudElement {
         setScale(cfg, kind, 1f);
         // Drop any per-bar size too, so "reset" really returns to the shared width/height rather
         // than leaving a bar stretched from an earlier drag.
-        if (cfg.statsBarWidths != null && kind.ordinal() < cfg.statsBarWidths.length) {
-            cfg.statsBarWidths[kind.ordinal()] = 0;
+        if (cfg.statsDisplayBlock.statsBarWidths != null && kind.ordinal() < cfg.statsDisplayBlock.statsBarWidths.length) {
+            cfg.statsDisplayBlock.statsBarWidths[kind.ordinal()] = 0;
         }
-        if (cfg.statsBarHeights != null && kind.ordinal() < cfg.statsBarHeights.length) {
-            cfg.statsBarHeights[kind.ordinal()] = 0;
+        if (cfg.statsDisplayBlock.statsBarHeights != null && kind.ordinal() < cfg.statsDisplayBlock.statsBarHeights.length) {
+            cfg.statsDisplayBlock.statsBarHeights[kind.ordinal()] = 0;
         }
     }
 
@@ -613,30 +613,30 @@ public final class StatsBarHudElement {
     private static final Map<Kind, Fields> FIELDS = new EnumMap<>(Kind.class);
 
     static {
-        put(Kind.HEALTH, c -> c.statsHealthBarX, (c, v) -> c.statsHealthBarX = v,
-                c -> c.statsHealthBarY, (c, v) -> c.statsHealthBarY = v,
-                c -> c.statsHealthBarScale, (c, v) -> c.statsHealthBarScale = (float) v,
-                c -> c.statsHealthBarEnabled);
-        put(Kind.MANA, c -> c.statsManaBarX, (c, v) -> c.statsManaBarX = v,
-                c -> c.statsManaBarY, (c, v) -> c.statsManaBarY = v,
-                c -> c.statsManaBarScale, (c, v) -> c.statsManaBarScale = (float) v,
-                c -> c.statsManaBarEnabled);
-        put(Kind.DEFENSE, c -> c.statsDefenseBarX, (c, v) -> c.statsDefenseBarX = v,
-                c -> c.statsDefenseBarY, (c, v) -> c.statsDefenseBarY = v,
-                c -> c.statsDefenseBarScale, (c, v) -> c.statsDefenseBarScale = (float) v,
-                c -> c.statsDefenseBarEnabled);
-        put(Kind.SPEED, c -> c.statsSpeedBarX, (c, v) -> c.statsSpeedBarX = v,
-                c -> c.statsSpeedBarY, (c, v) -> c.statsSpeedBarY = v,
-                c -> c.statsSpeedBarScale, (c, v) -> c.statsSpeedBarScale = (float) v,
-                c -> c.statsSpeedBarEnabled);
-        put(Kind.VITALITY, c -> c.statsVitalityBarX, (c, v) -> c.statsVitalityBarX = v,
-                c -> c.statsVitalityBarY, (c, v) -> c.statsVitalityBarY = v,
-                c -> c.statsVitalityBarScale, (c, v) -> c.statsVitalityBarScale = (float) v,
-                c -> c.statsVitalityBarEnabled);
-        put(Kind.AIR, c -> c.statsAirBarX, (c, v) -> c.statsAirBarX = v,
-                c -> c.statsAirBarY, (c, v) -> c.statsAirBarY = v,
-                c -> c.statsAirBarScale, (c, v) -> c.statsAirBarScale = (float) v,
-                c -> c.statsAirBarEnabled);
+        put(Kind.HEALTH, c -> c.statsDisplayBlock.statsHealthBarX, (c, v) -> c.statsDisplayBlock.statsHealthBarX = v,
+                c -> c.statsDisplayBlock.statsHealthBarY, (c, v) -> c.statsDisplayBlock.statsHealthBarY = v,
+                c -> c.statsDisplayBlock.statsHealthBarScale, (c, v) -> c.statsDisplayBlock.statsHealthBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsHealthBarEnabled);
+        put(Kind.MANA, c -> c.statsDisplayBlock.statsManaBarX, (c, v) -> c.statsDisplayBlock.statsManaBarX = v,
+                c -> c.statsDisplayBlock.statsManaBarY, (c, v) -> c.statsDisplayBlock.statsManaBarY = v,
+                c -> c.statsDisplayBlock.statsManaBarScale, (c, v) -> c.statsDisplayBlock.statsManaBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsManaBarEnabled);
+        put(Kind.DEFENSE, c -> c.statsDisplayBlock.statsDefenseBarX, (c, v) -> c.statsDisplayBlock.statsDefenseBarX = v,
+                c -> c.statsDisplayBlock.statsDefenseBarY, (c, v) -> c.statsDisplayBlock.statsDefenseBarY = v,
+                c -> c.statsDisplayBlock.statsDefenseBarScale, (c, v) -> c.statsDisplayBlock.statsDefenseBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsDefenseBarEnabled);
+        put(Kind.SPEED, c -> c.statsDisplayBlock.statsSpeedBarX, (c, v) -> c.statsDisplayBlock.statsSpeedBarX = v,
+                c -> c.statsDisplayBlock.statsSpeedBarY, (c, v) -> c.statsDisplayBlock.statsSpeedBarY = v,
+                c -> c.statsDisplayBlock.statsSpeedBarScale, (c, v) -> c.statsDisplayBlock.statsSpeedBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsSpeedBarEnabled);
+        put(Kind.VITALITY, c -> c.statsDisplayBlock.statsVitalityBarX, (c, v) -> c.statsDisplayBlock.statsVitalityBarX = v,
+                c -> c.statsDisplayBlock.statsVitalityBarY, (c, v) -> c.statsDisplayBlock.statsVitalityBarY = v,
+                c -> c.statsDisplayBlock.statsVitalityBarScale, (c, v) -> c.statsDisplayBlock.statsVitalityBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsVitalityBarEnabled);
+        put(Kind.AIR, c -> c.statsDisplayBlock.statsAirBarX, (c, v) -> c.statsDisplayBlock.statsAirBarX = v,
+                c -> c.statsDisplayBlock.statsAirBarY, (c, v) -> c.statsDisplayBlock.statsAirBarY = v,
+                c -> c.statsDisplayBlock.statsAirBarScale, (c, v) -> c.statsDisplayBlock.statsAirBarScale = (float) v,
+                c -> c.statsDisplayBlock.statsAirBarEnabled);
     }
 
     private static void put(Kind kind, ToIntFunction<ModConfig> x, ObjIntConsumer<ModConfig> sx,

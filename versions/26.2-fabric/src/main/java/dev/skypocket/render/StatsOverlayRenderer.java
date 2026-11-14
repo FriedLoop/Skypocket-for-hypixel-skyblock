@@ -32,7 +32,7 @@ public final class StatsOverlayRenderer {
             PlayerStatsTracker.reset();
             return false;
         }
-        return ConfigManager.get().statsEnabled;
+        return ConfigManager.get().statsDisplayBlock.statsEnabled;
     }
 
     /** Draws the classic icons; called from the HUD mixin at the end of the vanilla health block. */
@@ -41,7 +41,7 @@ public final class StatsOverlayRenderer {
             return;
         }
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.statsModernStyle) {
+        if (!cfg.statsDisplayBlock.statsModernStyle) {
             VanillaStatsStyle.draw(graphics, cfg);
         }
     }

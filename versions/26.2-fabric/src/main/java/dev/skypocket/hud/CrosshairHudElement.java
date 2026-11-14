@@ -32,7 +32,7 @@ public final class CrosshairHudElement {
 
     private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker, HudElement vanilla) {
         ModConfig config = ConfigManager.get();
-        if (!config.crosshairEnabled) {
+        if (!config.crosshairBlock.crosshairEnabled) {
             // Disabled: delegate to the vanilla crosshair (keeps its own render conditions).
             vanilla.extractRenderState(graphics, deltaTracker);
             return;
@@ -40,22 +40,22 @@ public final class CrosshairHudElement {
 
         int centerX = graphics.guiWidth() / 2;
         int centerY = graphics.guiHeight() / 2;
-        int pixel = Math.max(1, Math.round(config.crosshairPixelSize));
+        int pixel = Math.max(1, Math.round(config.crosshairBlock.crosshairPixelSize));
 
         int color = config.getCrosshairColorARGB();
-        if (config.crosshairEntityColorEnabled) {
+        if (config.crosshairBlock.crosshairEntityColorEnabled) {
             CrosshairTargetClassifier.Kind kind = CrosshairTargetClassifier.classify(Minecraft.getInstance());
             color = switch (kind) {
-                case FRIENDLY -> config.crosshairFriendlyColor;
-                case NEUTRAL -> config.crosshairNeutralColor;
-                case HOSTILE -> config.crosshairHostileColor;
-                case CONTAINER -> config.crosshairContainerColor;
+                case FRIENDLY -> config.crosshairBlock.crosshairFriendlyColor;
+                case NEUTRAL -> config.crosshairBlock.crosshairNeutralColor;
+                case HOSTILE -> config.crosshairBlock.crosshairHostileColor;
+                case CONTAINER -> config.crosshairBlock.crosshairContainerColor;
                 default -> color;
             };
         }
 
-        CrosshairRenderer.render(graphics, centerX, centerY, pixel, config.crosshairScale,
-                config.crosshairGrid, color, config.crosshairStroke,
-                config.crosshairStrokeWidth);
+        CrosshairRenderer.render(graphics, centerX, centerY, pixel, config.crosshairBlock.crosshairScale,
+                config.crosshairBlock.crosshairGrid, color, config.crosshairBlock.crosshairStroke,
+                config.crosshairBlock.crosshairStrokeWidth);
     }
 }
