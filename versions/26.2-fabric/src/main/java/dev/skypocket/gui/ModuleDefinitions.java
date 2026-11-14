@@ -83,12 +83,26 @@ final class ModuleDefinitions {
                 () -> cfg.crosshairEnabled, v -> cfg.crosshairEnabled = v,
                 List.of(
                         new Setting.Header("预览", "实时预览准星形状与像素网格"),
-                        new Setting.V2CustomSetting(140, (row, palette) -> {
+                        // The row is tall enough for a 286-unit grid plus breathing room, and both
+                        // widgets are square: the grid is fixed at preferredSize(), the preview is
+                        // given the leftover width but capped to the same height so the crosshair
+                        // inside it is not stranded in a 6:1 letterbox.
+                        new Setting.V2CustomSetting(300, (row, palette) -> {
                             int gridSize = CrosshairGrid.preferredSize();
+                            // Only the cross-axis alignment is added; SettingsPage already built the
+                            // row with the width, height and gap, and re-declaring those here would
+                            // duplicate a layout decision that lives in one place.
+                            row.style(Style.builder()
+                                    .width(dev.skypocket.ui.Dimension.percent(100f))
+                                    .height(300f)
+                                    .direction(Style.Direction.ROW)
+                                    .gap(15f)
+                                    .alignItems(Style.Align.CENTER)
+                                    .build());
                             row.add(new CrosshairGrid(cfg.crosshairGrid, cfg::getCrosshairColorARGB,
                                     Style.builder().width(gridSize).height(gridSize).build(), palette));
                             row.add(new CrosshairPreview(cfg, Style.builder()
-                                    .height(gridSize).flexGrow(1f).build(), palette));
+                                    .width(gridSize).height(gridSize).build(), palette));
                         }),
                         new Setting.GroupSetting("外观", List.of(
                                 new Setting.BooleanSetting("描边", () -> cfg.crosshairStroke, v -> cfg.crosshairStroke = v),
@@ -99,7 +113,7 @@ final class ModuleDefinitions {
                                     cfg.crosshairBlue = ColorUtil.blue(v);
                                     cfg.crosshairAlpha = ColorUtil.alpha(v);
                                 }, true),
-                                new Setting.SliderSetting("像素大小", 1, 8, () -> cfg.crosshairPixelSize, v -> cfg.crosshairPixelSize = (float) v, "%.0f", 1),
+                                new Setting.SliderSetting("像素大小", 1, 3, () -> cfg.crosshairPixelSize, v -> cfg.crosshairPixelSize = (float) v, "%.0f", 1),
                                 new Setting.SliderSetting("缩放", 0.25, 4.0, () -> cfg.crosshairScale, v -> cfg.crosshairScale = (float) v, "%.2f", ModConfig.SCALE_GRID)))
                         .subtitle("调整准星线条、颜色、像素大小与缩放"),
                         // The switch is the feature's own flag: it was a row of its own before, and

@@ -1,5 +1,6 @@
 package dev.skypocket.ui.widget;
 
+import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
@@ -8,10 +9,25 @@ import dev.skypocket.ui.input.PointerEvent;
 
 import java.util.function.IntSupplier;
 
-/** Click-to-paint 15x15 crosshair grid for the v2 settings page. */
+/**
+ * Click-to-paint 15x15 crosshair grid for the v2 settings page.
+ *
+ * <p>Cell edits write into the config array and then call {@link ConfigManager#touch()}, which is
+ * what makes the cached panel re-bake. The widget deliberately does <b>not</b> override
+ * {@code dynamicOverlay()}: doing that bypasses the panel cache entirely and repaints all 225 cells
+ * every frame, which is what made this page the most expensive one in the panel.
+ */
 public final class CrosshairGrid extends Control {
     private static final int GAP = 1;
-    private static final int CELL = 8;
+    /**
+     * Cell edge in design units.
+     *
+     * <p>Sized so the grid is readable at the row height the settings page now gives it: 15 cells of
+     * 18 plus 14 gaps of 1 is 284, and {@link #preferredSize()} adds the 1-unit border on both sides
+     * for 286. It is not a round 300 because a cell must stay an integer for the 1:1 pixel grid to
+     * line up; the row centres the widget vertically instead of stretching it.
+     */
+    private static final int CELL = 18;
 
     private final boolean[] grid;
     private final IntSupplier color;
@@ -32,12 +48,6 @@ public final class CrosshairGrid extends Control {
     }
 
     @Override
-    public boolean dynamicOverlay() {
-        // Cell edits are written directly into the config array; the neutral page base is stale.
-        return true;
-    }
-
-    @Override
     protected void activate() {
         // Cells are toggled by pointer events.
     }
@@ -54,6 +64,12 @@ public final class CrosshairGrid extends Control {
         if (index >= 0) {
             paintValue = !grid[index];
             grid[index] = paintValue;
+            // The panel is cached, so a cell edit only becomes visible if the cache key changes.
+            // This used to be handled by overriding dynamicOverlay() and repainting the whole widget
+            // every frame, which cost roughly 450 draws per frame for the 15x15 grid alone and took
+            // the settings page from triple-digit to double-digit FPS. Telling the cache instead
+            // costs one re-bake per edit.
+            ConfigManager.touch();
         }
         return true;
     }
@@ -66,6 +82,7 @@ public final class CrosshairGrid extends Control {
         int index = cellAt(event.x() - ancestorOffsetX(), event.y() - ancestorOffsetY());
         if (index >= 0) {
             grid[index] = paintValue;
+            ConfigManager.touch();
         }
         return true;
     }

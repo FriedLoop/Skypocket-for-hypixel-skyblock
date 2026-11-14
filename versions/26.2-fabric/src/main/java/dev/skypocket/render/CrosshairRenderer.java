@@ -24,9 +24,27 @@ import java.util.Objects;
  */
 public final class CrosshairRenderer {
     /** Largest pixel size the config allows; matches {@code ModConfig.sanitize()} clamp [1, 8]. */
-    private static final int MAX_PIXEL = 8;
-    /** Fixed bake resolution, so the texture never needs resizing (which crashes 26.2). */
-    private static final int MAX_SIZE = ModConfig.GRID * MAX_PIXEL;
+    /**
+     * Largest cell edge, in design units, the bake can produce.
+     *
+     * <p>Kept equal to the config range ({@code ModConfig.sanitize} clamps
+     * {@code crosshairPixelSize} to 1..3). It is the texture size basis, so raising it above what the
+     * config allows would only waste atlas space; lowering it below would clip a legal setting.
+     */
+    private static final int MAX_PIXEL = 3;
+
+    /**
+     * Transparent margin baked around the grid, in texels.
+     *
+     * <p>The stroke of an edge cell extends up to {@code border} texels outward, and {@code border}
+     * comes from {@code crosshairStrokeWidth}, whose config range is 0.5..4. Four is therefore the
+     * largest overhang any legal setting can produce. Without this margin the outer stroke was drawn
+     * at negative coordinates and silently dropped by {@code fillRect}'s bounds check.
+     */
+    private static final int MAX_PAD = 4;
+
+    /** Full texture edge: the grid at the largest cell size, plus the margin on both sides. */
+    private static final int MAX_SIZE = ModConfig.GRID * MAX_PIXEL + MAX_PAD * 2;
 
     private static DynamicTexture TEXTURE;
     private static Identifier TEXTURE_ID;
@@ -34,6 +52,18 @@ public final class CrosshairRenderer {
     private static int bakedHash = -1;
 
     private CrosshairRenderer() {
+    }
+
+    /**
+     * The on-screen size of a crosshair drawn with these settings, in design units.
+     *
+     * <p>Callers that have to fit the crosshair into a box - the settings-page preview - need this
+     * before deciding whether to scale it down. It mirrors what {@link #render} does with the same
+     * arguments: the grid edge times the cell size, then the scale.
+     */
+    public static int sizeFor(int pixel, float scale) {
+        int clampedPixel = Math.max(1, Math.min(MAX_PIXEL, pixel));
+        return Math.round(ModConfig.GRID * clampedPixel * scale);
     }
 
     public static void render(GuiGraphicsExtractor graphics, int centerX, int centerY, int pixel, float scale,
@@ -47,6 +77,11 @@ public final class CrosshairRenderer {
         // The tint is per-target: keep the colour in the bake key so entity changes repaint the mask.
         ensureTexture(pixel, grid, color, stroke, border);
 
+        // Draw only the grid's own region of the texture, offset by the transparent margin the bake
+        // leaves for the stroke. The texture is always MAX_SIZE wide no matter what `pixel` is, so
+        // the UV denominator is MAX_SIZE and not the sampled size - passing the smaller value made
+        // the sampled rectangle land off-centre, which is what shifted the crosshair to the upper
+        // left at pixel 1 and 2.
         int size = n * pixel;
         int originX = centerX - size / 2;
         int originY = centerY - size / 2;
@@ -59,7 +94,7 @@ public final class CrosshairRenderer {
             pose.translate(-centerX, -centerY);
         }
         graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE_ID,
-                originX, originY, 0f, 0f, size, size, MAX_SIZE, MAX_SIZE);
+                originX, originY, MAX_PAD, MAX_PAD, size, size, MAX_SIZE, MAX_SIZE);
         pose.popMatrix();
     }
 
@@ -85,12 +120,14 @@ public final class CrosshairRenderer {
         int colorAbgr = ColorUtil.abgr(ColorUtil.alpha(color), ColorUtil.red(color),
                 ColorUtil.green(color), ColorUtil.blue(color));
 
+        // Content starts at MAX_PAD so the stroke, which extends `border` texels outward, has room
+        // instead of being clipped at the texture edge. Everything below is offset by this.
         if (stroke) {
             int strokeAbgr = ColorUtil.abgr(ColorUtil.alpha(color), 0, 0, 0);
             for (int gy = 0; gy < n; gy++) {
                 for (int gx = 0; gx < n; gx++) {
                     if (grid[gy * n + gx]) {
-                        fillRect(image, gx * pixel - border, gy * pixel - border,
+                        fillRect(image, MAX_PAD + gx * pixel - border, MAX_PAD + gy * pixel - border,
                                 pixel + 2 * border, pixel + 2 * border, strokeAbgr);
                     }
                 }
@@ -99,7 +136,7 @@ public final class CrosshairRenderer {
         for (int gy = 0; gy < n; gy++) {
             for (int gx = 0; gx < n; gx++) {
                 if (grid[gy * n + gx]) {
-                    fillRect(image, gx * pixel, gy * pixel, pixel, pixel, colorAbgr);
+                    fillRect(image, MAX_PAD + gx * pixel, MAX_PAD + gy * pixel, pixel, pixel, colorAbgr);
                 }
             }
         }

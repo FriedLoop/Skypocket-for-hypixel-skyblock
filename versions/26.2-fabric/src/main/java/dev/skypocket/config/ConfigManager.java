@@ -20,7 +20,7 @@ public final class ConfigManager {
             FabricLoader.getInstance().getConfigDir().resolve("skypocket.json");
 
     /** Shape version this build writes. Bump it together with a new entry in {@link #MIGRATIONS}. */
-    public static final int CURRENT_VERSION = 8;
+    public static final int CURRENT_VERSION = 9;
 
     /**
      * Ordered upgrade steps: entry {@code i} turns a v{i} file into v{i+1}.
@@ -58,7 +58,47 @@ public final class ConfigManager {
             },
             // v7 -> v8: dropped-item glow was restored; default is off.
             cfg -> {
+            },
+            // v8 -> v9: the crosshair grid grew from 15x15 to 16x16 so every integer pixel size
+            // produces an even, exactly centrable square. The old array is 225 entries and would be
+            // rejected by sanitize() (which resets a wrong-length grid to the default), silently
+            // throwing away the player's drawn crosshair - so it is reshaped here instead.
+            cfg -> {
+                cfg.crosshairGrid = regridCrosshair(cfg.crosshairGrid,
+                        ModConfig.LEGACY_GRID_15, ModConfig.GRID);
             });
+
+    /**
+     * Re-lays an {@code oldN x oldN} crosshair bitmap into a {@code newN x newN} one.
+     *
+     * <p>The old grid is copied with an offset of half the size difference, so an existing drawing
+     * keeps its shape and lands as close to the middle as whole cells allow. For 15 into 16 that
+     * offset is 0: the old centre cell 7 cannot sit at the new geometric centre 7.5, so the result is
+     * half a cell up and to the left. There is no offset that avoids it - the alternative is to drop
+     * the drawing and start from the default, which is worse. The new row and column stay empty, and
+     * the player can repaint if the half-cell matters.
+     */
+    private static boolean[] regridCrosshair(boolean[] old, int oldN, int newN) {
+        boolean[] out = new boolean[newN * newN];
+        if (old == null || old.length != oldN * oldN) {
+            // Already the new shape, or unusable: leave it to sanitize() to substitute the default.
+            return old;
+        }
+        int offset = (newN - oldN) / 2;
+        for (int y = 0; y < oldN; y++) {
+            for (int x = 0; x < oldN; x++) {
+                if (!old[y * oldN + x]) {
+                    continue;
+                }
+                int nx = x + offset;
+                int ny = y + offset;
+                if (nx >= 0 && nx < newN && ny >= 0 && ny < newN) {
+                    out[ny * newN + nx] = true;
+                }
+            }
+        }
+        return out;
+    }
 
     private static ModConfig config = new ModConfig();
     /** Bumped on every load/save so cached UI can tell that some setting changed. */

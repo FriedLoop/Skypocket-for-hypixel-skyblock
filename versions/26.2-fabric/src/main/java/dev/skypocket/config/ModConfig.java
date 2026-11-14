@@ -14,7 +14,19 @@ import java.util.Map;
  * Field initializers act as defaults for keys missing from the JSON file.
  */
 public class ModConfig {
-    public static final int GRID = 15;
+    /**
+     * Crosshair grid edge, in cells. Must stay even.
+     *
+     * <p>Every cell is {@code crosshairPixelSize} units wide, so the drawn crosshair is
+     * {@code GRID * pixel} units across. With an odd edge and an odd pixel size that total is odd,
+     * and an odd-width square cannot be centred on an integer pixel: half a pixel of error always
+     * lands somewhere, and it showed up as the crosshair sitting up and to the left. Even edges keep
+     * the total even for every integer pixel size, so the centre is exact.
+     */
+    public static final int GRID = 16;
+
+    /** Edge of the grid before 16x16, used only by the config migration that reshapes old arrays. */
+    public static final int LEGACY_GRID_15 = 15;
 
     /**
      * The grid every scale setting snaps to. Shared on purpose: the ClickGUI sliders and the position
@@ -672,13 +684,24 @@ public class ModConfig {
     /** Look-ray length in blocks. */
     public float lookRayLength = 8.0f;
 
-    /** A classic plus-shaped crosshair in the 15x15 grid. */
+    /**
+     * A classic plus-shaped crosshair filling the grid.
+     *
+     * <p>An even grid has no single centre cell, so the cross is laid out around the boundary between
+     * the two middle rows: the arms are {@code (GRID - 1) / 2} cells long from the edge, which puts
+     * the intersection between cells {@code GRID/2 - 1} and {@code GRID/2}. Drawing one row instead
+     * would bias the cross half a cell off centre - the same off-by-one this grid size exists to fix.
+     */
     public static boolean[] defaultCrosshair() {
         boolean[] grid = new boolean[GRID * GRID];
-        int c = GRID / 2;
+        int lo = GRID / 2 - 1;
+        int hi = GRID / 2;
         for (int i = 0; i < GRID; i++) {
-            grid[i * GRID + c] = true;
-            grid[c * GRID + i] = true;
+            // Horizontal arm through the two middle rows, vertical arm through the two middle columns.
+            grid[lo * GRID + i] = true;
+            grid[hi * GRID + i] = true;
+            grid[i * GRID + lo] = true;
+            grid[i * GRID + hi] = true;
         }
         return grid;
     }
@@ -704,7 +727,7 @@ public class ModConfig {
         crosshairGreen = ColorUtil.clamp(crosshairGreen, 0, 255);
         crosshairBlue = ColorUtil.clamp(crosshairBlue, 0, 255);
         crosshairAlpha = ColorUtil.clamp(crosshairAlpha, 0, 255);
-        crosshairPixelSize = ColorUtil.clamp(crosshairPixelSize, 1f, 8f);
+        crosshairPixelSize = ColorUtil.clamp(crosshairPixelSize, 1f, 3f);
         crosshairScale = ColorUtil.clamp(crosshairScale, 0.25f, 4f);
         crosshairStrokeWidth = ColorUtil.clamp(crosshairStrokeWidth, 0.5f, 4f);
 
