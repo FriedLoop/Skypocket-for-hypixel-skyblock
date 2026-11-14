@@ -26,7 +26,7 @@ public abstract class StuckInBodyLayerMixin {
             require = 0)
     private void sky$hideStuckArrows(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
                                      AvatarRenderState state, float yRot, float xRot, CallbackInfo ci) {
-        if (ConfigManager.get().hideStuckArrows) {
+        if (ConfigManager.get().hideStuckArrowsBlock.enabled) {
             ci.cancel();
         }
     }

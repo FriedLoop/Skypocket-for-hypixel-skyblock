@@ -10,8 +10,9 @@ import java.util.List;
 /**
  * Hides arrows already stuck in a body.
  *
- * <p>Phase 4 migration: toggle only, no settings. Same shape as the Phase 1 trio, so the only new
- * thing it exercises is the {@code markSkyBlockOnly} chain through {@code ModuleAdapter}.
+ * <p>The first feature whose state lives in its own config block instead of a flat {@code ModConfig}
+ * field. It is the smallest feature in the mod, which is why it goes first: the shape can be
+ * reviewed on one boolean before the other 34 follow it.
  */
 public final class HideStuckArrowsFeature implements FeatureModule {
 
@@ -30,13 +31,25 @@ public final class HideStuckArrowsFeature implements FeatureModule {
         return Category.ESP;
     }
 
+    /**
+     * The feature's own state.
+     *
+     * <p>Returns the instance held by {@code ModConfig} rather than a field of this class: the config
+     * object is created by Gson during load, so the feature cannot own the instance and still have the
+     * saved values land in it.
+     */
+    @Override
+    public Object config() {
+        return ConfigManager.get().hideStuckArrowsBlock;
+    }
+
     @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hideStuckArrows;
+        return ConfigManager.get().hideStuckArrowsBlock.enabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hideStuckArrows = value;
+        ConfigManager.get().hideStuckArrowsBlock.enabled = value;
     }
 }

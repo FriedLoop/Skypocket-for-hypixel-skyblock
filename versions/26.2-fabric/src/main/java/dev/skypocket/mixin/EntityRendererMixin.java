@@ -93,7 +93,7 @@ public abstract class EntityRendererMixin {
 //#endif
                                       CallbackInfoReturnable<Boolean> cir) {
         ModConfig cfg = ConfigManager.get();
-        if (!cfg.hideLandedArrows) {
+        if (!cfg.hideLandedArrowsBlock.enabled) {
             return;
         }
         // Only real arrows (regular/spectral/tipped), not tridents, and only once

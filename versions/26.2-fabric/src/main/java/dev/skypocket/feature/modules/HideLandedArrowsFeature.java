@@ -3,11 +3,13 @@ package dev.skypocket.feature.modules;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.feature.FeatureModule;
 import dev.skypocket.gui.Category;
-import dev.skypocket.gui.setting.Setting;
 
-import java.util.List;
-
-/** Hides arrows that have landed and are stuck in the ground. Toggle only. */
+/**
+ * Hides arrows that have landed and are stuck in the ground. Toggle only.
+ *
+ * <p>State lives in its own config block, matching {@code hide_stuck_arrows}. Landed arrows are the
+ * easy one to produce in game, so this is the feature that actually exercises the block round-trip.
+ */
 public final class HideLandedArrowsFeature implements FeatureModule {
 
     @Override
@@ -26,12 +28,17 @@ public final class HideLandedArrowsFeature implements FeatureModule {
     }
 
     @Override
+    public Object config() {
+        return ConfigManager.get().hideLandedArrowsBlock;
+    }
+
+    @Override
     public boolean isEnabled() {
-        return ConfigManager.get().hideLandedArrows;
+        return ConfigManager.get().hideLandedArrowsBlock.enabled;
     }
 
     @Override
     public void setEnabled(boolean value) {
-        ConfigManager.get().hideLandedArrows = value;
+        ConfigManager.get().hideLandedArrowsBlock.enabled = value;
     }
 }

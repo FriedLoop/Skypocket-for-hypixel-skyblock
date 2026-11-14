@@ -93,10 +93,26 @@ public class ModConfig {
     public boolean hideOtherPlayersPresents = false;
 
     // ---- Hide arrows ----
-    /** Hide arrows that have landed and are stuck in the ground. */
-    public boolean hideLandedArrows = false;
-    /** Hide arrows stuck in the player's body. */
-    public boolean hideStuckArrows = false;
+    /**
+     * The {@code hide_landed_arrows} feature's own state.
+     *
+     * <p>Replaced a flat {@code hideLandedArrows} boolean; the existing file is updated by
+     * tools/migrate-config.ps1 rather than by a shipped migration step.
+     */
+    public dev.skypocket.feature.config.HideLandedArrowsConfig hideLandedArrowsBlock =
+            new dev.skypocket.feature.config.HideLandedArrowsConfig();
+    /**
+     * The {@code hide_stuck_arrows} feature's own state.
+     *
+     * <p>Nested so the feature owns its fields rather than adding another entry to this class. Gson
+     * writes it as a nested object.
+     *
+     * <p>This replaced a flat {@code hideStuckArrows} boolean. There is no migration step for it:
+     * the mod has no released users yet, so an existing file is updated by a one-off script on the
+     * developer's own instances instead of by code that would have to ship forever.
+     */
+    public dev.skypocket.feature.config.HideStuckArrowsConfig hideStuckArrowsBlock =
+            new dev.skypocket.feature.config.HideStuckArrowsConfig();
 
     // ---- Fishing hotspot overlay ----
     public boolean hotspotOverlayEnabled = false;
