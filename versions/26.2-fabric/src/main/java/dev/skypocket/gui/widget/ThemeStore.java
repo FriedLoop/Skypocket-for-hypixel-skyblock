@@ -211,11 +211,6 @@ public final class ThemeStore {
         return names(GuiTheme.class.getRecordComponents());
     }
 
-    /** What a studio colour token controls, ready for the UI to localise. */
-    public static String colorDescription(String name) {
-        return DESCRIPTIONS.getOrDefault(name, name);
-    }
-
     /** What a studio token controls, colour or metric. */
     public static String tokenDescription(String name) {
         String color = DESCRIPTIONS.get(name);

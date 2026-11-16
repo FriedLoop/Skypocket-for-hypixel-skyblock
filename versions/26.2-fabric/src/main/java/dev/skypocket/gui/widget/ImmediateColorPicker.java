@@ -518,10 +518,6 @@ public final class ImmediateColorPicker {
 
     // ---- colour maths ---------------------------------------------------------------------
 
-    public static String hexOf(int argb) {
-        return String.format("#%06X", argb & 0xFFFFFF);
-    }
-
     /** The six hex digits without the leading #, since the field shows # as its label. */
     private static String hexDigits(int argb) {
         return String.format("%06X", argb & 0xFFFFFF);

@@ -93,12 +93,6 @@ public abstract class Setting {
         return hint;
     }
 
-    /** Fixed height of the widget part of a row, matching what the subclasses build. */
-    /** Height of the control a row draws, from the theme's measurements. */
-    public static int controlHeight() {
-        return CONTROL_HEIGHT;
-    }
-
     /** Vertical space (px) this setting occupies. */
     public abstract int height();
 
@@ -298,7 +292,6 @@ public abstract class Setting {
 
         /** Opens/closes the inline picker - the page handles the row's click now. */
         public void toggleExpanded() { toggle(); }
-
 
         /** Flips the expanded state and re-lays out the Click GUI on the next tick. */
         private void toggle() {
