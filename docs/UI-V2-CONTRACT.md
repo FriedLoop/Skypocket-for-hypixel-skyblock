@@ -298,6 +298,48 @@ System.identityHashCode(this) * 1_000_003L   // 页面身份
 
 `ConfigManager.revision()` 的存在就是为了这个：任何配置写入后 `revision++`，缓存失效。
 
+### 5.2.1 页面自有状态必须覆写 `revision()`
+
+**这是最容易漏的一条，我已经踩过。**
+
+`UiPage.revision()` 默认只返回 `ConfigManager.revision()`。它只覆盖"配置变了"这一种情况。
+
+如果页面显示的某个值**不在配置里**，那么改变它不会触发任何缓存失效。典型例子：
+
+```java
+// 测试页里选中的下拉项
+private int demoDropdown;
+...
+new Dropdown(label, options, () -> demoDropdown, index -> demoDropdown = index, ...)
+```
+
+点选「三」之后，`demoDropdown` 变成 2，但：
+
+- `Dropdown.onChange` 只调 `onChange.accept(index)`，**不碰 `ConfigManager`**
+- 静态层仍缓存着显示「一」的纹理
+- 直到某个别的事件（重新打开下拉）让 `renderRevision++`，才重烘
+
+**症状**：控件的值变了，但界面要等下一次交互才更新。
+
+**正确做法**：把页面自有的可变状态折进 `revision()`。
+
+```java
+@Override
+protected long revision() {
+    return super.revision()
+            + demoDropdown * 31L
+            + demoMode * 1_009L
+            + Double.doubleToLongBits(demoSlider)
+            + (demoSwitch ? 7L : 0L)
+            + demoText.hashCode()
+            + demoColor;
+}
+```
+
+**判断标准**：只要某个值影响绘制，且它**不是通过 `Setting` 的 setter 改的**（那些自带 `touch()`），就必须出现在 `revision()` 里。
+
+这也解释了为什么 `SettingsPage` 没有这个问题：它的每个控件都连到 `Setting.XxxSetting` 的 setter，而那些 setter 都被 `touch()` 包装了。**直接连业务字段的控件没有这层保护。**
+
 ### 5.3 `ConfigManager.touch()` 的隐式契约 ⚠️
 
 **这是当前最大的语义陷阱。**

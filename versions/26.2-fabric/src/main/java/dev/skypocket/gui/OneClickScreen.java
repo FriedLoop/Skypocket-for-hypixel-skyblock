@@ -504,7 +504,9 @@ public class OneClickScreen extends Screen {
                         new Setting.ActionSetting("实验：恢复原生字体", () -> {
                             FontLab.applyCrispPreset();
                             ConfigManager.touch();
-                        })
+                        }),
+                        new Setting.ActionSetting("UI v2 测试页", () ->
+                                Minecraft.getInstance().gui.setScreen(new DevUiTestScreen()))
                 ), false).subtitle("字体与渲染调试选项"),
 
                 new Setting.Header("HUD 字体", "选择 HUD 文本使用的字体；切换后立即重新测量"),
