@@ -138,6 +138,13 @@ public final class PaintPass {
         if (element instanceof Control control
                 && (control.dynamicOverlay() || control.isFocused() || control.isPressed()
                 || control.flashActive()
+                // Hover must be repainted live, not baked. The static pass runs with neutralPaint on,
+                // and every Button surface suppresses its highlight in that mode - so a hovered
+                // control that is not in this set gets baked *without* a highlight and then never
+                // repainted. Invalidating the cache on a hover change alone is not enough: it makes
+                // the highlight appear for exactly one frame (the frame that re-bakes, which paints
+                // without neutralPaint) and then vanish again.
+                || control.isHovered()
                 || (control instanceof dev.skypocket.ui.widget.ColorField color && color.isOpen())
                 || (control instanceof dev.skypocket.ui.widget.Dropdown dropdown
                     && dropdown.isOpen()))) {
@@ -171,11 +178,23 @@ public final class PaintPass {
         }
     }
 
-    /** Whether an element's box overlaps the viewport's; used to skip scrolled-out rows. */
+    /**
+     * Whether an element's box overlaps the viewport's, used to skip scrolled-out rows.
+     *
+     * <p>Compared via {@link UiElement#visualX()} / {@link UiElement#visualY()}, not
+     * {@code bounds()}. Bounds are relative to the element's own parent, so an element deep inside
+     * the scroll content and the viewport itself are in different coordinate spaces - comparing the
+     * two rejects elements that are on screen and, worse, does it silently: the last section of the
+     * test page never drew even when fully scrolled into view.
+     */
     private static boolean intersects(UiElement element, ScrollView viewport) {
-        Rect view = viewport.bounds();
-        Rect box = element.bounds();
-        return box.right() > view.x() && box.x() < view.right()
-                && box.bottom() > view.y() && box.y() < view.bottom();
+        float ex = element.visualX();
+        float ey = element.visualY();
+        float vx = viewport.visualX();
+        float vy = viewport.visualY();
+        return ex + element.bounds().width() >= vx
+                && ex <= vx + viewport.bounds().width()
+                && ey + element.bounds().height() >= vy
+                && ey <= vy + viewport.bounds().height();
     }
 }

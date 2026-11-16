@@ -600,6 +600,15 @@ public final class DevUiTestScreen extends Screen {
                 Style.builder().build(), 0.6f, TextWeight.REGULAR));
         column.add(new Text("配置 revision: " + ConfigManager.revision(),
                 Style.builder().build(), 0.6f, TextWeight.REGULAR));
+
+        // A MENU-mode button: that is the only Button surface which draws a hover highlight (CARD
+        // stays flat by design). Placing one in the page rather than in a popup proves the page
+        // re-bakes when the hovered element changes.
+        column.add(new Text("下面这个按钮是 MENU 模式，移上去应高亮（验证页面内 hover 重烘）",
+                Style.builder().build(), 0.55f, TextWeight.REGULAR));
+        column.add(new Button(Localization.tr("悬停验证"), () -> {
+        }, Style.builder().width(Dimension.percent(100f)).height(24f).build(),
+                palette, Button.SurfaceMode.MENU_ONLY));
         return column;
     }
 }

@@ -95,7 +95,12 @@ public abstract class UiPage {
             rebuild();
         }
         LayoutEngine.layout(root, width, height, measurer);
-        if (root instanceof ScrollView scroll) {
+        // Refresh through the same search the cache key uses. `root instanceof ScrollView` was the
+        // first version and it never matched - the root is a layout Box and the scroll view is one of
+        // its children - so the content offset was never applied and the page could not scroll at
+        // all. The last section of the test screen was unreachable because of it.
+        ScrollView scroll = findScrollView(root);
+        if (scroll != null) {
             scroll.refresh();
         }
     }
@@ -150,6 +155,14 @@ public abstract class UiPage {
             lastFocused = focused;
             renderRevision++;
         }
+        // Hover is handled by the dynamic pass, not by invalidating the cache.
+        //
+        // The static bake deliberately suppresses highlights (Control.paint checks !neutralPaint()
+        // before drawing one), so a hovered control has to be repainted live - which
+        // PaintPass.collectDynamic now guarantees by including isHovered. Invalidating the cache here
+        // as well would re-bake the whole page on every hover change, and the highlight would look
+        // right for that frame and then be replaced by the cached texture on the next - the
+        // "flickers once and disappears" symptom this page had.
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
