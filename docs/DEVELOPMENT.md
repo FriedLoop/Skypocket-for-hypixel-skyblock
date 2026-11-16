@@ -25,6 +25,7 @@ dev.skypocket/
 │   ├─ setting/           Setting 数据模型（含全部子类）
 │   └─ widget/            ClickGUI 主题与旧控件（ClickGuiStyle/GuiTheme/ThemeStore/…）
 ├─ ui/                   与业务无关的 UI v2 内核：元素树、布局、绘制抽象、输入事件
+│   │                    ⚠ 改动或使用前先读 docs/UI-V2-CONTRACT.md（坐标系/绘制/输入/缓存的权威契约）
 │   ├─ input/            InputRouter + 各类输入事件
 │   ├─ mc/               McUiPainter（唯一的 MC painter 实现）
 │   └─ widget/           Control 家族（Switch/Slider/Button/Card/TextField/Dropdown/…）
