@@ -277,8 +277,19 @@ public abstract class Setting {
             this.expanded = defaultExpanded;
         }
 
+        /**
+         * Height the expanded colour picker needs.
+         *
+         * <p>Stated here rather than read from the picker implementation. This used to borrow
+         * {@code ImmediateColorPicker.CONTENT_H}, which made the settings model import the
+         * immediate-mode widget - a data class depending on one particular renderer. Both pickers use
+         * the same 8px padding and 132px square, so the number is the same; what changed is that this
+         * class no longer names a widget to get it.
+         */
+        private static final int PICKER_CONTENT_H = 8 * 2 + 132;
+
         @Override public int height() {
-            return expanded ? rowHeight() + dev.skypocket.gui.widget.ImmediateColorPicker.CONTENT_H : rowHeight();
+            return expanded ? rowHeight() + PICKER_CONTENT_H : rowHeight();
         }
 
         /** The row is drawn by the page; only the picker below it needs to be a widget. */
@@ -395,15 +406,6 @@ public abstract class Setting {
             scrollIndex = Math.max(0, Math.min(max, scrollIndex));
         }
 
-        /** The filter box, drawn by the page (no widget: it lives inside the cached panel). */
-        private final dev.skypocket.gui.widget.ImmediateTextField search =
-                new dev.skypocket.gui.widget.ImmediateTextField("dropdown",
-                        Localization.tr("搜索"), "", 56, c -> true);
-
-        public dev.skypocket.gui.widget.ImmediateTextField searchField() {
-            return search;
-        }
-
         private int scrollIndex;
         private List<String> filteredCache = List.of();
         private String lastFilter;
@@ -411,12 +413,8 @@ public abstract class Setting {
         /** Flips the expanded state and re-lays out the Click GUI on the next tick. */
         private void toggle() {
             expanded = !expanded;
-            if (expanded) {
-                // Seed the box with the filter that is still in effect.
-                search.setText(filter);
-            } else {
-                search.blur();
-            }
+            // The search text lives in the filter field, not in a widget: this setting no longer owns
+            // one. The v2 Dropdown keeps its own box, and seeding it from here is the page's job.
             relayout();
         }
     }
