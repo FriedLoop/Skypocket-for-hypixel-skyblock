@@ -11,8 +11,8 @@ import dev.skypocket.render.ColorUtil;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.Style;
-import dev.skypocket.ui.widget.CrosshairGrid;
-import dev.skypocket.ui.widget.CrosshairPreview;
+import dev.skypocket.crosshair.CrosshairGrid;
+import dev.skypocket.crosshair.CrosshairPreview;
 
 import java.util.List;
 

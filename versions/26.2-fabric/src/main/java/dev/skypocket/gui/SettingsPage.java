@@ -102,6 +102,17 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
         return input().focused() != null;
     }
 
+    /**
+     * Everything that changes this page's appearance.
+     *
+     * <p>Only the config: every widget here writes through a {@code Setting} setter, and those wrap
+     * {@code ConfigManager.touch()}, so the config revision covers them.
+     */
+    @Override
+    protected long revision() {
+        return ConfigManager.revision();
+    }
+
     @Override
     protected dev.skypocket.ui.UiElement build() {
         colorFields.clear();

@@ -17,6 +17,7 @@ import dev.skypocket.hud.StatTextHudElement;
 import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.gui.widget.ClickGuiStyle;
+import dev.skypocket.ui.input.InputKeys;
 import dev.skypocket.ui.input.Keys;
 import dev.skypocket.gui.widget.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;

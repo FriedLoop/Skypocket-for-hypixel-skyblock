@@ -1,11 +1,19 @@
-package dev.skypocket.ui.widget;
+package dev.skypocket.crosshair;
 
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.render.ClickGuiMetrics;
 import dev.skypocket.render.CrosshairRenderer;
+import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.WidgetPalette;
 import dev.skypocket.ui.Rect;
+import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.WidgetPalette;
 import dev.skypocket.ui.Style;
+import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.WidgetPalette;
 import dev.skypocket.ui.UiPainter;
+import dev.skypocket.ui.widget.Control;
+import dev.skypocket.ui.widget.WidgetPalette;
 import dev.skypocket.ui.mc.McUiPainter;
 
 /**

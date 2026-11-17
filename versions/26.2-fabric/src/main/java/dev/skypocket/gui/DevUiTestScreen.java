@@ -267,7 +267,9 @@ public final class DevUiTestScreen extends Screen {
          */
         @Override
         protected long revision() {
-            return super.revision()
+            // Config writes plus this page's own demo state: the widgets here write plain fields,
+            // and nothing bumps the config revision for them.
+            return ConfigManager.revision()
                     + demoDropdown * 31L
                     + demoMode * 1_009L
                     + Double.doubleToLongBits(demoSlider)

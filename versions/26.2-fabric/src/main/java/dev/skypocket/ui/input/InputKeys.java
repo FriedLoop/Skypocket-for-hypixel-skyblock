@@ -1,7 +1,6 @@
-package dev.skypocket.gui;
+package dev.skypocket.ui.input;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.skypocket.ui.input.Keys;
 import net.minecraft.client.input.KeyEvent;
 
 /**
@@ -33,7 +32,7 @@ public final class InputKeys {
         return event.key() == InputConstants.KEY_BACKSPACE;
     }
 
-    /** Canonical key used by {@link dev.skypocket.ui.input.InputRouter}. */
+    /** Canonical key used by {@link InputRouter}. */
     public static int canonical(KeyEvent event) {
         if (event.isCycleFocus()) {
             return Keys.TAB;

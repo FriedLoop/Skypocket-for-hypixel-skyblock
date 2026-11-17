@@ -12,6 +12,7 @@ import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.ClickGuiMetrics;
 import dev.skypocket.render.FontLab;
 import dev.skypocket.render.GuiPanelCache;
+import dev.skypocket.ui.input.InputKeys;
 import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PreeditEvent;
 import net.minecraft.client.Minecraft;

@@ -1,6 +1,5 @@
 package dev.skypocket.ui;
 
-import dev.skypocket.config.ConfigManager;
 import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.input.InputRouter;
@@ -34,7 +33,7 @@ import java.util.Set;
  *
  * <p>Four inputs, and leaving any out produces a stale panel: this page's identity (a rebuilt page
  * reuses revision 0), {@link #revision()}, the scroll position, and
- * {@link ConfigManager#revision()}. See UI-V2-CONTRACT.md §5.2.
+ * the config revision. See UI-V2-CONTRACT.md §5.2.
  */
 public abstract class UiPage {
     private final GuiPanelCache.Slot cache = new GuiPanelCache.Slot();
@@ -61,15 +60,19 @@ public abstract class UiPage {
     protected abstract UiElement build();
 
     /**
-     * Counter of changes that affect appearance but not the config.
+     * Counter of everything that affects this page's appearance beyond its own layout.
      *
-     * <p>Default covers config writes. A page whose content depends on something else - a subsystem's
-     * state, a data update - must override and fold that in, or the panel will keep showing the old
-     * frame.
+     * <p>Folded into the cache key, so a change here re-bakes the page. A page that reads settings
+     * should return the config revision; one that also depends on its own state has to combine the
+     * two. See UI-V2-CONTRACT.md §5.2.1 - leaving something out here is invisible until a value
+     * changes and the panel keeps showing the old frame.
+     *
+     * <p>Abstract rather than defaulted to the config revision: the UI kernel must not know the
+     * configuration system exists. That import was the reason {@code ui} depended on {@code config},
+     * which inverts the intended layering - the kernel is the lower layer and has to be usable
+     * without the mod's settings.
      */
-    protected long revision() {
-        return ConfigManager.revision();
-    }
+    protected abstract long revision();
 
     // ---- lifecycle ------------------------------------------------------------------------
 
@@ -384,7 +387,7 @@ public abstract class UiPage {
         if (event == null) {
             return;
         }
-        input().keyDown(new KeyEvent(dev.skypocket.gui.InputKeys.canonical(event), 0,
+        input().keyDown(new KeyEvent(dev.skypocket.ui.input.InputKeys.canonical(event), 0,
                 keyModifiers(event), true));
     }
 
@@ -392,7 +395,7 @@ public abstract class UiPage {
         if (event == null) {
             return;
         }
-        input().keyUp(new KeyEvent(dev.skypocket.gui.InputKeys.canonical(event), 0,
+        input().keyUp(new KeyEvent(dev.skypocket.ui.input.InputKeys.canonical(event), 0,
                 keyModifiers(event), false));
     }
 
@@ -411,7 +414,7 @@ public abstract class UiPage {
 
     /** Whether this page wants ESC handled by itself rather than by the host. */
     public final boolean shouldCloseOnEscape(net.minecraft.client.input.KeyEvent event) {
-        return dev.skypocket.gui.InputKeys.isEscape(event);
+        return dev.skypocket.ui.input.InputKeys.isEscape(event);
     }
 
     private static int keyModifiers(net.minecraft.client.input.KeyEvent event) {
