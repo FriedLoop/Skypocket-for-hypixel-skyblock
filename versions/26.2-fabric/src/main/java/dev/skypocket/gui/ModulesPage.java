@@ -354,12 +354,27 @@ final class ModulesPage {
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
         if (!withCards) {
-            // The module page already draws SettingsPage through the same global page cache.
-            // Caching this chrome as a second page in one frame makes the two textures compete
-            // for the cache target, which showed up as the sidebar/search blitted into the
-            // settings pane. Chrome is small enough to draw live.
-            drawHighlight(painter);
-            drawElement(painter, root);
+            // Chrome-only instance. Kept out of the cache historically because it runs in the same
+            // frame as the settings page, and caching two pages at once was said to make the two
+            // textures fight over the render target - which showed up as the sidebar blitted into
+            // the settings pane.
+            //
+            // That constraint predates per-page cache slots: each ModulesPage owns its own Slot with
+            // its own RenderTarget and GuiRenderer now, so the two no longer share anything. Running
+            // this one through the cache too, to find out whether the old note still applies.
+            boolean cached = pageCache.draw(graphics, pageCacheKey(),
+                    Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
+                    scaleX, scaleY, animating || highlightAnimating(),
+                    (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
+                    0, 0, 0f);
+            renderScaleX = cached ? pageCache.lastBlitScaleX() : 1f;
+            renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
+            if (!cached) {
+                drawHighlight(painter);
+                drawElement(painter, root);
+            } else {
+                pose.scale(renderScaleX, renderScaleY);
+            }
             pose.popMatrix();
             return;
         }

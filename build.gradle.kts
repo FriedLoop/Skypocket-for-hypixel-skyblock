@@ -127,7 +127,47 @@ dependencies {
     // JLayer decodes MP3 for custom mention-alert sounds (bundled into the mod jar).
     implementation("javazoom:jlayer:1.0.1")
     "include"("javazoom:jlayer:1.0.1")
+
+    // Tests cover the UI kernel's pure logic - layout arithmetic, style resolution, paint-pass
+    // selection - none of which touches Minecraft. See the ui-kernel test source set below.
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
+
+/**
+ * The UI kernel's core classes have no Minecraft imports, so they can be tested against plain JUnit
+ * instead of a full game launch. That is the point of the layering work: if a class in `ui` needs
+ * `net.minecraft` to compile, it is in the wrong place or needs an adapter.
+ *
+ * Only the classes below are compiled into the test source set. Adding one whose dependencies still
+ * reach Minecraft would fail the build here, which is a useful signal rather than an inconvenience.
+ */
+val uiKernelSources = listOf(
+    "ui/Box.java",
+    "ui/Dimension.java",
+    "ui/Insets.java",
+    "ui/LayoutEngine.java",
+    "ui/Painted.java",
+    "ui/Rect.java",
+    "ui/ScrollView.java",
+    "ui/Size.java",
+    "ui/Style.java",
+    "ui/Text.java",
+    "ui/TextMeasurer.java",
+    "ui/TextWeight.java",
+    "ui/UiElement.java",
+    "ui/UiPainter.java",
+    "ui/input/InputRouter.java",
+    "ui/input/KeyEvent.java",
+    "ui/input/Keys.java",
+    "ui/input/Modifiers.java",
+    "ui/input/PointerEvent.java",
+    "ui/input/PreeditEvent.java",
+    "ui/input/TextInputEvent.java",
+    "ui/input/WheelEvent.java",
+    "ui/widget/Scrollbar.java",
+    "ui/widget/WidgetPalette.java",
+)
 
 /**
  * Source rewrites applied per target version, on top of what the preprocessor copies over.
@@ -226,6 +266,27 @@ configure<org.gradle.api.tasks.SourceSetContainer> {
     named("main") {
         java.setSrcDirs(listOf(File(preprocessedDir, "main/java")))
         resources.setSrcDirs(listOf(File(preprocessedDir, "main/resources")))
+    }
+    named("test") {
+        // Bloom preprocesses both source sets, so build/bloom/test/java already holds a copy of the
+        // whole kernel - and of every screen, which imports Minecraft and would need a game runtime
+        // to compile. The kernel is filtered down to the files listed in uiKernelSources: if one of
+        // them ever grows a Minecraft import, this build fails and says so, which is the signal we
+        // want.
+        java.setSrcDirs(listOf(File(preprocessedDir, "test/java")))
+        // Keep only the kernel, plus the tests themselves - everything else in the preprocessed tree
+        // is mod code that is not part of this suite.
+        java.include(uiKernelSources.map { "dev/skypocket/$it" })
+        java.include("dev/skypocket/ui/*Test.java", "dev/skypocket/ui/**/*Test.java")
+        resources.setSrcDirs(listOf("src/test/resources"))
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
 
