@@ -4,6 +4,12 @@ import dev.skypocket.config.ConfigManager;
 import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.input.InputRouter;
+import dev.skypocket.ui.input.KeyEvent;
+import dev.skypocket.ui.input.Modifiers;
+import dev.skypocket.ui.input.PointerEvent;
+import dev.skypocket.ui.input.PreeditEvent;
+import dev.skypocket.ui.input.TextInputEvent;
+import dev.skypocket.ui.input.WheelEvent;
 import dev.skypocket.ui.mc.McUiPainter;
 import dev.skypocket.ui.widget.Control;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -33,6 +39,12 @@ import java.util.Set;
 public abstract class UiPage {
     private final GuiPanelCache.Slot cache = new GuiPanelCache.Slot();
     private final OverlayHost overlays = new OverlayHost();
+
+    /** Screen-to-design mapping supplied by the host; identity until one is set. */
+    private PageTransform transform = PageTransform.NONE;
+
+    /** Popup owners whose floating layers this page drives; see {@link #trackPopup}. */
+    private final java.util.List<PopupOwner> popupOwners = new java.util.ArrayList<>();
 
     private UiElement root;
     private InputRouter input;
@@ -64,13 +76,10 @@ public abstract class UiPage {
     /** Rebuilds the tree and invalidates the cache. */
     public final void rebuild() {
         root = build();
-        if (input == null) {
-            input = new InputRouter(root);
-            overlays.attach(input);
-        } else {
-            input = new InputRouter(root);
-            overlays.attach(input);
-        }
+        // A rebuilt tree means new elements, so the router is replaced rather than reused: it holds
+        // the hit-test root and the captured/focused elements, all of which belonged to the old tree.
+        input = new InputRouter(root);
+        overlays.attach(input);
         renderRevision++;
         lastFocused = null;
     }
@@ -103,6 +112,8 @@ public abstract class UiPage {
         if (scroll != null) {
             scroll.refresh();
         }
+        // Popups anchor to their owner's bounds, so they can only be placed after the page is.
+        layoutPopups(measurer);
     }
 
     public final InputRouter input() {
@@ -135,6 +146,47 @@ public abstract class UiPage {
 
     protected final void removeOverlay(UiElement overlay) {
         overlays.remove(overlay);
+    }
+
+    /**
+     * Registers a control whose popup this page should drive.
+     *
+     * <p>Without this, a page has to write the same four steps for every popup owner it contains -
+     * lay it out against its anchor, register it while open, unregister it when closed, and sync its
+     * contents before painting. {@code SettingsPage} had three copies of that loop, one per kind of
+     * popup it grew; the test screen had two. Each copy is a chance to forget a step, and forgetting
+     * one produces a popup that is invisible, unclickable, or shows stale values.
+     */
+    protected final void trackPopup(PopupOwner owner) {
+        if (owner != null && !popupOwners.contains(owner)) {
+            popupOwners.add(owner);
+        }
+    }
+
+    /**
+     * Lays out and registers every tracked popup.
+     *
+     * <p>Called from {@link #layout(TextMeasurer)} after the page itself has been laid out: a popup
+     * anchors to its owner's bounds, which do not exist until then.
+     */
+    private void layoutPopups(TextMeasurer measurer) {
+        for (PopupOwner owner : popupOwners) {
+            if (!owner.isOpen()) {
+                removeOverlay(owner.popup());
+                continue;
+            }
+            owner.layoutPopup(measurer, width, height);
+            addOverlay(owner.popup());
+        }
+    }
+
+    /** Refreshes popup contents just before painting; see {@link PopupOwner#syncBeforePaint()}. */
+    private void syncPopups() {
+        for (PopupOwner owner : popupOwners) {
+            if (owner.isOpen()) {
+                owner.syncBeforePaint();
+            }
+        }
     }
 
     // ---- painting -------------------------------------------------------------------------
@@ -181,6 +233,9 @@ public abstract class UiPage {
             pose.scale(renderScaleX, renderScaleY);
             paintDynamicLayer(painter);
         }
+        // Popup contents mirror a value that can also change from elsewhere (the colour square moves
+        // the hex field), so they are refreshed immediately before they are painted.
+        syncPopups();
         overlays.paint(painter);
         pose.popMatrix();
     }
@@ -252,5 +307,108 @@ public abstract class UiPage {
 
     public final float renderScaleY() {
         return renderScaleY;
+    }
+
+    // ---- input ---------------------------------------------------------------------------
+    //
+    // Every host used to write these bridges itself, and each one had three jobs: convert screen
+    // pixels into design units, convert the platform key code into the kernel's own, and remember to
+    // forward every event that matters. The test screen got all three wrong at least once - a
+    // missing mouseMoved meant hover never updated at all, and Keys.ESCAPE never matched the
+    // platform code so ESC and backspace silently did nothing.
+    //
+    // Taking screen coordinates and raw platform events makes each of those impossible: the
+    // conversion is here, and there is one method per event with no optional pieces.
+
+    /** Sets how screen coordinates map into this page's design space. */
+    public final void transform(PageTransform value) {
+        this.transform = value == null ? PageTransform.NONE : value;
+    }
+
+    public final void pointerDown(double screenX, double screenY, int button, int modifiers) {
+        input().pointerDown(new PointerEvent(transform.toDesignX(screenX),
+                transform.toDesignY(screenY), button, modifiers));
+    }
+
+    public final void pointerMove(double screenX, double screenY, int button, int modifiers) {
+        input().pointerMove(new PointerEvent(transform.toDesignX(screenX),
+                transform.toDesignY(screenY), button, modifiers));
+    }
+
+    public final void pointerUp(double screenX, double screenY, int button, int modifiers) {
+        input().pointerUp(new PointerEvent(transform.toDesignX(screenX),
+                transform.toDesignY(screenY), button, modifiers));
+    }
+
+    /**
+     * Hover tracking.
+     *
+     * <p>Separate from {@link #pointerMove} on purpose: a drag must not change what is hovered, and
+     * a plain move must not be treated as one. Hosts that only forward drags get no hover at all.
+     */
+    public final void mouseMoved(double screenX, double screenY) {
+        input().pointerMove(new PointerEvent(transform.toDesignX(screenX),
+                transform.toDesignY(screenY), -1, 0));
+    }
+
+    public final void wheel(double screenX, double screenY, double amount, int modifiers) {
+        input().wheel(new WheelEvent(transform.toDesignX(screenX),
+                transform.toDesignY(screenY), (float) amount, modifiers));
+    }
+
+    /**
+     * Forwards a key press.
+     *
+     * <p>Runs the platform event through {@code InputKeys.canonical} first. That conversion is
+     * version-specific - 26.2 uses GLFW key codes, 26.3 uses SDL3 ones - so passing
+     * {@code event.key()} straight through works for letters (their codes coincide) and silently
+     * breaks every named key.
+     */
+    public final void keyDown(net.minecraft.client.input.KeyEvent event) {
+        if (event == null) {
+            return;
+        }
+        input().keyDown(new KeyEvent(dev.skypocket.gui.InputKeys.canonical(event), 0,
+                keyModifiers(event), true));
+    }
+
+    public final void keyUp(net.minecraft.client.input.KeyEvent event) {
+        if (event == null) {
+            return;
+        }
+        input().keyUp(new KeyEvent(dev.skypocket.gui.InputKeys.canonical(event), 0,
+                keyModifiers(event), false));
+    }
+
+    /** Forwards typed text; ignores characters the game would not accept in chat. */
+    public final void textInput(net.minecraft.client.input.CharacterEvent event) {
+        if (event != null && event.isAllowedChatCharacter()) {
+            input().textInput(new TextInputEvent(event.codepointAsString()));
+        }
+    }
+
+    /** Forwards IME composition state, which text fields show inline. */
+    public final void preedit(net.minecraft.client.input.PreeditEvent event) {
+        input().preedit(new PreeditEvent(event == null ? "" : event.fullText(),
+                event == null ? 0 : event.caretPosition()));
+    }
+
+    /** Whether this page wants ESC handled by itself rather than by the host. */
+    public final boolean shouldCloseOnEscape(net.minecraft.client.input.KeyEvent event) {
+        return dev.skypocket.gui.InputKeys.isEscape(event);
+    }
+
+    private static int keyModifiers(net.minecraft.client.input.KeyEvent event) {
+        int bits = 0;
+        if (event.hasShiftDown()) {
+            bits |= Modifiers.SHIFT;
+        }
+        if (event.hasControlDown()) {
+            bits |= Modifiers.CONTROL;
+        }
+        if (event.hasAltDown()) {
+            bits |= Modifiers.ALT;
+        }
+        return bits;
     }
 }

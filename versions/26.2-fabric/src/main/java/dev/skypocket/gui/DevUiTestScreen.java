@@ -14,11 +14,8 @@ import dev.skypocket.ui.Text;
 import dev.skypocket.ui.TextMeasurer;
 import dev.skypocket.ui.TextWeight;
 import dev.skypocket.ui.UiElement;
+import dev.skypocket.ui.PageTransform;
 import dev.skypocket.ui.UiPage;
-import dev.skypocket.ui.input.Keys;
-import dev.skypocket.ui.input.KeyEvent;
-import dev.skypocket.ui.input.PointerEvent;
-import dev.skypocket.ui.input.WheelEvent;
 import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
 import dev.skypocket.ui.widget.ColorField;
@@ -64,8 +61,9 @@ public final class DevUiTestScreen extends Screen {
     private int demoColor = 0xFFFF5555;
     /** Selection of the demo dropdown; it has to be stored, or the field always shows the first item. */
     private int demoDropdown;
-    /** The colour row, tracked so the page can drive its popup. */
+    /** The colour row and the dropdown, handed to the page as popup owners on rebuild. */
     private ColorField testColor;
+    private Dropdown testDropdown;
 
     public DevUiTestScreen() {
         super(Component.literal("UI v2 Test"));
@@ -79,6 +77,18 @@ public final class DevUiTestScreen extends Screen {
         if (minecraft != null) {
             minecraft.onTextInputFocusChange(this, true);
         }
+        // The page converts pointer positions back through the same transform the pose applies.
+        page.transform(new PageTransform() {
+            @Override
+            public float toDesignX(double screenX) {
+                return (float) ((screenX - originX()) / scaleX());
+            }
+
+            @Override
+            public float toDesignY(double screenY) {
+                return (float) ((screenY - originY()) / scaleY());
+            }
+        });
         // The page is a fixed design surface; only rebuild here, sizing happens while drawing.
         page.rebuild();
     }
@@ -119,18 +129,11 @@ public final class DevUiTestScreen extends Screen {
         graphics.fill(0, 0, (int) PANEL_W, (int) PANEL_H, 0xFF1A1A1E);
         page.draw(graphics, scaleX, scaleY, false);
         pose.popMatrix();
-
-        lastScaleX = scaleX;
-        lastScaleY = scaleY;
     }
 
     /** Fixed design surface, the same one OneClickScreen uses. */
     private static final float PANEL_W = 1348f;
     private static final float PANEL_H = 810f;
-
-    /** Scale used by the last frame; input conversion needs the same value the pose used. */
-    private float lastScaleX = 1f;
-    private float lastScaleY = 1f;
 
     private float guiScale() {
         return Math.max(1.0e-4f, minecraft == null ? 1f : minecraft.getWindow().getGuiScale());
@@ -158,75 +161,58 @@ public final class DevUiTestScreen extends Screen {
         return Math.round((height - PANEL_H * scaleY()) / 2f);
     }
 
-    private float toDesignX(double screenX) {
-        return (float) ((screenX - originX()) / lastScaleX);
-    }
-
-    private float toDesignY(double screenY) {
-        return (float) ((screenY - originY()) / lastScaleY);
-    }
-
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
-        page.input().pointerDown(new PointerEvent(toDesignX(event.x()), toDesignY(event.y()), 0,
-                modifiers()));
+        page.pointerDown(event.x(), event.y(), 0, modifiers());
         return true;
     }
 
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx,
                                 double dy) {
-        page.input().pointerMove(new PointerEvent(toDesignX(event.x()), toDesignY(event.y()), 0,
-                modifiers()));
+        page.pointerMove(event.x(), event.y(), 0, modifiers());
         return true;
     }
 
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        page.input().pointerUp(new PointerEvent(toDesignX(event.x()), toDesignY(event.y()), 0,
-                modifiers()));
+        page.pointerUp(event.x(), event.y(), 0, modifiers());
         return true;
     }
 
     @Override
     public void mouseMoved(double x, double y) {
-        // Hover state is only updated from pointerMove; without this the option rows never see
-        // onHoverChanged and the menu has no highlight at all.
-        page.input().pointerMove(new PointerEvent(toDesignX(x), toDesignY(y), 0, modifiers()));
+        // Hover only updates from a move event; without this the option rows never see
+        // onHoverChanged and a menu has no highlight at all.
+        page.mouseMoved(x, y);
     }
 
     @Override
     public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        page.input().wheel(new WheelEvent(toDesignX(x), toDesignY(y), (float) vertical,
-                modifiers()));
+        page.wheel(x, y, vertical, modifiers());
         return true;
     }
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        // InputKeys, not Keys.ESCAPE: 26.2 uses GLFW key codes and 26.3 uses SDL3 ones, so the UI
-        // kernel's canonical constant is not what arrives here. Comparing against it left ESC dead
-        // and, because every other key was forwarded unchanged, backspace and the clipboard
-        // shortcuts silently did nothing either - the translator never saw a key it recognised.
-        if (dev.skypocket.gui.InputKeys.isEscape(event)) {
+        if (page.shouldCloseOnEscape(event)) {
             onClose();
             return true;
         }
-        // Everything else goes to the page, including Tab for focus navigation.
-        // canonical(), not event.key(): the UI kernel names keys with its own constants, and the
-        // platform codes differ between 26.2 (GLFW) and 26.3 (SDL3). Forwarding the raw code left
-        // backspace and the clipboard shortcuts unrecognised while ordinary letters still worked.
-        page.input().keyDown(new KeyEvent(dev.skypocket.gui.InputKeys.canonical(event), 0,
-                modifiers(event), true));
+        // The page converts the platform key code itself; see UiPage.keyDown.
+        page.keyDown(event);
+        return true;
+    }
+
+    @Override
+    public boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
+        page.keyUp(event);
         return true;
     }
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
-        if (event.isAllowedChatCharacter()) {
-            page.input().textInput(new dev.skypocket.ui.input.TextInputEvent(
-                    event.codepointAsString()));
-        }
+        page.textInput(event);
         return true;
     }
 
@@ -236,19 +222,7 @@ public final class DevUiTestScreen extends Screen {
     }
 
     /** Modifier bits taken from a key event, which carries them. */
-    private static int modifiers(net.minecraft.client.input.KeyEvent event) {
-        int bits = 0;
-        if (event.hasShiftDown()) {
-            bits |= dev.skypocket.ui.input.Modifiers.SHIFT;
-        }
-        if (event.hasControlDown()) {
-            bits |= dev.skypocket.ui.input.Modifiers.CONTROL;
-        }
-        if (event.hasAltDown()) {
-            bits |= dev.skypocket.ui.input.Modifiers.ALT;
-        }
-        return bits;
-    }
+
 
     @Override
     public void onClose() {
@@ -279,23 +253,9 @@ public final class DevUiTestScreen extends Screen {
 
         private ScrollView scroll;
 
-        /**
-         * Colour rows whose popups this page drives.
-         *
-         * <p>A ColorField's popup is not a child in the tree: it is a separate Card that must be laid
-         * out against the row it belongs to, registered as an input layer while open, synced before
-         * painting, and painted after the page. That is four steps, and skipping any of them produces
-         * a popup that is missing its inputs, sits at the origin, or ignores the mouse - all three of
-         * which happened here before this list existed.
-         */
-        private final java.util.List<ColorField> colorFields = new java.util.ArrayList<>();
-
-        void trackColorField(ColorField field) {
-            colorFields.add(field);
-        }
-
-        /** Dropdowns whose popups this page drives; same contract as the colour rows. */
-        private final java.util.List<Dropdown> dropdowns = new java.util.ArrayList<>();
+        /** Widgets built by widgetSection(), registered as popup owners from build(). */
+        private Dropdown trackedDropdown;
+        private ColorField trackedColor;
 
         /**
          * Folds the demo widgets' state into the cache key.
@@ -316,42 +276,6 @@ public final class DevUiTestScreen extends Screen {
                     + demoColor;
         }
 
-        void trackDropdown(Dropdown dropdown) {
-            dropdowns.add(dropdown);
-        }
-
-        @Override
-        public void layout(TextMeasurer measurer) {
-            super.layout(measurer);
-            for (ColorField field : colorFields) {
-                field.layoutPopup(measurer, width(), height());
-                if (field.isOpen()) {
-                    addOverlay(field.popup());
-                } else {
-                    removeOverlay(field.popup());
-                }
-            }
-            for (Dropdown dropdown : dropdowns) {
-                dropdown.layoutPopup(measurer, width(), height());
-                if (dropdown.isOpen()) {
-                    addOverlay(dropdown.popup());
-                } else {
-                    removeOverlay(dropdown.popup());
-                }
-            }
-        }
-
-        @Override
-        public void draw(net.minecraft.client.gui.GuiGraphicsExtractor graphics,
-                         float scaleX, float scaleY, boolean animating) {
-            for (ColorField field : colorFields) {
-                if (field.isOpen()) {
-                    field.syncFields();
-                }
-            }
-            super.draw(graphics, scaleX, scaleY, animating);
-        }
-
         @Override
         protected UiElement build() {
             root.clearChildren();
@@ -364,6 +288,16 @@ public final class DevUiTestScreen extends Screen {
             content.add(section("2. 组件 / Widgets", widgetSection()));
             content.add(section("3. 样式复刻 / Style tokens", styleSection()));
             content.add(section("4. 交互 / Interaction", interactionSection()));
+
+            // Registered here, inside the page: trackPopup is protected because a popup owner belongs
+            // to the page that builds it, and letting an outside caller inject one would invite a
+            // page to be driven from two places.
+            if (testDropdown != null) {
+                trackPopup(testDropdown);
+            }
+            if (testColor != null) {
+                trackPopup(testColor);
+            }
 
             scroll = new ScrollView(Style.builder()
                     .width(Dimension.percent(100f))
@@ -511,14 +445,14 @@ public final class DevUiTestScreen extends Screen {
                 // no matter what was picked.
                 () -> demoDropdown, index -> demoDropdown = index,
                 Style.builder().width(Dimension.percent(100f)).height(26f).build(), palette);
-        page.trackDropdown(dropdown);
+        testDropdown = dropdown;
         column.add(dropdown);
 
         // Registered with the page so its layout and paint passes can drive the popup. Opening is a
         // click on the row, not something this builder decides.
         testColor = new ColorField(Localization.tr("颜色"), () -> demoColor,
                 value -> demoColor = value);
-        page.trackColorField(testColor);
+
         column.add(testColor);
         return column;
     }

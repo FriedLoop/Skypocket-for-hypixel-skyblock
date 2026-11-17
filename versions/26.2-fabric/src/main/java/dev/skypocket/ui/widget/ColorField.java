@@ -19,7 +19,7 @@ import java.util.function.IntSupplier;
  * hue/alpha bars, preset swatches and HEX/RGBA text fields. It is a separate layer, like Dropdown,
  * so it can escape the page's scroll clip.
  */
-public final class ColorField extends Control {
+public final class ColorField extends Control implements dev.skypocket.ui.PopupOwner {
     private final String label;
     private final IntSupplier value;
     private final IntConsumer setter;
@@ -208,6 +208,11 @@ public final class ColorField extends Control {
         int next = (value.getAsInt() & ~mask) | (clamped << shift);
         panel.adopt(next);
         setColor(next);
+    }
+
+    @Override
+    public void syncBeforePaint() {
+        syncFields();
     }
 
     public void syncFields() {

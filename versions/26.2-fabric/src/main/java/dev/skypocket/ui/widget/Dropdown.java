@@ -22,7 +22,7 @@ import java.util.function.IntSupplier;
  * A compact dropdown. The option list is a separate, searchable, virtualized popup layer so it can
  * escape the parent's clipping and scroll viewport without building one widget per option.
  */
-public final class Dropdown extends Control {
+public final class Dropdown extends Control implements dev.skypocket.ui.PopupOwner {
     private static final int MAX_VISIBLE_ROWS = 8;
     private static final float ROW_H = 40f;
     private static final float SEARCH_H = 36f;
