@@ -51,7 +51,28 @@ foreach ($pkg in $docPackages) {
     }
 }
 
-# --- 2. The kernel must not depend upward -------------------------------------------------
+# --- 2. Every docs/ file referenced from another doc or the README must exist --------------
+# Renaming or deleting a doc leaves dangling references behind, which read as authoritative
+# until someone follows them.
+$docsDir = Join-Path $root 'docs'
+$scanFiles = @(Get-ChildItem $docsDir -Filter '*.md')
+$readme = Join-Path $root 'README.md'
+if (Test-Path $readme) { $scanFiles += Get-Item $readme }
+
+foreach ($doc in $scanFiles) {
+    $text = [IO.File]::ReadAllText($doc.FullName, [Text.Encoding]::UTF8)
+    # Match both "docs/NAME.md" and a bare "NAME.md" appearing in a doc tree listing.
+    foreach ($m in [regex]::Matches($text, '(?:docs/)?([A-Za-z0-9_\-]+\.md)')) {
+        $name = $m.Groups[1].Value
+        $target = Join-Path $docsDir $name
+        $atRoot = Join-Path $root $name
+        if (-not (Test-Path $target) -and -not (Test-Path $atRoot)) {
+            [void]$problems.Add("$($doc.Name) references $name which does not exist")
+        }
+    }
+}
+
+# --- 3. The kernel must not depend upward -------------------------------------------------
 # Mirrors the compile-time guard in uiKernelSources, so a violation is caught even for a class
 # that is not in that list yet.
 $upward = @('gui', 'feature', 'config', 'hud', 'skyblock', 'crosshair')

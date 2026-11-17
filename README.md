@@ -50,11 +50,29 @@ gradlew.bat build
 │  ├─ 26.2-fabric/        # 主版本：源码手写在这里
 │  └─ 26.3-fabric/        # 构建时由 26.2 预处理生成到 build/preprocessed
 ├─ docs/
-│  ├─ DEVELOPMENT.md      # 架构与开发约定（改代码前先读）
+│  ├─ DEVELOPMENT.md      # 架构、约定、包结构（改代码前先读）
+│  ├─ UI-V2-CONTRACT.md   # UI v2 契约：坐标系/绘制/输入/缓存（动 ui/ 前必读）
+│  ├─ PITFALLS.md         # MC 反编译踩坑记录（遇到怪现象时查）
+│  ├─ MULTIVERSION.md     # 26.2 / 26.3 差异处理
+│  ├─ UI-REFACTOR-LOG.md  # 架构重构的决策与取舍
+│  ├─ UI-V2-DEDUP-EVALUATION.md  # 重复能力评估
 │  ├─ SKYBLOCK_STATS.md   # SkyBlock 数据来源与解析语义
-│  └─ settings-ux-brief.md
+│  └─ MAINTENANCE_TABLES.md      # 维护用对照表
 └─ tools/
 ```
+
+**文档是有序的，按需读**：
+
+| 场景 | 读什么 |
+|---|---|
+| 第一次接触项目 | `DEVELOPMENT.md` §1-2（概览与包结构） |
+| 写新功能 | `DEVELOPMENT.md` §3-4（契约与 checklist） |
+| 改 `ui/` 任何东西 | `UI-V2-CONTRACT.md`（否则会踩坐标系与缓存的坑） |
+| 遇到"按理说应该能工作"的怪现象 | `PITFALLS.md` |
+| 处理 26.2/26.3 差异 | `MULTIVERSION.md` |
+| 想知道某个设计为什么这样 | `UI-REFACTOR-LOG.md` |
+
+**文档漂移会被构建拦截**：`build` 会跑 `tools/check-docs.ps1`，检查文档列出的包是否存在、是否漏列新包、以及 `ui/` 是否违规依赖上层。
 
 源码只在 `versions/<mainProject>/src` 中手写，其他版本由预处理器与 `build.gradle.kts` 的
 Bloom 替换规则生成，因此**不要直接改非主版本目录**（会被覆盖）。
