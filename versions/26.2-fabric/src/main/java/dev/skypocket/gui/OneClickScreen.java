@@ -139,6 +139,34 @@ public class OneClickScreen extends Screen {
     private SettingsPage transitionPage;
     private Feature transitionPageFeature;
     private float statsPageHeight = -1f;
+
+    // The three panes own separate InputRouters, so each can hold a focused text field at the same
+    // time and none of them knows about the others. Typing then went to whichever pane the dispatch
+    // code happened to check first - the sidebar search box - rather than to the field the user had
+    // just clicked.
+    private static final int TEXT_REGION_MODULES = 0;
+    private static final int TEXT_REGION_CHROME = 1;
+    private static final int TEXT_REGION_SETTINGS = 2;
+
+    /**
+     * Clears text focus in every pane except the one about to receive a click.
+     *
+     * <p>Focus is what decides where typed characters go, so there must be exactly one owner. The
+     * panes cannot coordinate this between themselves - they do not share a router and SettingsPage
+     * has no idea a sidebar exists. The screen is the only place that sees all three, so it is where
+     * the handover belongs.
+     */
+    private void focusOnly(int region) {
+        if (region != TEXT_REGION_MODULES && modulesPage != null) {
+            modulesPage.clearFocus();
+        }
+        if (region != TEXT_REGION_CHROME && moduleChrome != null) {
+            moduleChrome.clearFocus();
+        }
+        if (region != TEXT_REGION_SETTINGS && statsPage != null) {
+            statsPage.clearFocus();
+        }
+    }
     /** Last theme/metric generation the cached page objects were built for. */
     private int builtThemeGeneration = -1;
 
@@ -906,6 +934,7 @@ public class OneClickScreen extends Screen {
         if (modulesPageActive() && ly >= TAB_BAR_H && ly < contentBottom()) {
             ensureModulesPage();
             modulesPage.layout();
+            focusOnly(TEXT_REGION_MODULES);
             modulesPage.pointerDown((float) lx, (float) ly - TAB_BAR_H,
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
@@ -914,6 +943,7 @@ public class OneClickScreen extends Screen {
         if (inModuleChrome(lx, ly)) {
             ensureModuleChrome();
             moduleChrome.layout();
+            focusOnly(TEXT_REGION_CHROME);
             moduleChrome.pointerDown((float) lx, (float) ly - TAB_BAR_H,
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
@@ -947,6 +977,7 @@ public class OneClickScreen extends Screen {
         if (statsPageActive()) {
             ensureStatsPage();
             statsPage.layout();
+            focusOnly(TEXT_REGION_SETTINGS);
             statsPage.pointerDown(statsLocalX(lx), statsLocalY(ly),
                     Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
             return true;
