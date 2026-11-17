@@ -194,7 +194,44 @@ public interface PopupOwner {
 
 ---
 
-## 三、建议的执行顺序
+## 三、执行结果与 ModulesPage 的结论
+
+### 已完成
+
+| 项 | 结果 |
+|---|---|
+| P1 hover 进动态层 | ✅ 删除 `ModulesPage` 之外所有手写 hover 补偿的思路 |
+| P2 PopupOwner + trackPopup | ✅ 测试页零 popup 代码；`SettingsPage` 三类循环合并为一处注册 |
+| P3 输入桥接 | ✅ 测试页零事件构造、零 `InputKeys` 引用 |
+| P4 绘制递归 | ✅ `SettingsPage` 已用 `PaintPass`，删 40 行 |
+| `SettingsPage` 迁移 | ✅ 704 → 512 行（-27%），8 个框架方法归零 |
+
+### `ModulesPage` 评估结论：不迁移
+
+查清后发现它**不是标准页面，是复合页面**，与 `UiPage` 的假设有 6 处冲突：
+
+1. **两条绘制路径**：`withCards` 为真时缓存、为假时完全绕过缓存（因为同一帧里 `SettingsPage` 也在用全局缓存，两张纹理争抢缓存目标会导致侧栏被 blit 进设置面板）。
+2. **高亮动画在缓存外单独绘制**：`drawHighlight` 画的是侧栏选中指示条的缓动动画，必须每帧更新。
+3. **卡片区独立裁剪 + 水平位移**：`cardOffsetX` 和独立的 scissor 矩形。
+4. **侧栏与卡片分开绘制**：为了不让 `scroll` 参与侧栏那一次递归，临时 `scroll.visible(false)` 再恢复。
+5. **缓存键含导航状态**：`canGoBack`/`canGoForward`/`highlightY`。
+6. **hoverHash**：为弥补静态层不含 hover 而做的全量扫描。
+
+要把这些塞进 `UiPage`，需要加 4-5 个覆写钩子，框架会因此变复杂。**收益递减，不做。**
+
+### 但 ModulesPage 的 `hoverHash` 可以删——需要先补动态层
+
+`hoverHash()` 的作用是"hover 变化时让缓存失效"。框架的替代方案是"动态层每帧重绘 hovered 控件"，两者目的相同、手段不同。
+
+**但 `ModulesPage` 不从 `UiPage` 继承**，所以享受不到那个机制。我尝试给它手工补动态层，发现 `paintDynamic` 会直接递归 `root`，而 `drawBase` 对 `scroll` 做了临时隐藏和独立裁剪——动态层不会做这些，画出来会错位。
+
+**这正是"复合页面不该套标准框架"的证据**：动态层机制依赖了 `drawBase` 的绘制顺序假设，`ModulesPage` 不满足。
+
+**结论**：`hoverHash` 保留，直到 `ModulesPage` 被重构为标准页面（那是独立的一件事）。
+
+---
+
+## 四、建议的后续顺序
 
 | 步骤 | 内容 | 风险 | 可独立验证 |
 |---|---|---|---|
@@ -210,7 +247,7 @@ public interface PopupOwner {
 
 ---
 
-## 四、不做的事
+## 五、不做的事
 
 | 项 | 理由 |
 |---|---|
@@ -220,7 +257,7 @@ public interface PopupOwner {
 
 ---
 
-## 五、这次评估纠正的三个误判
+## 六、这次评估纠正的三个误判
 
 记录在此，因为它们说明了"先查清再动手"的必要性。
 
@@ -239,7 +276,7 @@ public interface PopupOwner {
 
 ---
 
-## 六、P1 实施暴露的一个通用陷阱
+## 七、P1 实施暴露的一个通用陷阱
 
 修 bug 时要**搜索同类模式**，而不是只看报错那行。
 
