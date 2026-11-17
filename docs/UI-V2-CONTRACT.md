@@ -103,6 +103,31 @@ input.pointerDown(new PointerEvent(designX, designY, ...));
 
 `visualX()` / `visualY()` = `bounds().x() + ancestorOffsetX()`，是**design 坐标**，弹窗定位用它。
 
+### 1.5.1 控件内部必须自己扣掉祖先 offset ⚠️
+
+**这一条我踩了最久，因为它只在弹窗里的控件上暴露。**
+
+事件传到 `onPointerDown` 时，坐标仍是**design 坐标**（`InputRouter.bubble` 不转换）。但控件绘制基准是 `bounds()`，也就是**父局部坐标**。两者差着祖先链上的 `offset` 之和。
+
+**正确写法**（`Slider`、`Segmented`、`ColorPickerPanel` 都是这样）：
+
+```java
+float localX = event.x() - ancestorOffsetX();
+```
+
+**`TextField` 曾经漏了这一行**，后果：
+
+| 输入框位置 | 祖先 offset X | 表现 |
+|---|---|---|
+| 设置页内（在 ScrollView 里） | **0**（滚动只改 Y）| **正常**，bug 隐藏 |
+| 下拉搜索框（在 popup 里） | 弹窗的水平位置，几百像素 | 光标偏右 5-6 个字符 |
+
+**为什么难查**：`ScrollView` 的 `offset` 只在 Y 方向，而光标定位只关心 X，所以最常见的输入框反而看不出问题。只有放进 popup 的输入框才暴露。
+
+**规则**：任何在 `onPointerDown` / `onPointerMove` 里读 `event.x()/y()` 的控件，第一件事是减 `ancestorOffsetX()/ancestorOffsetY()`。
+
+**另一个相关陷阱**：字体测量必须和绘制用同一字重。`painter.text()` 画的是 **Medium**，如果测量用默认（Regular），光标位置会差几个像素。`UiText.install()` 在启动时指定字重，就是为了对齐这两者。
+
 ---
 
 ## 2. 布局
@@ -252,6 +277,38 @@ input.focusNext(backwards)   // Tab 导航，遍历 root + layers
 
 `focusable()` 返回 true 的元素才能获得焦点。焦点变化会触发 `onFocusChanged()`。
 
+### 4.3.1 一个 `InputRouter` 只能有一个焦点，但一个屏幕可以有很多个 router ⚠️
+
+**这是最容易踩的坑，因为它不会报错，只会让输入跑到错误的控件里。**
+
+焦点是**每个 router 各自维护**的。当屏幕上并排放着多个独立模块时，每个模块有自己的 router，于是**它们可以同时各有一个聚焦的文本框**：
+
+```
+OneClickScreen
+├─ modulesPage  (InputRouter A)  ← 可能有焦点
+├─ moduleChrome (InputRouter B)  ← 可能有焦点
+└─ statsPage    (InputRouter C)  ← 可能有焦点
+```
+
+**症状**：在模块的设置页里打字，字符却出现在顶部搜索框。原因是 `charTyped` 按固定顺序分发，而侧栏排在设置页前面。backspace 走同样路径，于是"能打字但删不掉"。
+
+**规则：屏幕必须在点击时交接焦点，保证同时只有一个 router 持有焦点。**
+
+```java
+// OneClickScreen：在分发 pointerDown 之前
+private void focusOnly(int region) {
+    if (region != TEXT_REGION_MODULES && modulesPage != null) modulesPage.clearFocus();
+    if (region != TEXT_REGION_CHROME && moduleChrome != null) moduleChrome.clearFocus();
+    if (region != TEXT_REGION_SETTINGS && statsPage != null) statsPage.clearFocus();
+}
+```
+
+**为什么是 `pointerDown`**：键盘和文本事件都发给"已经持有焦点"的控件，所以只要在点击时让所有者唯一，后续所有事件自然正确。
+
+**为什么放在屏幕层**：各模块之间无法互相协调——`SettingsPage` 不知道侧栏存在。只有屏幕能看到全部。
+
+**新增一个可聚焦模块时，必须把它加进 `focusOnly`**，否则又会退化成"谁先被检查谁赢"。
+
 ### 4.4 控件基类 `Control`
 
 提供：
@@ -383,13 +440,29 @@ protected long revision() {
 | `UiElement` | 树节点：父子关系、bounds、offset、事件虚方法 |
 | `Style` | 样式：尺寸/盒模型/flex/对齐/绝对定位/方向 |
 | `LayoutEngine` | 布局：measure + layout 两阶段 |
-| `Box` | 纯布局容器（不绘制）|
-| `Text` | 文本节点 |
+| `Box` | 纯布局容器（**不绘制**，要背景用 `Card`）|
+| `Text` | 文本节点（**不是 `Painted`**，绘制要单独分支）|
 | `ScrollView` | 滚动容器（内部 content + 可选滚动条）|
 | `Dimension` / `Insets` / `Rect` / `Size` | 几何值对象 |
 | `UiPainter` | 绘制抽象（平台无关）|
-| `Painted` | 可自绘接口 |
+| `Painted` | 可自绘接口（只有 `Card` 和 `Control` 实现）|
 | `TextMeasurer` / `TextWeight` | 文本测量 |
+| `UiPage` | **页面基类**：布局 + 缓存 + 绘制序列 + 输入桥接 |
+| `PaintPass` | 静态层 / 动态层绘制 |
+| `OverlayHost` | 浮层注册与绘制 |
+| `PopupOwner` | 浮层所有者的契约 |
+| `PageTransform` | 屏幕坐标 → 设计坐标 |
+| `RenderCache` | 纹理缓存契约（实现在 `ui/mc/`）|
+| `UiText` | 运行时字体测量（启动时安装一次）|
+
+### 6.1.1 平台绑定（`ui/mc/`）
+
+**唯一允许 import `dev.skypocket.render` 的地方。**
+
+| 类 | 职责 |
+|---|---|
+| `McUiPainter` | `UiPainter` 的 MC 实现 |
+| `McRenderCache` | `RenderCache` 的 MC 实现（含烘焙时的 scissor 重置）|
 
 ### 6.2 输入（`ui/input/`）
 
@@ -398,6 +471,7 @@ protected long revision() {
 | `InputRouter` | 事件路由 + 焦点 + 层 |
 | `PointerEvent` / `KeyEvent` / `WheelEvent` / `TextInputEvent` / `PreeditEvent` | 事件 |
 | `Modifiers` / `Keys` | 常量 |
+| `InputKeys` | **平台键码 ↔ 内核键码**的适配器（26.2 用 GLFW，26.3 用 SDL3）|
 
 ### 6.3 控件（`ui/widget/`）
 
@@ -421,20 +495,22 @@ protected long revision() {
 
 ## 7. 已知缺口与技术债
 
-审计确认的问题，按影响排序。
+按影响排序。**§7.1 曾经记录的最大缺口已经补齐**，保留在这里是因为它解释了几个类的由来。
 
-### 7.1 没有页面/框架层 ⚠️ 最大缺口
+### 7.1 页面框架层（已补齐 ✅）
 
-`ui/` 里有组件和输入路由，但**没有**：
+`ui/` 原来只有组件和输入路由，**没有**：
 
-| 缺失 | 后果 |
-|---|---|
-| 页面基类 | 每个页面自己写布局调用、绘制递归、输入桥接、缓存集成 |
-| 绘制调度 | `SettingsPage.drawElement` 是唯一一份，其他页面各写各的 |
-| 浮层托管 | 三层（注册/布局/绘制）要宿主手写，`SettingsPage` 写了三段 |
-| 缓存集成 | `pageCacheKey` 的拼法要每个页面自己维护 |
+| 缺失 | 当时的后果 | 现在 |
+|---|---|---|
+| 页面基类 | 每页自己写布局、绘制、输入、缓存 | `UiPage` |
+| 绘制调度 | `SettingsPage.drawElement` 是唯一一份 | `PaintPass` |
+| 浮层托管 | 三层（注册/布局/绘制）宿主手写 | `OverlayHost` + `PopupOwner` |
+| 缓存集成 | `pageCacheKey` 拼法各自维护 | `UiPage.cacheKey` |
 
-**证据：没有一个纯 v2 的页面。** 所有页面（`OneClickScreen` / `HudPositionEditorScreen` / `SettingsPage` / `ModulesPage`）都是即时模式或混用。
+补齐后 `SettingsPage` 从 704 行降到 512 行，8 个框架职责方法归零。`DevUiTestScreen` 只实现 `build()` 和 `revision()`。
+
+**仍未使用框架的**：`ModulesPage`（自带布局与缓存，见 §7.6）、`OneClickScreen`（壳层）、`HudPositionEditorScreen`（纯即时模式，与 v2 无关）。
 
 ### 7.2 `ColorPickerPanel` 不独立
 
@@ -449,6 +525,21 @@ protected long revision() {
 这个例外无法通过类型系统发现——`ChoiceSetting` 和其他子类的用法看起来一样，忘记调用 `touch()` 的后果是"切换选项后界面不刷新"，而且只在特定页面出现。
 
 **建议修复方向**：把 `ChoiceSetting.setter` 也改成 `touch()` 包装，或让 `select()` 内部调用 `readyForChange()` 钩子。改动小但需要验证每个 `ChoiceSetting` 的使用点不会重复 touch（重复调用无害，只是计数多加）。
+
+### 7.6 `ModulesPage` 自带布局（不打算迁移）
+
+它有 6 处与 `UiPage` 的假设冲突，其中 5 处曾是历史包袱，现在只改了 `withCards`：
+
+| 项 | 状态 |
+|---|---|
+| `withCards` 双绘制路径 | ✅ 已改为**仅构建时生效**，绘制路径合并为一条 |
+| `drawElement` / `intersects` / `pageCacheKey` | 未改，与 `PaintPass` 重复 |
+| `hoverHash` | 未改，是它对"静态层不含 hover"的补偿 |
+| 高亮动画、侧栏/卡片分区绘制 | 本质需求，保留 |
+
+**为什么不套 `UiPage`**：它有两个实例在同一帧的不同位置绘制（`modulesPage` 画侧栏+卡片，`moduleChrome` 只画侧栏），而 `UiPage` 的模型是"一个页面 = 一棵树 + 一个缓存 + 一次绘制"。强行套需要 4-5 个覆写钩子，框架会因此对每个简单页面都更难理解。
+
+**代价**：`drawElement` 等三处逻辑与 `PaintPass` 重复。如果将来要统一，前提是先把它的绘制拆成标准页面形态。
 
 ### 7.4 类注释过时
 

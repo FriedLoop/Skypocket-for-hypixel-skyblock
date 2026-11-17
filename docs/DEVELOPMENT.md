@@ -20,14 +20,21 @@
 dev.skypocket/
 ├─ SkyPocketMod          客户端入口：加载配置、注册 HUD/渲染器、命令、按键、tick
 ├─ SkyPocketLog          分区日志（SkyPocketLog.of("area")）
+├─ util/                 零依赖工具：ColorUtil（颜色运算）、Easing（缓动曲线）、
+│                        GuiMetrics、MouseButtons、PickerMemory
+│                        ⚠ 只能放不依赖本模组其他包的类，它是依赖图的最底层
 ├─ config/               ConfigManager（Gson JSON ↔ config/skypocket.json）+ ModConfig + ColorDefaults
 ├─ gui/                  ClickGUI 业务层：Feature/Module 契约与注册、各页面、布局常量、外壳绘制
 │   ├─ setting/           Setting 数据模型（含全部子类）
 │   └─ widget/            ClickGUI 主题与旧控件（ClickGuiStyle/GuiTheme/ThemeStore/…）
+├─ feature/              FeatureModule SPI 与 35 个功能实现（modules/、config/ 子包）
+│                        ⚠ 新功能一律走 FeatureModule，不要碰 gui.Module；见 §4 checklist
+├─ crosshair/            准星组件与配置（CrosshairGrid/CrosshairPreview/CrosshairPreset…）
 ├─ ui/                   与业务无关的 UI v2 内核：元素树、布局、绘制抽象、输入事件
 │   │                    ⚠ 改动或使用前先读 docs/UI-V2-CONTRACT.md（坐标系/绘制/输入/缓存的权威契约）
+│   │                    ⚠ 不得 import dev.skypocket.gui / config / feature（tests 会编译期拦截）
 │   ├─ input/            InputRouter + 各类输入事件
-│   ├─ mc/               McUiPainter（唯一的 MC painter 实现）
+│   ├─ mc/               MC 平台绑定：McUiPainter、McRenderCache（唯一允许 import render 的地方）
 │   └─ widget/           Control 家族（Switch/Slider/Button/Card/TextField/Dropdown/…）
 ├─ hud/                  每个 HUD 元素一个类 + HudPositionSync（位置迁移/自愈）
 ├─ skyblock/             SkyBlock 数据解析：tracker、静态数据表、物品字段
@@ -40,6 +47,22 @@ dev.skypocket/
 ├─ diagnostics/          非 mixin 的运行时诊断（MixinTargetCheck）
 └─ mixin/                **只能放 mixin 类**，见下方硬约束
 ```
+
+### 依赖方向（只能向下）
+
+```
+feature / hud / crosshair          业务
+        ↓
+gui                                具体界面与主题
+        ↓
+ui                                 内核（无业务依赖）
+        ↓
+ui/mc                              平台绑定
+        ↓
+util                               零依赖
+```
+
+违反这条方向会有两类后果：`config ↔ render` 曾经互相 import，导致两者都无法单独理解；`ui` 曾经 import `gui` 的 `InputKeys`，形成循环。**测试任务会把 `ui/` 的纯逻辑类单独编译，任何新增的 `net.minecraft` 依赖都会在那里失败。**
 
 ### 2.1 每个包放什么、不放什么
 
@@ -908,6 +931,47 @@ layout(location = 0) out vec4 fragColor;
 
 **下一步**：保持自研图集作为可选实验，先对比多缩放下的观感；确认后把文字 run 批处理、页面淘汰、真实 metrics 和 UI 内核一起收敛，并决定是否彻底移除整块面板缓存。
 
+## 10.3 自动化测试
+
+`ui/` 的内核类**没有 `net.minecraft` 依赖**，所以能脱离游戏跑 JUnit。
+
+**位置**：`versions/<name>/src/test/java/dev/skypocket/ui/`
+
+**运行**：`./gradlew :26.2-fabric:test`（`build` 也会跑）
+
+### 配置文件里的 `uiKernelSources` 不是普通配置，是架构守卫
+
+```kotlin
+// build.gradle.kts
+val uiKernelSources = listOf(
+    "ui/Box.java", "ui/LayoutEngine.java", "ui/Style.java", ...
+)
+```
+
+`test` 源集**只编译这些类**。如果 `ui/` 里某个类新增了 `net.minecraft` 依赖：
+
+- 测试编译失败
+- 错误信息指出是哪个类
+
+**这把"内核不得依赖平台"从文档约定变成了编译期强制。**
+
+### 新增可测试类的步骤
+
+1. 确认它不 import `net.minecraft`（也不间接依赖：它引用的类也必须在白名单里）
+2. 把路径加进 `build.gradle.kts` 的 `uiKernelSources`
+3. 在 `src/test/java/dev/skypocket/ui/` 写测试
+
+**加不进去通常是信号**：说明这个类应该放进 `ui/mc/`，或者抽一个接口。
+
+### 当前覆盖
+
+`LayoutEngineTest`（10 个用例）：COLUMN/ROW 堆叠、flexGrow 比例分配、padding 盒模型、min 约束、百分比解析、文本测量、绝对定位两种锚定、`ScrollView` 的 offset 不改 bounds、滚动边界。
+
+**两个已知的布局语义**（测试固定，容易记错）：
+
+- **根节点 auto 尺寸会被撑满 `availableWidth/Height`**，不是包裹内容
+- **单独的 `Text` 作为根节点时同样被撑满**，只有作为子节点才按内容测量
+
 ## 11. UI v2 布局内核（第一阶段）
 
 **位置**：`dev.skypocket.ui`，纯 Java，不依赖 Minecraft、业务配置或渲染代码，后续可整体抽成独立模块。
@@ -960,7 +1024,7 @@ layout(location = 0) out vec4 fragColor;
 - MC 输入适配层（26.2/26.3 鼠标键、键盘、IME）
 - 控件库（Button、Switch、Slider、TextField、Dropdown、ColorField、Segmented）
 
-**测试页**：迁移阶段的 `/skypocket uitest` 与 `Ui2TestScreen` 已删除；正式 ClickGUI 自身覆盖布局、滚动、点击/拖拽捕获、Tab 焦点和输入回归。
+**测试页**：迁移阶段的 `/skypocket uitest` 与 `Ui2TestScreen` 已删除。现在有 `DevUiTestScreen`（设置 → 字体与渲染调试选项 → "UI v2 测试页"），它验证 v2 框架的完整能力：布局（含绝对定位四种锚定）、全部控件、`ClickGuiStyle` 颜色对照、交互。**纯逻辑部分由 JUnit 覆盖**，见 §3.x 测试章节。
 
 **崩溃修复（ScissorTracker）**：
 
@@ -990,7 +1054,7 @@ layout(location = 0) out vec4 fragColor;
 - `Button`：动态文案 + action。
 - `Switch`：BooleanSupplier/Consumer。
 - `Slider`：拖拽捕获、左右键微调、数值显示。
-- 迁移阶段的 `Ui2TestScreen` 已随回归入口一起删除。
+- 迁移阶段的 `Ui2TestScreen` 已删除，替代品是 `DevUiTestScreen`（见上）。
 
 - `TextField`：单行编辑、光标、Backspace/Delete、左右/Home/End、IME 预编辑接口。
 - `Dropdown`：独立 popup layer，通过 `InputRouter.addLayer` 接收点击；选项由 Button 组成，菜单首/尾项只圆外侧角，中间项直角，避免每个选项像独立卡片。

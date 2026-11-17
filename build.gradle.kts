@@ -301,6 +301,29 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+/**
+ * Fails the build when the documentation no longer matches the tree.
+ *
+ * The specific failure worth guarding: documentation that was accurate when written and quietly
+ * wrong later. Three cases so far - a class comment claiming a layout feature did not exist after
+ * it did, the package list missing a package that had been added, and the notes saying there was no
+ * test screen after one had been written.
+ *
+ * The check also enforces the kernel's dependency direction, duplicating what uiKernelSources
+ * catches at test compile time - deliberately, because a class added to `ui` without being added to
+ * that list would otherwise escape both.
+ */
+tasks.register<Exec>("checkDocs") {
+    group = "verification"
+    description = "Verifies docs/ still matches the package layout and dependency direction."
+    val script = rootProject.file("tools/check-docs.ps1")
+    onlyIf { script.exists() }
+    commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.absolutePath)
+    isIgnoreExitValue = false
+}
+
+tasks.named("check") { dependsOn("checkDocs") }
+
 tasks.register("printSources") {
     doLast {
         val ss = project.extensions.getByType<org.gradle.api.tasks.SourceSetContainer>().getByName("main")
