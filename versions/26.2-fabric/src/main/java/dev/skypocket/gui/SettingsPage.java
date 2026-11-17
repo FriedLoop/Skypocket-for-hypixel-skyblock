@@ -47,11 +47,9 @@ import java.util.Set;
  * Content-only settings page for a feature. It owns an element tree, its input router and its popup
  * layers, but no Screen; the unified ClickGUI hosts it inside the content pane.
  */
-public final class SettingsPage {
+public final class SettingsPage extends dev.skypocket.ui.UiPage {
     private final Feature feature;
     private final WidgetPalette palette;
-    private final float width;
-    private final float height;
     private final float columnWidth;
     private final List<ColorField> colorFields = new ArrayList<>();
     private final List<Dropdown> dropdowns = new ArrayList<>();
@@ -63,7 +61,6 @@ public final class SettingsPage {
      * no longer shown must not keep its popup on the layer stack.
      */
     private final List<Dropdown> customDropdowns = new ArrayList<>();
-    private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
 
     /**
      * The context handed to custom rows that own a popup.
@@ -84,13 +81,8 @@ public final class SettingsPage {
             SettingsPage.this.rebuild();
         }
     };
-    private Box root;
+    /** The scrolling column; kept because the page still styles its scrollbar after building. */
     private ScrollView scroll;
-    private InputRouter input;
-    private long renderRevision;
-    private UiElement lastFocused;
-    private float renderScaleX = 1f;
-    private float renderScaleY = 1f;
 
     public SettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
         this(feature, palette, width, height, Math.min(1002f, Math.max(386f, width - 58f)));
@@ -100,29 +92,26 @@ public final class SettingsPage {
                         float columnWidth) {
         this.feature = feature;
         this.palette = palette;
-        this.width = width;
-        this.height = height;
         this.columnWidth = Math.max(386f, Math.min(columnWidth, width - 58f));
+        // The page's size is fixed at construction; UiPage keeps it and the cache key uses it.
+        bounds(width, height);
         rebuild();
     }
 
-    public InputRouter input() {
-        return input;
-    }
-
     public boolean isFocused() {
-        return input.focused() != null;
+        return input().focused() != null;
     }
 
-    public void rebuild() {
+    @Override
+    protected dev.skypocket.ui.UiElement build() {
         colorFields.clear();
         dropdowns.clear();
         // Custom-row dropdowns are re-registered by the rows that are built again below, so the old
         // list has to go: keeping it would keep closed popups on the layer stack.
         customDropdowns.clear();
         Box page = new Box(Style.builder()
-                .width(width)
-                .height(height)
+                .width(width())
+                .height(height())
                 .direction(Style.Direction.COLUMN)
                 .build());
         if (feature == null) {
@@ -134,13 +123,13 @@ public final class SettingsPage {
                     .gap(8f)
                     .build());
             buildSettings(content, feature.settings());
-            float columnLeft = (width - columnWidth) / 2f;
+            float columnLeft = (width() - columnWidth) / 2f;
             scroll = new ScrollView(Style.builder()
                     .position(Style.Position.ABSOLUTE)
                     .left(columnLeft)
                     .top(0f)
                     .width(columnWidth)
-                    .height(height)
+                    .height(height())
                     .padding(4f)
                     .build(), content, 46f, false, palette);
             page.add(scroll);
@@ -154,107 +143,44 @@ public final class SettingsPage {
                     .build());
             page.add(bar);
         }
-        root = page;
-        input = new InputRouter(root);
-        // The page cache must not reuse the texture from before a style/section rebuild.
-        renderRevision++;
+        return page;
     }
 
+    /** No-argument entry point kept for existing callers; delegates to the framework's layout. */
     public void layout() {
         TextMeasurer measurer = (text, maxWidth) ->
                 new Size(ClickGuiFonts.width(
                         dev.skypocket.i18n.Localization.auto(text)), ClickGuiFonts.lineHeight());
-        LayoutEngine.layout(root, width, height, measurer);
-        if (scroll != null) {
-            scroll.refresh();
-        }
+        layout(measurer);
+    }
+
+    /**
+     * Lays this page out, then registers its popups.
+     *
+     * <p>The body of this used to be here: layout the tree, refresh the scroll view, and run three
+     * near-identical loops - colour pickers, dropdowns, custom-row dropdowns - each laying its popup
+     * out against its anchor and adding or removing it as an input layer. All of that is now
+     * {@code UiPage.layout} plus {@code trackPopup}, so this only has to say which controls own a
+     * popup.
+     */
+    @Override
+    public void layout(TextMeasurer measurer) {
+        registerPopups();
+        super.layout(measurer);
+    }
+
+    /** Registers this page's popup owners once; {@code trackPopup} is idempotent. */
+    private void registerPopups() {
         for (ColorField field : colorFields) {
-            field.layoutPopup(measurer, width, height);
-            if (field.isOpen()) {
-                if (!input.layers().contains(field.popup())) {
-                    input.addLayer(field.popup());
-                }
-            } else {
-                input.removeLayer(field.popup());
-            }
+            trackPopup(field);
         }
         for (Dropdown dropdown : dropdowns) {
-            dropdown.layoutPopup(measurer, width, height);
-            if (dropdown.isOpen()) {
-                if (!input.layers().contains(dropdown.popup())) {
-                    input.addLayer(dropdown.popup());
-                }
-            } else {
-                input.removeLayer(dropdown.popup());
-            }
+            trackPopup(dropdown);
         }
-        // Custom rows own their popups, so the page cannot know them in advance; each row exposes
-        // its own dropdowns through the host and they follow the same open/close rule as the above.
+        // Custom rows own their popups, so the page only learns about them through the host.
         for (Dropdown dropdown : customDropdowns) {
-            dropdown.layoutPopup(measurer, width, height);
-            if (dropdown.isOpen()) {
-                if (!input.layers().contains(dropdown.popup())) {
-                    input.addLayer(dropdown.popup());
-                }
-            } else {
-                input.removeLayer(dropdown.popup());
-            }
+            trackPopup(dropdown);
         }
-    }
-
-    public void draw(GuiGraphicsExtractor graphics, float scaleX, float scaleY, boolean animating) {
-        UiElement focused = input.focused();
-        if (focused != lastFocused) {
-            lastFocused = focused;
-            renderRevision++;
-        }
-        McUiPainter painter = new McUiPainter(graphics);
-        Matrix3x2fStack pose = graphics.pose();
-        pose.pushMatrix();
-        boolean cached = pageCache.draw(graphics, pageCacheKey(),
-                Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
-                scaleX, scaleY, animating,
-                (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
-                0, 0, 0f);
-        renderScaleX = cached ? pageCache.lastBlitScaleX() : 1f;
-        renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
-        if (!cached) {
-            drawElement(painter, root);
-        } else {
-            // The cached texture is blitted with exactScale to stay 1:1 with texels. Live
-            // overlays must use the same scale about the same page origin, otherwise a popup
-            // drifts horizontally by a pixel at its right edge.
-            pose.scale(renderScaleX, renderScaleY);
-            drawDynamicControls(painter);
-        }
-        for (ColorField field : colorFields) {
-            if (field.isOpen()) {
-                field.syncFields();
-                drawElement(painter, field.popup());
-            }
-        }
-        for (Dropdown dropdown : dropdowns) {
-            if (dropdown.isOpen()) {
-                drawElement(painter, dropdown.popup());
-            }
-        }
-        // Custom-row popups are drawn here too. Registering them as input layers without adding them
-        // to this loop is why the preset dropdown took the arrow keys but showed nothing: it was
-        // receiving input and never being painted.
-        for (Dropdown dropdown : customDropdowns) {
-            if (dropdown.isOpen()) {
-                drawElement(painter, dropdown.popup());
-            }
-        }
-        pose.popMatrix();
-    }
-
-    public float inputScaleX() {
-        return renderScaleX;
-    }
-
-    public float inputScaleY() {
-        return renderScaleY;
     }
 
     /** Height of the laid-out scroll content, used when a host wants a content-sized popup. */
@@ -262,185 +188,66 @@ public final class SettingsPage {
         return scroll == null ? 0f : scroll.content().bounds().height();
     }
 
-    private long pageCacheKey() {
-        long scrollHash = scroll == null ? 0L : Float.floatToIntBits(scroll.scrollY());
-        // A rebuilt page can reuse renderRevision 0 and the same scroll offset; its identity prevents
-        // the global GuiPanelCache from blitting the previous layout's texture.
-        return System.identityHashCode(this) * 1_000_003L
-                + renderRevision * 31_415_926_535L + scrollHash
-                + ConfigManager.revision() * 2_654_435_761L;
+    /**
+     * Scale the last frame was drawn at.
+     *
+     * <p>Kept as a named alias because the host converts screen coordinates with it: the page may be
+     * drawn 1:1 or through a cached texture whose exact scale differs slightly from the requested
+     * one, and input has to use what was actually used.
+     */
+    public float inputScaleX() {
+        return renderScaleX();
     }
 
-    private void drawBase(GuiGraphicsExtractor graphics) {
-        dev.skypocket.render.ScissorTracker.reset(graphics);
-        Control.neutralPaint(true);
-        try {
-            drawElement(new McUiPainter(graphics), root);
-        } finally {
-            Control.neutralPaint(false);
-        }
-    }
-
-    private void drawDynamicControls(McUiPainter painter) {
-        Set<UiElement> dynamic = new HashSet<>();
-        collectDynamic(root, dynamic);
-        if (!dynamic.isEmpty()) {
-            Control.overlayPaint(true);
-            try {
-                drawDynamicElement(painter, root, dynamic);
-            } finally {
-                Control.overlayPaint(false);
-            }
-        }
-    }
-
-    private static void collectDynamic(UiElement element, Set<UiElement> dynamic) {
-        if (element instanceof Control control
-                && (control.dynamicOverlay() || control.isFocused() || control.isPressed()
-                || control.flashActive()
-                || (control instanceof ColorField color && color.isOpen())
-                || (control instanceof Dropdown dropdown && dropdown.isOpen()))) {
-            dynamic.add(control);
-        }
-        for (UiElement child : element.children()) {
-            collectDynamic(child, dynamic);
-        }
-    }
-
-    private boolean drawDynamicElement(McUiPainter painter, UiElement element,
-                                       Set<UiElement> dynamic) {
-        boolean any = dynamic.contains(element);
-        for (UiElement child : element.children()) {
-            any |= containsDynamic(child, dynamic);
-        }
-        if (!any || !element.visible()) {
-            return false;
-        }
-        Matrix3x2fStack pose = painter.graphics().pose();
-        pose.pushMatrix();
-        pose.translate(element.offsetX(), element.offsetY());
-        boolean scroll = element instanceof ScrollView;
-        if (scroll) {
-            painter.pushClip(element.bounds());
-        }
-        if (dynamic.contains(element) && element instanceof Control control) {
-            control.paint(painter);
-        }
-        for (UiElement child : element.children()) {
-            drawDynamicElement(painter, child, dynamic);
-        }
-        if (scroll) {
-            painter.popClip();
-        }
-        pose.popMatrix();
-        return true;
-    }
-
-    private static boolean containsDynamic(UiElement element, Set<UiElement> dynamic) {
-        if (dynamic.contains(element)) {
-            return true;
-        }
-        for (UiElement child : element.children()) {
-            if (containsDynamic(child, dynamic)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void drawElement(McUiPainter painter, UiElement element) {
-        drawElement(painter, element, null);
-    }
-
-    private void drawElement(McUiPainter painter, UiElement element, ScrollView viewport) {
-        if (!element.visible()) {
-            return;
-        }
-        if (viewport != null && !intersects(element, viewport)) {
-            return;
-        }
-        Matrix3x2fStack pose = painter.graphics().pose();
-        pose.pushMatrix();
-        pose.translate(element.offsetX(), element.offsetY());
-        ScrollView nextViewport = element instanceof ScrollView view ? view : viewport;
-        if (element instanceof ScrollView view) {
-            // The cards already sit on the ClickGUI shell; an extra dark page fill makes the
-            // whole content pane look like a second surface behind them.
-            painter.pushClip(view.bounds());
-        }
-        if (element instanceof Painted painted) {
-            painted.paint(painter);
-        } else if (element instanceof Text text) {
-            // Preserve explicit weights: headers are SemiBold and descriptions Regular even
-            // though ordinary control text defaults to Medium.
-            painter.textWeighted(text.value(), text.bounds().x(), text.bounds().y(),
-                    text.color(), text.fontScale(), text.weight());
-        }
-        for (UiElement child : element.children()) {
-            drawElement(painter, child, nextViewport);
-        }
-        if (element instanceof ScrollView) {
-            painter.popClip();
-        }
-        pose.popMatrix();
-    }
-
-    private static boolean intersects(UiElement element, ScrollView viewport) {
-        float ex = element.visualX();
-        float ey = element.visualY();
-        float vx = viewport.visualX();
-        float vy = viewport.visualY();
-        return ex + element.bounds().width() >= vx
-                && ex <= vx + viewport.bounds().width()
-                && ey + element.bounds().height() >= vy
-                && ey <= vy + viewport.bounds().height();
+    public float inputScaleY() {
+        return renderScaleY();
     }
 
     public boolean pointerDown(float x, float y, int button, int modifiers) {
-        input.pointerDown(new PointerEvent(x, y, button, modifiers));
+        input().pointerDown(new PointerEvent(x, y, button, modifiers));
         closePopupsOutside();
         return true;
     }
 
     public boolean pointerMove(float x, float y, int modifiers) {
-        input.pointerMove(PointerEvent.move(x, y, modifiers));
+        input().pointerMove(PointerEvent.move(x, y, modifiers));
         return true;
     }
 
     public boolean pointerUp(float x, float y, int button, int modifiers) {
-        input.pointerUp(new PointerEvent(x, y, button, modifiers));
+        input().pointerUp(new PointerEvent(x, y, button, modifiers));
         closePopupsOutside();
         return true;
     }
 
     public boolean wheel(float x, float y, float delta, int modifiers) {
-        input.wheel(new WheelEvent(x, y, delta, modifiers));
+        input().wheel(new WheelEvent(x, y, delta, modifiers));
         return true;
     }
 
     public boolean keyDown(KeyEvent event) {
-        input.keyDown(event);
+        input().keyDown(event);
         closePopupsOutside();
         return true;
     }
 
     public boolean keyUp(KeyEvent event) {
-        input.keyUp(event);
+        input().keyUp(event);
         return true;
     }
 
     public boolean textInput(String text) {
-        input.textInput(new TextInputEvent(text));
+        input().textInput(new TextInputEvent(text));
         return true;
     }
 
     public boolean preedit(PreeditEvent event) {
-        input.preedit(event);
+        input().preedit(event);
         return true;
     }
 
     public void clearFocus() {
-        input.focus(null);
+        input().focus(null);
     }
 
     public boolean hasOpenPopup() {
@@ -472,18 +279,18 @@ public final class SettingsPage {
         for (Dropdown dropdown : customDropdowns) {
             dropdown.close();
         }
-        input.focus(null);
+        input().focus(null);
     }
 
     private void closePopupsOutside() {
         for (ColorField field : colorFields) {
-            field.closeIfFocusOutside(input.focused());
+            field.closeIfFocusOutside(input().focused());
         }
         for (Dropdown dropdown : dropdowns) {
-            dropdown.closeIfFocusOutside(input.focused());
+            dropdown.closeIfFocusOutside(input().focused());
         }
         for (Dropdown dropdown : customDropdowns) {
-            dropdown.closeIfFocusOutside(input.focused());
+            dropdown.closeIfFocusOutside(input().focused());
         }
     }
 

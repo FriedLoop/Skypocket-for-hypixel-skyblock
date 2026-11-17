@@ -75,6 +75,10 @@ public abstract class UiPage {
 
     /** Rebuilds the tree and invalidates the cache. */
     public final void rebuild() {
+        // Popup owners belong to the tree that created them. A page that rebuilds creates new
+        // ColorFields and Dropdowns, and the old ones would otherwise stay registered forever -
+        // their popups still hit-tested, still painted, and their owners still referenced.
+        clearPopups();
         root = build();
         // A rebuilt tree means new elements, so the router is replaced rather than reused: it holds
         // the hit-test root and the captured/focused elements, all of which belonged to the old tree.
@@ -82,6 +86,18 @@ public abstract class UiPage {
         overlays.attach(input);
         renderRevision++;
         lastFocused = null;
+    }
+
+    /**
+     * Forgets every tracked popup owner and removes their layers.
+     *
+     * <p>Called by {@link #rebuild()} before {@code build()}, so a page never has to think about it.
+     */
+    protected final void clearPopups() {
+        for (PopupOwner owner : popupOwners) {
+            overlays.remove(owner.popup());
+        }
+        popupOwners.clear();
     }
 
     /** Sets the page's size in design units; call before {@link #layout}. */
