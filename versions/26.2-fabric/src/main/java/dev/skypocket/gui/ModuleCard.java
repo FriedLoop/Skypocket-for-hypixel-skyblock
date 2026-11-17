@@ -28,7 +28,7 @@ import static dev.skypocket.gui.PanelGeometry.CARD_TITLE_X;
 import static dev.skypocket.gui.PanelGeometry.CARD_TITLE_Y;
 import static dev.skypocket.gui.PanelGeometry.CARD_W;
 import static dev.skypocket.gui.PanelGeometry.ICON_SIZE;
-import dev.skypocket.gui.widget.GuiMetrics;
+import dev.skypocket.util.GuiMetrics;
 
 /** One module card in the v2 homepage grid. */
 final class ModuleCard extends Control {

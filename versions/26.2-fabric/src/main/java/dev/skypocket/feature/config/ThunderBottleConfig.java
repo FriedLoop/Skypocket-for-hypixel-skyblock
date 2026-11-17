@@ -1,7 +1,7 @@
 package dev.skypocket.feature.config;
 
 
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 
 /**
  * Persisted state for the <code>thunder_bottle</code> feature.

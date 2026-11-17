@@ -3,7 +3,7 @@ package dev.skypocket.feature.config;
 
 
 import dev.skypocket.config.ConfigManager;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 import java.util.HashMap;
 import java.util.Map;
 

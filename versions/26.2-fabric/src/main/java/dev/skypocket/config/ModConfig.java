@@ -1,8 +1,6 @@
 package dev.skypocket.config;
 
-import dev.skypocket.render.AntialiasingRenderer;
-import dev.skypocket.render.ColorGradeRenderer;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -308,7 +306,7 @@ public class ModConfig {
     public int clickGuiBackgroundAlpha = 255;
     /** Open/close scale-animation duration in ms (0 = no animation). */
     public int clickGuiAnimDuration = 200;
-    /** Easing curve id for the open/close animation (see dev.skypocket.gui.Easing). */
+    /** Easing curve id for the open/close animation (see dev.skypocket.util.Easing). */
     public String clickGuiEasing = "ease";
     /** Draw text shadows in the Click GUI (off by default: it doubles text geometry). */
     public boolean clickGuiTextShadow = false;

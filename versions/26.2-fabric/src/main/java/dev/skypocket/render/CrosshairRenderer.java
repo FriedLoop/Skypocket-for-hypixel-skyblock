@@ -1,5 +1,7 @@
 package dev.skypocket.render;
 
+import dev.skypocket.util.ColorUtil;
+
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.skypocket.SkyPocketMod;
 import dev.skypocket.config.ModConfig;

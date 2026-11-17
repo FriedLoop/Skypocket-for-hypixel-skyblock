@@ -1,4 +1,4 @@
-package dev.skypocket.gui.widget;
+package dev.skypocket.util;
 
 /**
  * The only measurements a theme may change: large-surface and control corner radii.

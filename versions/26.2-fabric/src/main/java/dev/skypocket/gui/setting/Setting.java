@@ -261,10 +261,10 @@ public abstract class Setting {
         /**
          * The parts of the colour RGB cannot carry - the hue on greys, the hue and the saturation
          * on black. Shared with the picker, and kept here rather than in the widget because rows
-         * are rebuilt on every scroll; see {@link dev.skypocket.gui.widget.PickerMemory} for why the
+         * are rebuilt on every scroll; see {@link dev.skypocket.util.PickerMemory} for why the
          * markers must not be derived from the colour itself.
          */
-        private final dev.skypocket.gui.widget.PickerMemory memory = new dev.skypocket.gui.widget.PickerMemory();
+        private final dev.skypocket.util.PickerMemory memory = new dev.skypocket.util.PickerMemory();
 
         public ColorSetting(String label, IntSupplier getter, IntConsumer setter) {
             this(label, getter, setter, false);

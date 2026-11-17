@@ -1,4 +1,4 @@
-package dev.skypocket.gui.widget;
+package dev.skypocket.util;
 
 /**
  * Mouse button numbers.

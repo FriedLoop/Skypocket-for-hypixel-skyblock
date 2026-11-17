@@ -4,7 +4,7 @@ import dev.skypocket.config.ConfigManager;
 import dev.skypocket.feature.FeatureModule;
 import dev.skypocket.gui.Category;
 import dev.skypocket.gui.setting.Setting;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 
 import java.util.List;
 

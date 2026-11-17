@@ -1,5 +1,7 @@
 package dev.skypocket.render;
 
+import dev.skypocket.util.ColorUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 

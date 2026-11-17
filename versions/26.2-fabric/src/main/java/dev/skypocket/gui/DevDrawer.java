@@ -2,12 +2,12 @@ package dev.skypocket.gui;
 
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.gui.widget.ClickGuiStyle;
-import dev.skypocket.gui.widget.GuiMetrics;
+import dev.skypocket.util.GuiMetrics;
 import dev.skypocket.gui.widget.GuiTheme;
 import dev.skypocket.gui.widget.ImmediateColorPicker;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.skypocket.gui.widget.ImmediateTextField;
-import dev.skypocket.gui.widget.PickerMemory;
+import dev.skypocket.util.PickerMemory;
 import dev.skypocket.gui.widget.ThemeStore;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.ClickGuiFonts;

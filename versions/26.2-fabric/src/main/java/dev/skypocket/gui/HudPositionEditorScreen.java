@@ -19,7 +19,7 @@ import dev.skypocket.i18n.Localization;
 import dev.skypocket.gui.widget.ClickGuiStyle;
 import dev.skypocket.ui.input.InputKeys;
 import dev.skypocket.ui.input.Keys;
-import dev.skypocket.gui.widget.MouseButtons;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.render.GuiPixels;
 import dev.skypocket.render.HudText;

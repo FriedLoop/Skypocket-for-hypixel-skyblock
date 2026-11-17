@@ -1,6 +1,8 @@
 package dev.skypocket.gui.widget;
 
+import dev.skypocket.util.GuiMetrics;
 import dev.skypocket.render.GuiPixels;
+import dev.skypocket.util.GuiMetrics;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**

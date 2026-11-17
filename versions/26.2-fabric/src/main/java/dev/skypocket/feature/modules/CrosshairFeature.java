@@ -7,7 +7,7 @@ import dev.skypocket.feature.FeatureModule;
 import dev.skypocket.gui.Category;
 import dev.skypocket.gui.Ui2Theme;
 import dev.skypocket.gui.setting.Setting;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.Style;

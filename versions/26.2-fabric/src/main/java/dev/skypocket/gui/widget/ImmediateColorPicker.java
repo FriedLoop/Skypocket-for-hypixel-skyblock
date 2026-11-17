@@ -1,6 +1,7 @@
 package dev.skypocket.gui.widget;
 
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.util.PickerMemory;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix3x2fStack;
 

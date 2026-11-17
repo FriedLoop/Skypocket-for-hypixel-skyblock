@@ -1,4 +1,4 @@
-package dev.skypocket.render;
+package dev.skypocket.util;
 
 /**
  * Small color helpers shared by the HUD renderers and the config UI.

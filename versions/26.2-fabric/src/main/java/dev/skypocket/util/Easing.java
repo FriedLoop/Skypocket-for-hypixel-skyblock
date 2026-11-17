@@ -1,4 +1,4 @@
-package dev.skypocket.gui;
+package dev.skypocket.util;
 
 import java.util.ArrayList;
 import java.util.List;

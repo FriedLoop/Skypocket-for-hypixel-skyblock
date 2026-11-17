@@ -1,36 +1,94 @@
 package dev.skypocket.gui;
 
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.SkyPocketMod;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.config.ConfigManager;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.config.ModConfig;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.gui.setting.Setting;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.i18n.Localization;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.ClickGuiBlur;
-import dev.skypocket.gui.widget.GuiMetrics;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
+import dev.skypocket.util.GuiMetrics;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.gui.widget.GuiTheme;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.ClickGuiFonts;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.ClickGuiMetrics;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.FontLab;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.render.GuiPanelCache;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.ui.input.InputKeys;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.ui.input.Modifiers;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import dev.skypocket.ui.input.PreeditEvent;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.Minecraft;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.gui.screens.Screen;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.input.CharacterEvent;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.input.KeyEvent;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.client.input.MouseButtonEvent;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import net.minecraft.network.chat.Component;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import org.joml.Matrix3x2fStack;
 
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import java.util.List;
 
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import static dev.skypocket.gui.PanelGeometry.*;
 
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import static dev.skypocket.render.GuiPixels.popDeviceSpace;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import static dev.skypocket.render.GuiPixels.pushDeviceSpace;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import static dev.skypocket.render.GuiPixels.scissorFloor;
+import dev.skypocket.util.Easing;
+import dev.skypocket.util.MouseButtons;
 import static dev.skypocket.render.GuiPixels.scissorRow;
 
 /**
@@ -840,7 +898,7 @@ public class OneClickScreen extends Screen {
         double lx = localX(event.x());
         double ly = localY(event.y());
 
-        if (!dev.skypocket.gui.widget.MouseButtons.isLeft(event.button())) {
+        if (!dev.skypocket.util.MouseButtons.isLeft(event.button())) {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
         }
 

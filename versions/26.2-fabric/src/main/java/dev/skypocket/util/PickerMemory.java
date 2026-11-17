@@ -1,4 +1,4 @@
-package dev.skypocket.gui.widget;
+package dev.skypocket.util;
 
 /**
  * The parts of a colour RGB cannot carry, remembered while the picker is open.

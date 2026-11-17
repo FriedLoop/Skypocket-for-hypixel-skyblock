@@ -3,7 +3,7 @@ package dev.skypocket.hud;
 import dev.skypocket.config.ConfigManager;
 import dev.skypocket.config.ModConfig;
 import dev.skypocket.net.SkyBlockDetector;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 import dev.skypocket.render.HudText;
 import dev.skypocket.skyblock.CommissionTracker;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;

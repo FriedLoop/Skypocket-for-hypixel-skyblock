@@ -10,7 +10,7 @@ import dev.skypocket.hud.StatsBarHudElement;
 import dev.skypocket.i18n.Localization;
 import dev.skypocket.render.AntialiasingRenderer;
 import dev.skypocket.render.ColorGradeRenderer;
-import dev.skypocket.render.ColorUtil;
+import dev.skypocket.util.ColorUtil;
 import dev.skypocket.render.HotspotOverlayStyle;
 import dev.skypocket.render.HotspotType;
 import dev.skypocket.skyblock.MiningStrengthTable;
