@@ -1,6 +1,5 @@
 package dev.skypocket.ui.widget;
 
-import dev.skypocket.render.ClickGuiFonts;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
@@ -103,7 +102,6 @@ public final class TextField extends Control {
         preedit = "";
         return true;
     }
-
     @Override
     public boolean onPointerMove(PointerEvent event) {
         if (!selecting) {
@@ -113,12 +111,21 @@ public final class TextField extends Control {
         return true;
     }
 
-    private int indexAt(float mouseX) {
-        float localX = mouseX - textStartX();
+    /**
+     * Character boundary nearest a pointer position.
+     *
+     * <p>{@code textStartX()} is in this element's parent coordinates (it starts from
+     * {@code bounds().x()}), but event positions arrive in design space - the router passes the
+     * original event straight down the bubble chain. The ancestor offsets have to come off first,
+     * exactly as Slider, Segmented and ColorPickerPanel do. Without it, a field inside a popup placed
+     * the caret off by however far that popup sat from the page origin.
+     */
+    private int indexAt(float designX) {
+        float localX = designX - ancestorOffsetX() - textStartX();
         int best = 0;
         float bestDistance = Math.abs(localX);
         for (int i = 1; i <= value.length(); i++) {
-            float width = ClickGuiFonts.width(value.substring(0, i));
+            float width = dev.skypocket.ui.UiText.width(value.substring(0, i));
             float distance = Math.abs(localX - width);
             if (distance < bestDistance) {
                 bestDistance = distance;
@@ -132,12 +139,12 @@ public final class TextField extends Control {
         if (!labelOutside) {
             float x = bounds().x() + 11f;
             if (label != null && !label.isEmpty()) {
-                x += ClickGuiFonts.width(label) + 3f;
+                x += dev.skypocket.ui.UiText.width(label) + 3f;
             }
             return x;
         }
         float labelWidth = label == null || label.isEmpty()
-                ? 0f : ClickGuiFonts.width(label);
+                ? 0f : dev.skypocket.ui.UiText.width(label);
         return outsideFieldBounds(labelWidth).x() + 11f;
     }
 

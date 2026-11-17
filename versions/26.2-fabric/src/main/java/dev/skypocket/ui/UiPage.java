@@ -1,7 +1,5 @@
 package dev.skypocket.ui;
 
-import dev.skypocket.render.GuiPanelCache;
-import dev.skypocket.render.ScissorTracker;
 import dev.skypocket.ui.input.InputRouter;
 import dev.skypocket.ui.input.KeyEvent;
 import dev.skypocket.ui.input.Modifiers;
@@ -36,7 +34,7 @@ import java.util.Set;
  * the config revision. See UI-V2-CONTRACT.md §5.2.
  */
 public abstract class UiPage {
-    private final GuiPanelCache.Slot cache = new GuiPanelCache.Slot();
+    private final RenderCache cache = dev.skypocket.ui.mc.McRenderCache.create();
     private final OverlayHost overlays = new OverlayHost();
 
     /** Screen-to-design mapping supplied by the host; identity until one is set. */
@@ -261,7 +259,6 @@ public abstract class UiPage {
 
     /** Bakes the static layer into the cache texture. */
     private void drawStaticLayer(GuiGraphicsExtractor graphics) {
-        ScissorTracker.reset(graphics);
         // Hover and focus are transient; painting them into the texture would freeze one frame's
         // highlight into every subsequent frame.
         Control.neutralPaint(true);

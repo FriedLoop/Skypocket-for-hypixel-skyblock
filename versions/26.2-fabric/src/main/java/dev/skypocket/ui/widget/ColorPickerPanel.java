@@ -1,6 +1,5 @@
 package dev.skypocket.ui.widget;
 
-import dev.skypocket.render.GuiPanelCache;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
@@ -52,7 +51,7 @@ public final class ColorPickerPanel extends Control {
 
     private final IntSupplier getter;
     private final IntConsumer setter;
-    private final GuiPanelCache.Slot staticCache = new GuiPanelCache.Slot();
+    private final dev.skypocket.ui.RenderCache staticCache = dev.skypocket.ui.mc.McRenderCache.create();
     private Zone drag = Zone.NONE;
     private int lastEmitted = Integer.MIN_VALUE;
     private float hue;

@@ -72,6 +72,19 @@ public final class SkyPocketMod implements ClientModInitializer {
         // from then on the palette lives in config/skypocket/themes/*.json and can be edited by hand.
         dev.skypocket.gui.widget.ThemeStore.seedDefaults();
         dev.skypocket.gui.widget.ThemeStore.apply(ConfigManager.get().clickGuiTheme);
+        // The UI kernel measures text without knowing which font service is in use; the host installs
+        // one at startup. Widgets that draw their own text - a text field's caret, a label offset -
+        // would otherwise have to import the render package, which inverts the layering.
+        //
+        // Measured at MEDIUM, not the default weight: painter.text() draws body copy at Medium, so
+        // measuring at Regular puts a caret or a selection edge a pixel or two off from where the
+        // glyphs actually are. That was visible as a dropdown's search caret sitting right of the
+        // click that placed it.
+        dev.skypocket.ui.UiText.install((text, maxWidth) -> new dev.skypocket.ui.Size(
+                dev.skypocket.render.ClickGuiFonts.widthWeighted(
+                        dev.skypocket.i18n.Localization.auto(text),
+                        dev.skypocket.render.FontLab.Weight.MEDIUM),
+                dev.skypocket.render.ClickGuiFonts.lineHeight()));
         // Applies the "debug log" setting before anything else can log, so startup is quiet unless asked.
         SkyPocketLog.apply();
         CrosshairHudElement.register();
