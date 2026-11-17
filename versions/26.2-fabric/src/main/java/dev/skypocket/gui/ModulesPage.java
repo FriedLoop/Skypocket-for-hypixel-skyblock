@@ -131,7 +131,21 @@ final class ModulesPage {
     private final WidgetPalette palette;
     private final float width;
     private final float height;
+    /**
+     * Whether this instance builds the card area.
+     *
+     * <p>Build-time only. The homepage draws sidebar and cards; while a module's settings are open
+     * the same sidebar is shown alone beside the settings pane, so the second instance simply never
+     * creates the grid and the scroll view. Nothing downstream has to ask: a tree without cards
+     * paints no cards, and {@link #refreshCards()} exits early on the missing grid.
+     *
+     * <p>It used to be a paint-time switch as well, with the card-less instance bypassing the cache
+     * because caching two pages in one frame was said to make them fight over a render target. That
+     * stopped being true when each page got its own slot and target, so the bypass - and the second
+     * copy of the draw path it carried - is gone.
+     */
     private final boolean withCards;
+
     private final List<ModuleCard> cards = new ArrayList<>();
     private final List<SidebarRow> rows = new ArrayList<>();
     private final List<NavButton> navButtons = new ArrayList<>();
@@ -268,7 +282,7 @@ final class ModulesPage {
 
     /** Rebuilds only the card children, keeping the search field and its focus intact. */
     void refreshCards() {
-        if (!withCards || grid == null) {
+        if (grid == null) {
             return;
         }
         grid.clearChildren();
@@ -353,31 +367,6 @@ final class ModulesPage {
         McUiPainter painter = new McUiPainter(graphics);
         Matrix3x2fStack pose = graphics.pose();
         pose.pushMatrix();
-        if (!withCards) {
-            // Chrome-only instance. Kept out of the cache historically because it runs in the same
-            // frame as the settings page, and caching two pages at once was said to make the two
-            // textures fight over the render target - which showed up as the sidebar blitted into
-            // the settings pane.
-            //
-            // That constraint predates per-page cache slots: each ModulesPage owns its own Slot with
-            // its own RenderTarget and GuiRenderer now, so the two no longer share anything. Running
-            // this one through the cache too, to find out whether the old note still applies.
-            boolean cached = pageCache.draw(graphics, pageCacheKey(),
-                    Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
-                    scaleX, scaleY, animating || highlightAnimating(),
-                    (pageGraphics, pageMouseX, pageMouseY, pageDelta) -> drawBase(pageGraphics),
-                    0, 0, 0f);
-            renderScaleX = cached ? pageCache.lastBlitScaleX() : 1f;
-            renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
-            if (!cached) {
-                drawHighlight(painter);
-                drawElement(painter, root);
-            } else {
-                pose.scale(renderScaleX, renderScaleY);
-            }
-            pose.popMatrix();
-            return;
-        }
         boolean cached = pageCache.draw(graphics, pageCacheKey(),
                 Math.max(1, Math.round(width)), Math.max(1, Math.round(height)),
                 scaleX, scaleY, animating || highlightAnimating(),
