@@ -54,10 +54,12 @@ gradlew.bat build
 │  ├─ UI-V2-CONTRACT.md   # UI v2 契约：坐标系/绘制/输入/缓存（动 ui/ 前必读）
 │  ├─ PITFALLS.md         # MC 反编译踩坑记录（遇到怪现象时查）
 │  ├─ MULTIVERSION.md     # 26.2 / 26.3 差异处理
-│  ├─ UI-REFACTOR-LOG.md  # 架构重构的决策与取舍
+│  ├─ adr/                # 架构决策记录（每个设计为什么这样）
+│  ├─ UI-REFACTOR-LOG.md  # 重构的完整过程与取舍
 │  ├─ UI-V2-DEDUP-EVALUATION.md  # 重复能力评估
 │  ├─ SKYBLOCK_STATS.md   # SkyBlock 数据来源与解析语义
-│  └─ MAINTENANCE_TABLES.md      # 维护用对照表
+│  ├─ MAINTENANCE_TABLES.md      # 维护用对照表
+│  └─ REGRESSION-CHECKLIST.md    # 改动后的人工验证清单
 └─ tools/
 ```
 
@@ -70,9 +72,10 @@ gradlew.bat build
 | 改 `ui/` 任何东西 | `UI-V2-CONTRACT.md`（否则会踩坐标系与缓存的坑） |
 | 遇到"按理说应该能工作"的怪现象 | `PITFALLS.md` |
 | 处理 26.2/26.3 差异 | `MULTIVERSION.md` |
-| 想知道某个设计为什么这样 | `UI-REFACTOR-LOG.md` |
+| 想知道某个设计为什么这样 | `docs/adr/`（决策）→ `UI-REFACTOR-LOG.md`（过程） |
+| 大改动之后 | `REGRESSION-CHECKLIST.md` |
 
-**文档漂移会被构建拦截**：`build` 会跑 `tools/check-docs.ps1`，检查文档列出的包是否存在、是否漏列新包、以及 `ui/` 是否违规依赖上层。
+**文档漂移会被构建拦截**：`build` 会跑 `tools/check-docs.ps1`，检查文档列出的包是否存在、是否漏列新包、引用是否有效、ADR 编号是否连续，以及 `ui/` 是否违规依赖上层。
 
 源码只在 `versions/<mainProject>/src` 中手写，其他版本由预处理器与 `build.gradle.kts` 的
 Bloom 替换规则生成，因此**不要直接改非主版本目录**（会被覆盖）。

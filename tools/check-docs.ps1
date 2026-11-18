@@ -72,7 +72,28 @@ foreach ($doc in $scanFiles) {
     }
 }
 
-# --- 3. The kernel must not depend upward -------------------------------------------------
+# --- 3. ADR numbering must be contiguous and unique ---------------------------------------
+# Gaps and duplicates make ADR references ("see ADR-0007") ambiguous.
+$adrDir = Join-Path $docsDir 'adr'
+if (Test-Path $adrDir) {
+    $numbers = @()
+    foreach ($adr in (Get-ChildItem $adrDir -Filter '*.md')) {
+        if ($adr.Name -match '^(\d{4})-') {
+            $numbers += [int]$Matches[1]
+        } else {
+            [void]$problems.Add("docs/adr/$($adr.Name) does not start with a 4-digit number")
+        }
+    }
+    $sorted = $numbers | Sort-Object
+    for ($i = 0; $i -lt $sorted.Count; $i++) {
+        if ($sorted[$i] -ne ($i + 1)) {
+            [void]$problems.Add("ADR numbering has a gap or duplicate at $($i + 1) (found $($sorted[$i]))")
+            break
+        }
+    }
+}
+
+# --- 4. The kernel must not depend upward -------------------------------------------------
 # Mirrors the compile-time guard in uiKernelSources, so a violation is caught even for a class
 # that is not in that list yet.
 $upward = @('gui', 'feature', 'config', 'hud', 'skyblock', 'crosshair')
