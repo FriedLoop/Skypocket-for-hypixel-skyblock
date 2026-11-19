@@ -167,6 +167,17 @@ val uiKernelSources = listOf(
     "ui/input/WheelEvent.java",
     "ui/widget/Scrollbar.java",
     "ui/widget/WidgetPalette.java",
+    // Controls are platform-free: they paint through the UiPainter interface and take a
+    // WidgetPalette for colours. That means the paint-pass selection logic can be tested here,
+    // even though the painting itself cannot.
+    "ui/widget/Control.java",
+    "ui/widget/ColorField.java",
+    "ui/widget/Dropdown.java",
+    // Platform boundary: the kernel names these, ui.mc implements them.
+    "ui/Clipboard.java",
+    "ui/GuiScale.java",
+    "ui/UiPlatform.java",
+    "ui/TextMeasurer.java",
 )
 
 /**
@@ -313,6 +324,17 @@ tasks.withType<JavaCompile>().configureEach {
  * catches at test compile time - deliberately, because a class added to `ui` without being added to
  * that list would otherwise escape both.
  */
+tasks.register<Exec>("checkKernelPurity") {
+    group = "verification"
+    description = "Fails if ui/ reaches for a live game object instead of using a UiPlatform service."
+    val script = rootProject.file("tools/check-kernel-purity.ps1")
+    onlyIf { script.exists() }
+    // Runs against compiled classes, so it has to follow compilation.
+    mustRunAfter(tasks.named("classes"))
+    commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.absolutePath)
+    isIgnoreExitValue = false
+}
+
 tasks.register<Exec>("checkDocs") {
     group = "verification"
     description = "Verifies docs/ still matches the package layout and dependency direction."
@@ -322,7 +344,7 @@ tasks.register<Exec>("checkDocs") {
     isIgnoreExitValue = false
 }
 
-tasks.named("check") { dependsOn("checkDocs") }
+tasks.named("check") { dependsOn("checkDocs", "checkKernelPurity") }
 
 tasks.register("printSources") {
     doLast {

@@ -32,7 +32,8 @@ dev.skypocket/
 ├─ crosshair/            准星组件与配置（CrosshairGrid/CrosshairPreview/CrosshairPreset…）
 ├─ ui/                   与业务无关的 UI v2 内核：元素树、布局、绘制抽象、输入事件
 │   │                    ⚠ 改动或使用前先读 docs/UI-V2-CONTRACT.md（坐标系/绘制/输入/缓存的权威契约）
-│   │                    ⚠ 不得 import dev.skypocket.gui / config / feature（tests 会编译期拦截）
+│   │                    ⚠ 不得 import dev.skypocket.gui / config / feature；不得取 Minecraft 服务
+│   │                       两者都由 build 的 checkDocs / checkKernelPurity 拦截
 │   ├─ input/            InputRouter + 各类输入事件
 │   ├─ mc/               MC 平台绑定：McUiPainter、McRenderCache（唯一允许 import render 的地方）
 │   └─ widget/           Control 家族（Switch/Slider/Button/Card/TextField/Dropdown/…）
@@ -62,7 +63,12 @@ ui/mc                              平台绑定
 util                               零依赖
 ```
 
-违反这条方向会有两类后果：`config ↔ render` 曾经互相 import，导致两者都无法单独理解；`ui` 曾经 import `gui` 的 `InputKeys`，形成循环。**测试任务会把 `ui/` 的纯逻辑类单独编译，任何新增的 `net.minecraft` 依赖都会在那里失败。**
+违反这条方向会有两类后果：`config ↔ render` 曾经互相 import，导致两者都无法单独理解；`ui` 曾经 import `gui` 的 `InputKeys`，形成循环。
+
+**两个守卫都会在 `build` 时拦截违规**：
+
+- `checkDocs`（`tools/check-docs.ps1`）：`ui/` 不得 import `gui` / `config` / `feature` 等上层
+- `checkKernelPurity`（`tools/check-kernel-purity.ps1`）：`ui/` 不得取 `Minecraft` 服务（字节码级检查，见 §10.3）
 
 ### 2.1 每个包放什么、不放什么
 
@@ -414,44 +420,70 @@ util                               零依赖
 
 ## 10.3 自动化测试
 
-`ui/` 的内核类**没有 `net.minecraft` 依赖**，所以能脱离游戏跑 JUnit。
+`ui/` 的内核类大部分**没有 `net.minecraft` 依赖**，所以能脱离游戏跑 JUnit。
 
 **位置**：`versions/<name>/src/test/java/dev/skypocket/ui/`
-
 **运行**：`./gradlew :26.2-fabric:test`（`build` 也会跑）
 
-### 配置文件里的 `uiKernelSources` 不是普通配置，是架构守卫
+### `uiKernelSources` 是"编译进测试的类清单"，**不是**架构守卫
 
 ```kotlin
 // build.gradle.kts
-val uiKernelSources = listOf(
-    "ui/Box.java", "ui/LayoutEngine.java", "ui/Style.java", ...
-)
+val uiKernelSources = listOf("ui/Box.java", "ui/LayoutEngine.java", ...)
 ```
 
-`test` 源集**只编译这些类**。如果 `ui/` 里某个类新增了 `net.minecraft` 依赖：
+它的作用：决定 `build/bloom/test/` 下额外编译哪些源文件。
 
-- 测试编译失败
-- 错误信息指出是哪个类
+⚠️ **它拦不住 MC 依赖**。Gradle 的 `test` 源集**默认依赖 `main`**，所以 `main` 的全部编译产物始终在测试 classpath 上——即使某类不在白名单里，测试代码照样能引用它。
 
-**这把"内核不得依赖平台"从文档约定变成了编译期强制。**
+**实测**：往 `ui/Size.java` 注入 `net.minecraft.client.Minecraft`，测试**编译并全部通过**。
+
+### 真正的守卫是字节码扫描
+
+```
+tools/check-kernel-purity.ps1   （由 build 的 checkKernelPurity 任务调用）
+```
+
+它读编译后的 `.class` 常量池，检查 `ui/` 下（除 `ui/mc/`）是否引用了平台类型。
+
+**不是所有 `net.minecraft` 引用都违规**，它按三类判断：
+
+| 类型 | 处理 | 理由 |
+|---|---|---|
+| `GuiGraphicsExtractor` | ✅ 允许 | 绘制入口，`UiPainter`/`RenderCache`/`UiPage` 的签名必须接收它 |
+| `KeyEvent` / `CharacterEvent` / `PreeditEvent` / `MouseButtonEvent` | ✅ 允许 | MC 触发的平台事件，`InputKeys` 就是用来翻译它们的 |
+| `Minecraft` | ❌ **报错** | 取服务（窗口缩放、剪贴板），这类永远可以用接口消除 |
+
+**验证方式**：注入 `Minecraft.getInstance().getGuiScale()` 到 `ui/Size.java` → 守卫报错；恢复 → 通过。
+
+**已因此修掉的耦合**：`TextField` 的剪贴板、`ColorPickerPanel` 的窗口缩放，改为 `UiPlatform.clipboard()` / `UiPlatform.guiScale()`。
 
 ### 新增可测试类的步骤
 
-1. 确认它不 import `net.minecraft`（也不间接依赖：它引用的类也必须在白名单里）
-2. 把路径加进 `build.gradle.kts` 的 `uiKernelSources`
+1. 运行 `check-kernel-purity`，确认它不引用 `Minecraft`（`GuiGraphicsExtractor` 等边界类型是允许的）
+2. 把路径加进 `build.gradle.kts` 的 `uiKernelSources`（否则测试编译时看不到源码）
 3. 在 `src/test/java/dev/skypocket/ui/` 写测试
 
-**加不进去通常是信号**：说明这个类应该放进 `ui/mc/`，或者抽一个接口。
+**加不进去通常是信号**：说明这个类应该放进 `ui/mc/`，或者抽一个 `UiPlatform` 服务。
 
-### 当前覆盖
+### 当前覆盖：56 个用例
 
-`LayoutEngineTest`（10 个用例）：COLUMN/ROW 堆叠、flexGrow 比例分配、padding 盒模型、min 约束、百分比解析、文本测量、绝对定位两种锚定、`ScrollView` 的 offset 不改 bounds、滚动边界。
+| 测试类 | 数量 | 覆盖 |
+|---|---|---|
+| `LayoutEngineTest` | 10 | 布局算术 |
+| `InputRouterTest` | 15 | 命中测试、事件冒泡、拖拽捕获、焦点、层、Tab 导航 |
+| `StyleTest` | 14 | `Dimension.resolve` 语义、盒模型、builder 复制 |
+| `UiElementTest` | 11 | 三套坐标系、offset、树操作、输入钩子默认值 |
+| `PaintPassTest` | 6 | 动态层选择规则（hover/flash/overlay）|
 
-**两个已知的布局语义**（测试固定，容易记错）：
+**几个被测试固定下来的反直觉行为**（都踩过）：
 
 - **根节点 auto 尺寸会被撑满 `availableWidth/Height`**，不是包裹内容
 - **单独的 `Text` 作为根节点时同样被撑满**，只有作为子节点才按内容测量
+- **`Style` 默认 `direction` 是 `ROW`**，不是 COLUMN
+- **`visualX()` 只含祖先 offset**，不含自身 offset
+- **`acceptsPointer()` 默认 `false`**，指针捕获需要显式开启
+- **层（layer）不参与布局**，`bounds` 由开启它的人设置
 
 ### 10.4 手工验证页 `DevUiTestScreen`
 

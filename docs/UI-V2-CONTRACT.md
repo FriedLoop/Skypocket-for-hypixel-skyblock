@@ -453,7 +453,30 @@ protected long revision() {
 | `PopupOwner` | 浮层所有者的契约 |
 | `PageTransform` | 屏幕坐标 → 设计坐标 |
 | `RenderCache` | 纹理缓存契约（实现在 `ui/mc/`）|
-| `UiText` | 运行时字体测量（启动时安装一次）|
+| `UiPlatform` | **平台服务安装点**：字体测量 + 设备缩放 + 剪贴板 |
+| `Clipboard` / `GuiScale` | 平台服务契约（实现在 `SkyPocketMod.onInitializeClient`）|
+| `TextMeasurer` | 文本测量契约 |
+
+### 6.1.2 平台服务的安装
+
+三个东西内核需要但无法自己实现，全部通过 `UiPlatform` 安装一次：
+
+```java
+// SkyPocketMod.onInitializeClient()
+UiPlatform.install(textMeasurer, guiScaleSupplier, clipboardImpl);
+```
+
+| 服务 | 谁需要 | 为什么不能自己取 |
+|---|---|---|
+| 文本测量 | `TextField` 定位光标 | 需要 `ClickGuiFonts`（依赖 config）|
+| 设备缩放 | `ColorPickerPanel` 算缓存键 | 需要 `Minecraft.getInstance()` |
+| 剪贴板 | `TextField` 的 Ctrl+C/V | 同上 |
+
+**未安装时各自有中性默认值**（测量为 0、缩放 1、剪贴板空），所以无头测试或启动早期的控件不会崩。
+
+**为什么是静态安装点而不是构造参数**：三者都是进程唯一的，穿过 6 个控件构造函数和所有调用方只会增加噪音。
+
+⚠️ **不要在这里加"随时会变"的状态**。安装点是给不变的平台事实用的；会变的东西应该走 `revision()`。
 
 ### 6.1.1 平台绑定（`ui/mc/`）
 

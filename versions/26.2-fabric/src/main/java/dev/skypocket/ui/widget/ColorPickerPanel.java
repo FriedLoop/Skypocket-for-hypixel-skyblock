@@ -5,7 +5,6 @@ import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.mc.McUiPainter;
-import net.minecraft.client.Minecraft;
 
 import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
@@ -262,7 +261,7 @@ public final class ColorPickerPanel extends Control {
 
     private long staticCacheKey(float scaleX, float scaleY) {
         long key = System.identityHashCode(this);
-        key = key * 31 + Math.round(Minecraft.getInstance().getWindow().getGuiScale() * 1000f);
+        key = key * 31 + Math.round(dev.skypocket.ui.UiPlatform.guiScale() * 1000f);
         key = key * 31 + Math.round(scaleX * 1000f);
         key = key * 31 + Math.round(scaleY * 1000f);
         return key;

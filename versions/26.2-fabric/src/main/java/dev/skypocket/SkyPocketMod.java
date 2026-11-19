@@ -80,11 +80,34 @@ public final class SkyPocketMod implements ClientModInitializer {
         // measuring at Regular puts a caret or a selection edge a pixel or two off from where the
         // glyphs actually are. That was visible as a dropdown's search caret sitting right of the
         // click that placed it.
-        dev.skypocket.ui.UiText.install((text, maxWidth) -> new dev.skypocket.ui.Size(
-                dev.skypocket.render.ClickGuiFonts.widthWeighted(
-                        dev.skypocket.i18n.Localization.auto(text),
-                        dev.skypocket.render.FontLab.Weight.MEDIUM),
-                dev.skypocket.render.ClickGuiFonts.lineHeight()));
+        // The kernel's three platform services, installed once here so no widget has to import the
+        // game to measure text, read the gui scale, or touch the clipboard.
+        //
+        // Text is measured at MEDIUM, not the default weight: painter.text() draws body copy at
+        // Medium, so measuring at Regular puts a caret or a selection edge a pixel or two off from
+        // where the glyphs actually are. That showed up as a dropdown's search caret sitting right
+        // of the click that placed it.
+        dev.skypocket.ui.UiPlatform.install(
+                (text, maxWidth) -> new dev.skypocket.ui.Size(
+                        dev.skypocket.render.ClickGuiFonts.widthWeighted(
+                                dev.skypocket.i18n.Localization.auto(text),
+                                dev.skypocket.render.FontLab.Weight.MEDIUM),
+                        dev.skypocket.render.ClickGuiFonts.lineHeight()),
+                () -> net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale(),
+                new dev.skypocket.ui.Clipboard() {
+                    @Override
+                    public String get() {
+                        String value = net.minecraft.client.Minecraft.getInstance()
+                                .keyboardHandler.getClipboard();
+                        return value == null ? "" : value;
+                    }
+
+                    @Override
+                    public void set(String text) {
+                        net.minecraft.client.Minecraft.getInstance()
+                                .keyboardHandler.setClipboard(text);
+                    }
+                });
         // Applies the "debug log" setting before anything else can log, so startup is quiet unless asked.
         SkyPocketLog.apply();
         CrosshairHudElement.register();

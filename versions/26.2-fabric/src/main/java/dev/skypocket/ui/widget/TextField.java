@@ -125,7 +125,7 @@ public final class TextField extends Control {
         int best = 0;
         float bestDistance = Math.abs(localX);
         for (int i = 1; i <= value.length(); i++) {
-            float width = dev.skypocket.ui.UiText.width(value.substring(0, i));
+            float width = dev.skypocket.ui.UiPlatform.textWidth(value.substring(0, i));
             float distance = Math.abs(localX - width);
             if (distance < bestDistance) {
                 bestDistance = distance;
@@ -139,12 +139,12 @@ public final class TextField extends Control {
         if (!labelOutside) {
             float x = bounds().x() + 11f;
             if (label != null && !label.isEmpty()) {
-                x += dev.skypocket.ui.UiText.width(label) + 3f;
+                x += dev.skypocket.ui.UiPlatform.textWidth(label) + 3f;
             }
             return x;
         }
         float labelWidth = label == null || label.isEmpty()
-                ? 0f : dev.skypocket.ui.UiText.width(label);
+                ? 0f : dev.skypocket.ui.UiPlatform.textWidth(label);
         return outsideFieldBounds(labelWidth).x() + 11f;
     }
 
@@ -294,8 +294,9 @@ public final class TextField extends Control {
     }
 
     private static String clipboard() {
+        // The clipboard lives behind UiPlatform so this widget does not have to name Minecraft.
         try {
-            String value = net.minecraft.client.Minecraft.getInstance().keyboardHandler.getClipboard();
+            String value = dev.skypocket.ui.UiPlatform.clipboard().get();
             return value == null ? "" : value;
         } catch (RuntimeException e) {
             return "";
@@ -307,7 +308,7 @@ public final class TextField extends Control {
             return;
         }
         try {
-            net.minecraft.client.Minecraft.getInstance().keyboardHandler.setClipboard(text);
+            dev.skypocket.ui.UiPlatform.clipboard().set(text);
         } catch (RuntimeException ignored) {
             // Keep the field usable even if the platform clipboard is unavailable.
         }
