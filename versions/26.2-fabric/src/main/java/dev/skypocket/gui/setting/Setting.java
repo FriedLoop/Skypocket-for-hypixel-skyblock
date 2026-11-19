@@ -576,7 +576,12 @@ public abstract class Setting {
             super(label);
             this.options = List.copyOf(options);
             this.getter = getter;
-            this.setter = setter;
+            // Wrapped like every other setting subclass. This one used to store the raw setter,
+            // which made it the single exception to the rule that a setting write bumps the config
+            // revision - so switching an option could leave a cached page showing the old value
+            // until something else invalidated it. Callers compensated by calling touch()
+            // themselves, which only worked where someone remembered.
+            this.setter = touch(setter);
             this.rebuildsPage = rebuildsPage;
         }
 

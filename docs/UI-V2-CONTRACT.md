@@ -421,13 +421,22 @@ protected long revision() {
 | `TextFieldSetting` | ✅ | 同上 |
 | `GroupSetting` | ✅ | 三元形式：`getter == null ? null : touch(setter)` |
 | `ActionSetting` | N/A | 没有 setter，动作自己负责 |
-| **`ChoiceSetting`** | ❌ | `select()` 直接 `setter.accept(index)`，**没有包装** |
+| `ChoiceSetting` | ✅ | 已修复：构造器里 `this.setter = touch(setter)` |
 
-**唯一的例外是 `ChoiceSetting`。** 用它时调用方必须自己调 `ConfigManager.touch()`，否则面板不刷新。
+**8 个子类现在全部自动包装，没有例外。**
 
-这是 `FpsTpsPingFeature` 里那行显式 `ConfigManager.touch()` 的原因。
+`ChoiceSetting` 曾是唯一的漏网之鱼：它直接存原始 setter，`select()` 里只是 `setter.accept(index)`。后果是切换选项**不 bump 配置版本号**，缓存可能继续显示旧值，直到别的事件让它失效。
 
-**这条规则没有被强制，只能靠记忆。** 这是技术债，见 §7.3。
+它没有暴露成显眼 bug，是因为两个使用点碰巧各自遮掩了一半：
+
+| 使用点 | 当时的写法 | 结果 |
+|---|---|---|
+| `FpsTpsPingFeature` | setter 里手写 `ConfigManager.touch()` | 正常，但那是调用方补偿 |
+| `StatsDisplayFeature` | setter 里只调 `rebuildPanelAfterStyleChange()` | **实际缺少 touch**，只是重建顺带刷新了界面 |
+
+**教训**：靠调用方记忆的规则，正确性取决于每个调用方是否记得。现在规则由构造器保证。
+
+**仍然没有强制机制**：如果有人新增一个 Setting 子类，还是可能忘记。见 §7.3。
 
 ---
 
@@ -541,13 +550,15 @@ UiPlatform.install(textMeasurer, guiScaleSupplier, clipboardImpl);
 
 单独用 `ColorPickerPanel` 会得到"没有输入框、也没有可命中控件"的取色器——这是 `DevDrawer` 迁移失败的第二个原因。
 
-### 7.3 `touch()` 无强制机制
+### 7.3 `touch()` 仍无编译期强制（但已无例外）
 
-见 §5.3。**实测确认：8 个 Setting 子类里 7 个自动包装，唯一例外是 `ChoiceSetting`。**
+见 §5.3。**8 个 Setting 子类现在全部自动包装**，包括曾经遗漏的 `ChoiceSetting`。
 
-这个例外无法通过类型系统发现——`ChoiceSetting` 和其他子类的用法看起来一样，忘记调用 `touch()` 的后果是"切换选项后界面不刷新"，而且只在特定页面出现。
+**剩余风险**：新增一个设置子类时，仍然可能忘记套 `touch()`。这无法通过类型系统发现——写法和别的子类看起来一样，后果是"改值后面板不刷新"，而且只在特定页面出现。
 
-**建议修复方向**：把 `ChoiceSetting.setter` 也改成 `touch()` 包装，或让 `select()` 内部调用 `readyForChange()` 钩子。改动小但需要验证每个 `ChoiceSetting` 的使用点不会重复 touch（重复调用无害，只是计数多加）。
+**可以考虑的进一步措施**：让 `Setting` 提供一个 `protected final IntConsumer touch(IntConsumer)` 之外的统一入口，或在构造器里强制要求传入经过 `touch()` 的 setter（当前是可选调用，靠自觉）。
+
+**不建议**：给 `set()` 加反射检查或运行期断言，代价大于收益。
 
 ### 7.6 `ModulesPage` 自带布局（不打算迁移）
 

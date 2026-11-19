@@ -54,14 +54,9 @@ public final class FpsTpsPingFeature implements FeatureModule {
                 new Setting.SliderSetting("大小", 0.25, 6.0,
                         () -> cfg.fpsTpsPingBlock.fpsTpsPingScale,
                         v -> cfg.fpsTpsPingBlock.fpsTpsPingScale = (float) v, "%.2f", ModConfig.SCALE_GRID),
-                // A boolean field shown as a two-option choice: index 0 is vertical. The explicit
-                // touch() is the original code's, and it matters because a ChoiceSetting does not go
-                // through the usual setter wrapper.
+                // A boolean field shown as a two-option choice: index 0 is vertical.
                 new Setting.ChoiceSetting("排版", List.of("竖向排版", "横向排版"),
                         () -> cfg.fpsTpsPingBlock.fpsTpsPingVertical ? 0 : 1,
-                        index -> {
-                            cfg.fpsTpsPingBlock.fpsTpsPingVertical = index == 0;
-                            ConfigManager.touch();
-                        }));
+                        index -> cfg.fpsTpsPingBlock.fpsTpsPingVertical = index == 0));
     }
 }

@@ -71,6 +71,9 @@ public final class StatsDisplayFeature implements FeatureModule {
                         () -> cfg.statsDisplayBlock.statsModernStyle ? 1 : 0,
                         index -> {
                             cfg.statsDisplayBlock.statsModernStyle = index == 1;
+                            // The write above is not the only effect: the whole page changes shape,
+                            // so it is rebuilt. The revision bump comes from ChoiceSetting's setter
+                            // wrapper, not from here.
                             rebuildPanelAfterStyleChange();
                         }, true),
 
