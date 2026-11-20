@@ -357,7 +357,7 @@ util                               零依赖
 | 设置页（`SettingsPage`） | ✅ 已落地 |
 | 首页模块网格（`ModulesPage` + `SidebarRow` + `ModuleCard` + `NavButton`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
 | **外壳 chrome**（面板背景 / 顶部主 tabs / 底栏） | ⬜ 仍是 `PanelRenderer` 手工绘制 + `shellCache` 整块烘焙 |
-| 主题抽屉（`DevDrawer`） | ⬜ 仍用 `ImmediateColorPicker` / `ImmediateTextField` 旧控件 |
+| 主题抽屉（`DevDrawer`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
 
 **已定方向**：
 
@@ -568,7 +568,7 @@ tools/check-kernel-purity.ps1   （由 build 的 checkKernelPurity 任务调用�
 - 26.2 的 `KeyEvent.key()` 是 GLFW 键码；26.3 的 `key()` 是 SDL 键码，直接用 `256/257/258` 判断会导致 26.3 的 Esc、Tab、Enter 全部失效。
 - 跨版本必须使用 `InputWithModifiers` 的语义方法：`isEscape()`、`isCycleFocus()`、`isConfirmation()`，再转换成 `InputRouter` 自己的 canonical keys。
 - **鼠标按键也重新编号**：26.2 左/右是 `0/1`，26.3 是左/中/右 `1/2/3`。任何 `event.button() == 0/1` 都必须走 `MouseButtons.isLeft/isRight`；`PointerEvent` 内部使用 canonical 左 0/右 1，边界适配必须保持一致。
-- **不要直接比较 GLFW 常量或 GLFW 数字**（Esc/Backspace/Delete/Home/End/方向键/Shift/Ctrl）。平台边界统一走 `gui/InputKeys`：`canonical(KeyEvent)` 把 Screen 事件转成 `ui.input.Keys`；需要原始字母的即时文本框走 `InputConstants.KEY_*`。`OneClickScreen`、`HudPositionEditorScreen`、`DevDrawer`、`ImmediateTextField`、HUD 设置卡和键位注册均已迁移；新增代码不得再写 `GLFW.GLFW_KEY_*` 或 `event.input() == 32/42/44/74/76/77`。
+- **不要直接比较 GLFW 常量或 GLFW 数字**（Esc/Backspace/Delete/Home/End/方向键/Shift/Ctrl）。平台边界统一走 `gui/InputKeys`：`canonical(KeyEvent)` 把 Screen 事件转成 `ui.input.Keys`。`OneClickScreen`、`HudPositionEditorScreen`、`DevDrawer`、HUD 设置卡和键位注册均已迁移；新增代码不得再写 `GLFW.GLFW_KEY_*` 或 `event.input() == 32/42/44/74/76/77`。文本输入统一走 `TextField`，它自己处理 `InputConstants` 与 `CharacterEvent`，不要手写。
 - **文本输入走 `Screen.charTyped(CharacterEvent)` / `preeditUpdated`**，不要自己注册 GLFW char callback，也不要假设 26.3 的 SDL text-input/IME 时序与 GLFW 相同。`CharacterEvent.codepointAsString()` 和 `isAllowedChatCharacter()` 是当前可移植入口；IME 预编辑和提交时机仍要两版分别测。
 - `KeyMapping` / `InputConstants` 的注册可能仍使用 GLFW 常量；修改键位相关代码时必须在 26.2 和 26.3 都实际按键验证。
 - `GuiGraphicsExtractor.fill` 参数是 `x1,y1,x2,y2`，而 `outline` 是 `x,y,width,height`；混用会把焦点框画成巨大的矩形。

@@ -15,9 +15,8 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 /**
- * A colour row with a v2 picker popup. The popup mirrors the old ImmediateColorPicker: SV square,
- * hue/alpha bars, preset swatches and HEX/RGBA text fields. It is a separate layer, like Dropdown,
- * so it can escape the page's scroll clip.
+ * A colour row with a v2 picker popup: SV square, hue/alpha bars, preset swatches and HEX/RGBA text
+ * fields. It is a separate layer, like Dropdown, so it can escape the page's scroll clip.
  */
 public final class ColorField extends Control implements dev.skypocket.ui.PopupOwner {
     private final String label;

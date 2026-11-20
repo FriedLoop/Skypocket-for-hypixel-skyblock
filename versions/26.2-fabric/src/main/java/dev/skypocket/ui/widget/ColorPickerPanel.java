@@ -11,8 +11,11 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 /**
- * The v2 equivalent of the old ImmediateColorPicker: a saturation/value square, hue and alpha
- * bars, and the preset swatches. HEX/RGBA editors live beside it as v2 TextFields.
+ * A saturation/value square, hue and alpha bars, and the preset swatches.
+ *
+ * <p>HEX/RGBA editors live beside it as TextFields rather than inside it - {@link ColorField} builds
+ * the row-and-popup form, and {@link #editor} builds the inline form for hosts that show the picker
+ * without a popup.
  */
 public final class ColorPickerPanel extends Control {
     static final int PAD = 8;

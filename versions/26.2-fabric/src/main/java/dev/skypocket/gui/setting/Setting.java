@@ -280,11 +280,10 @@ public abstract class Setting {
         /**
          * Height the expanded colour picker needs.
          *
-         * <p>Stated here rather than read from the picker implementation. This used to borrow
-         * {@code ImmediateColorPicker.CONTENT_H}, which made the settings model import the
-         * immediate-mode widget - a data class depending on one particular renderer. Both pickers use
-         * the same 8px padding and 132px square, so the number is the same; what changed is that this
-         * class no longer names a widget to get it.
+         * <p>Stated here rather than read from the picker implementation, so that this data class
+         * does not name a renderer to get one number. The value is 8px of padding above and below a
+         * 132px square; ColorPickerPanel declares the same geometry, and a guard would be the only
+         * thing keeping them equal if either changes.
          */
         private static final int PICKER_CONTENT_H = 8 * 2 + 132;
 
