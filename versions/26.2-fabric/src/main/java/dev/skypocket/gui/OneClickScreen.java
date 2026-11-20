@@ -1140,6 +1140,13 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
+        // The drawer floats above everything, so it takes the move first and swallows it while
+        // open. Without this the drawer's router never sees a pointer move, and its rows keep a
+        // stale hover until some other event happens to re-run hover detection.
+        if (devDrawer.isOpen()) {
+            devDrawer.mouseMoved(mouseX, mouseY, width, height);
+            return;
+        }
         if (modulesPageActive() || moduleChromeActive() || statsPageActive()) {
             layout();
             double lx = localX(mouseX);

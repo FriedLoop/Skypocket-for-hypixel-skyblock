@@ -126,7 +126,41 @@ float localX = event.x() - ancestorOffsetX();
 
 **规则**：任何在 `onPointerDown` / `onPointerMove` 里读 `event.x()/y()` 的控件，第一件事是减 `ancestorOffsetX()/ancestorOffsetY()`。
 
-**另一个相关陷阱**：字体测量必须和绘制用同一字重。`painter.text()` 画的是 **Medium**，如果测量用默认（Regular），光标位置会差几个像素。`UiText.install()` 在启动时指定字重，就是为了对齐这两者。
+### 1.5.2 坐标要减**两步**，不只是祖先 offset ⚠️
+
+**这一条是 1.5.1 的补丁，因为 1.5.1 只说了一半。**
+
+从 design 坐标到控件内部坐标要走三步：
+
+```
+design 坐标
+  − ancestorOffsetX()      → 父容器的局部坐标
+  − bounds().x()           → 控件自身的内部坐标（0 起）
+  = 控件内部坐标
+```
+
+控件内部的绘制与命中计算（如 `zoneAt`、`presetX`、光标位置）都是按**0 起**写的，所以两步都必须减。
+
+**`ColorPickerPanel` 曾经只减了第一步**：
+
+```java
+// 错误
+float x = event.x() - ancestorOffsetX();
+zoneAt(x, y);              // zoneAt 里用 PAD=8 这样的面板内部坐标
+
+// 正确
+float x = event.x() - ancestorOffsetX() - bounds().x();
+```
+
+**症状**：取色器的所有点击**向右下偏移**，偏移量正好是取色器在父容器里的位置。方块、色相条、预设全都点不准。
+
+**为什么它不明显**：取色器在 `ColorField` 的 popup 里时，`bounds()` 接近 0（popup 内绝对定位到左上角），bug 隐藏了。只有把它嵌到别的容器中间（这次是抽屉），偏移才暴露。
+
+**这与 1.5.1 是同一类错误的不同步骤**：`TextField` 漏了减祖先 offset，`ColorPickerPanel` 漏了减 bounds。两者的共同点是——**v2 没有提供统一的“事件坐标 → 控件内部坐标”的封装，每个控件都要自己写对三步**。
+
+**自查方式**：如果你的控件里出现 `PAD`、`FIELD_X` 这类从 0 开始算的常量，而事件处理里只减了 `ancestorOffset`，那就是漏了 `bounds()`。
+
+**另一个相关陷阱**：字体测量必须和绘制用同一字重。`painter.text()` 画的是 **Medium**，如果测量用默认（Regular），光标位置会差几个像素。`UiPlatform.install()` 在启动时指定字重，就是为了对齐这两者。
 
 ---
 
@@ -309,6 +343,28 @@ private void focusOnly(int region) {
 
 **新增一个可聚焦模块时，必须把它加进 `focusOnly`**，否则又会退化成"谁先被检查谁赢"。
 
+### 4.3.2 浮层必须收到 `mouseMoved`，否则 hover 永远不更新 ⚠️
+
+**症状**：控件的高亮只在"别的操作恰好触发了 hover 重算"时出现——比如滚动一下列表，行才高亮；鼠标单纯移上去没有反应。
+
+**原因**：宿主的 `mouseMoved` 只把事件转发给页面，**漏了浮层**。浮层的 `InputRouter` 从不收到 `pointerMove`，所以 `hovered` 一直停留在旧值。
+
+**规则**：宿主转发输入事件时，**浮层优先**：
+
+```java
+public void mouseMoved(double mouseX, double mouseY) {
+    if (overlay.isOpen()) {
+        overlay.mouseMoved(mouseX, mouseY, width, height);
+        return;                       // 浮层在顶层，吞掉事件
+    }
+    // …页面的转发
+}
+```
+
+**为什么容易漏**：`mouseDragged` 转发给了浮层（拖拽能工作），`mouseMoved` 却没有。两个都是指针移动，但走的是不同的宿主方法，漏一个不影响另一个。
+
+**判据**：任何"hover 要等别的操作才刷新"的现象，先查 `mouseMoved` 的转发链。
+
 ### 4.4 控件基类 `Control`
 
 提供：
@@ -437,6 +493,35 @@ protected long revision() {
 **教训**：靠调用方记忆的规则，正确性取决于每个调用方是否记得。现在规则由构造器保证。
 
 **仍然没有强制机制**：如果有人新增一个 Setting 子类，还是可能忘记。见 §7.3。
+
+### 5.4 嵌套缓存与外层 pose 缩放的冲突 ⚠️
+
+**组件内部的缓存假设"自己是唯一缩放内容的东西"。**
+
+`ColorPickerPanel` 把色相条、棋盘格、预设烘进自己的纹理：
+
+```java
+float poseScaleX = mc.graphics().pose().m00();     // 读外层 pose 的缩放
+staticCache.draw(..., CONTENT_W, CONTENT_H, poseScaleX, poseScaleY, ...)
+```
+
+`GuiPanelCache` 按 `panelSize × scale × guiScale` 算纹理尺寸。所以当外层有 `pose.scale(0.5)` 时，**纹理只创建了一半大小**，而内容仍按完整设计尺寸绘制 → **下半和右侧被裁掉**。
+
+**症状的特征**：只在缓存命中时错误，缓存失效重烘的那一帧是对的。
+
+**规则**：把一个自带缓存的组件放进有 pose 缩放的容器时，**要么禁掉它的内部缓存，要么让容器不在 pose 中缩放**。
+
+`DevDrawer` 的选择是前者——`ColorPickerPanel.editor(..., cacheStaticLayer = false)`，代价是每帧多几百个 `fill`，但只在选中颜色时才发生。
+
+**为什么 `SettingsPage` 里的取色器没这个问题**：它的 pose 是 1:1，`m00()` 为 1，缓存尺寸正确。
+
+### 5.5 同层多个缓存槽：可以并存
+
+`GuiPanelCache` 的每个 `Slot` 有自己的 `RenderTarget`、`GuiRenderState`、`GuiRenderer`，`bakePending()` 的全局状态替换（`mainRenderTarget`、窗口宽高缩放）在 `finally` 里成对还原。
+
+**同帧多个 Slot 烘焙是安全的。** `ModulesPage` 曾有一段注释说"两个纹理竞争 target"，那是早期版本（全局单缓存）的约束，`4884dce` 之后已不成立——但绕过缓存的代码留了下来，直到实验证明可以删掉。
+
+**判据**：如果你看到"同帧两个缓存冲突"之类的注释，先看它写于什么时候，再看每个 Slot 是否已经独立。
 
 ---
 

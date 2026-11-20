@@ -1,5 +1,6 @@
 package dev.skypocket.ui.widget;
 
+import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Rect;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.UiPainter;
@@ -30,8 +31,8 @@ public final class ColorPickerPanel extends Control {
     static final int PRESET_GAP = 3;
     static final int PRESET_COLS = 2;
 
-    static final int CONTENT_W = 309;
-    static final int CONTENT_H = 148;
+    public static final int CONTENT_W = 309;
+    public static final int CONTENT_H = 148;
 
     private static final int[] HUE_STOPS = {
             0xFFFF0000, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF, 0xFF0000FF, 0xFFFF00FF, 0xFFFF0000
@@ -51,6 +52,15 @@ public final class ColorPickerPanel extends Control {
     private final IntSupplier getter;
     private final IntConsumer setter;
     private final dev.skypocket.ui.RenderCache staticCache = dev.skypocket.ui.mc.McRenderCache.create();
+    /**
+     * Whether the hue ramp, checkerboard and presets may be baked into their own texture.
+     *
+     * <p>Turned off by hosts that draw this panel under a scaled pose. The cache sizes its texture
+     * from the pose scale it is handed, which assumes it is the only thing scaling the content;
+     * under a 0.5 pose it bakes a half-resolution copy and then draws full-size content into it,
+     * clipping the bottom and right of the panel until something else invalidates the cache.
+     */
+    private boolean cacheStaticLayer = true;
     private Zone drag = Zone.NONE;
     private int lastEmitted = Integer.MIN_VALUE;
     private float hue;
@@ -59,6 +69,12 @@ public final class ColorPickerPanel extends Control {
     private boolean seeded;
     private float mouseX;
     private float mouseY;
+
+    /** Disables the internal static-layer cache; see {@link #cacheStaticLayer}. */
+    ColorPickerPanel cacheStaticLayer(boolean value) {
+        this.cacheStaticLayer = value;
+        return this;
+    }
 
     ColorPickerPanel(IntSupplier getter, IntConsumer setter, Style style, WidgetPalette palette) {
         super(style, palette);
@@ -92,8 +108,12 @@ public final class ColorPickerPanel extends Control {
 
     @Override
     public boolean onPointerDown(PointerEvent event) {
-        float x = event.x() - ancestorOffsetX();
-        float y = event.y() - ancestorOffsetY();
+        // Panel-local coordinates. Events arrive in design space; subtracting the ancestor offsets
+        // reaches the parent space, and bounds() is what remains to get to this element's own
+        // origin. The arithmetic below (zoneAt, presetX/Y) is written against a zero-based
+        // panel, so skipping bounds() shifted every hit down and right by the panel's position.
+        float x = event.x() - ancestorOffsetX() - bounds().x();
+        float y = event.y() - ancestorOffsetY() - bounds().y();
         mouseX = x;
         mouseY = y;
         drag = zoneAt(x, y);
@@ -117,8 +137,8 @@ public final class ColorPickerPanel extends Control {
 
     @Override
     public boolean onPointerMove(PointerEvent event) {
-        float x = event.x() - ancestorOffsetX();
-        float y = event.y() - ancestorOffsetY();
+        float x = event.x() - ancestorOffsetX() - bounds().x();
+        float y = event.y() - ancestorOffsetY() - bounds().y();
         mouseX = x;
         mouseY = y;
         if (pressed && drag != Zone.NONE) {
@@ -238,7 +258,7 @@ public final class ColorPickerPanel extends Control {
         float bx = bounds().x();
         float by = bounds().y();
 
-        if (painter instanceof McUiPainter mc) {
+        if (painter instanceof McUiPainter mc && cacheStaticLayer) {
             // Static layer: hue ramp, checkerboard and preset fills. It gets its own stratum so
             // the cached blit can never land above the dynamic SV/alpha/marker layer.
             mc.graphics().nextStratum();
@@ -362,5 +382,102 @@ public final class ColorPickerPanel extends Control {
         }
         return ((alpha & 0xFF) << 24) | (Math.round(r * 255f) << 16)
                 | (Math.round(g * 255f) << 8) | Math.round(b * 255f);
+    }
+
+    /**
+     * Builds the complete colour editor - square, bars, presets, and the hex and RGBA fields - as one
+     * element that can be embedded directly in a page.
+     *
+     * <p>This panel on its own is only the visual half: the numeric fields are separate TextFields
+     * that ColorField creates and positions. A host that needs the editor inline rather than behind a
+     * popup had to redefine all of it, which is why a drawer migration once produced a picker with no
+     * inputs and nothing hit-testable. The combination lives here now so both hosts share it.
+     *
+     * <p>Width and height are {@link #CONTENT_W} and {@link #CONTENT_H}; the caller lays this out at
+     * those dimensions.
+     */
+    public static Box editor(IntSupplier getter, IntConsumer setter, WidgetPalette palette) {
+        return editor(getter, setter, palette, true);
+    }
+
+    /**
+     * @param cacheStaticLayer false when the host draws this under a scaled pose, which would make
+     *                         the internal cache bake at the wrong resolution; see
+     *                         {@link #cacheStaticLayer(boolean)}
+     */
+    public static Box editor(IntSupplier getter, IntConsumer setter, WidgetPalette palette,
+                             boolean cacheStaticLayer) {
+        Box holder = new Box(Style.builder()
+                .width(CONTENT_W)
+                .height(CONTENT_H)
+                .build());
+        ColorPickerPanel panel = new ColorPickerPanel(getter, setter, Style.builder()
+                .position(Style.Position.ABSOLUTE)
+                .left(0f).top(0f)
+                .width(CONTENT_W)
+                .height(CONTENT_H)
+                .build(), palette);
+        panel.cacheStaticLayer(cacheStaticLayer);
+        holder.add(panel);
+
+        panel.seed(getter.getAsInt());
+
+        TextField hex = embedField(8, "#", palette);
+        TextField[] channels = {
+                embedField(36, "R", palette),
+                embedField(64, "G", palette),
+                embedField(92, "B", palette),
+                embedField(120, "A", palette)
+        };
+
+        // Fields mirror the colour and write back through the same setter the panel uses. Keeping
+        // them out of focus is what stops a keystroke from being overwritten on the next sync.
+        hex.text(String.format("%06X", getter.getAsInt() & 0xFFFFFF));
+        hex.onChange(text -> {
+            String s = text.trim();
+            if (s.startsWith("#")) {
+                s = s.substring(1);
+            }
+            if (s.length() != 6) {
+                return;
+            }
+            try {
+                int next = (getter.getAsInt() & 0xFF000000) | Integer.parseInt(s, 16);
+                panel.adopt(next);
+                setter.accept(next);
+            } catch (NumberFormatException ignored) {
+            }
+        });
+        int[] shifts = {16, 8, 0, 24};
+        for (int i = 0; i < channels.length; i++) {
+            int shift = shifts[i];
+            channels[i].text(Integer.toString((getter.getAsInt() >> shift) & 0xFF));
+            channels[i].onChange(text -> {
+                int parsed;
+                try {
+                    parsed = Integer.parseInt(text.trim());
+                } catch (NumberFormatException e) {
+                    return;
+                }
+                int clamped = Math.max(0, Math.min(255, parsed));
+                int mask = 0xFF << shift;
+                int next = (getter.getAsInt() & ~mask) | (clamped << shift);
+                panel.adopt(next);
+                setter.accept(next);
+            });
+            holder.add(channels[i]);
+        }
+        holder.add(hex);
+        return holder;
+    }
+
+    private static TextField embedField(int y, String label, WidgetPalette palette) {
+        return new TextField("", label, Style.builder()
+                .position(Style.Position.ABSOLUTE)
+                .left(FIELD_X)
+                .top(y)
+                .width(FIELD_W)
+                .height(FIELD_H)
+                .build(), palette);
     }
 }
