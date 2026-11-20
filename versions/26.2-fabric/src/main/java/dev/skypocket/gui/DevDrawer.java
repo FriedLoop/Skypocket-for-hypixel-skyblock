@@ -568,12 +568,11 @@ final class DevDrawer {
                 .direction(Style.Direction.COLUMN)
                 .build());
         for (String token : tokens) {
-            boolean current = token.equals(selected);
-            content.add(new Button(token, () -> select(token),
-                    Style.builder().width(Dimension.percent(100f))
-                            .height(Dimension.points(LIST_ROW_H)).build(),
-                    palette,
-                    current ? Button.SurfaceMode.MENU_ONLY : Button.SurfaceMode.MENU_MIDDLE));
+            // TokenRow rather than Button: a button has no selected state - only hover and press -
+            // and no room for the swatch and hex code that make a colour token recognisable.
+            content.add(new TokenRow(token, isColorToken(token), token.equals(selected),
+                    Dimension.percent(100f), Dimension.points(LIST_ROW_H),
+                    () -> select(token), palette));
         }
         return new ScrollView(Style.builder()
                 .width(Dimension.percent(100f))
