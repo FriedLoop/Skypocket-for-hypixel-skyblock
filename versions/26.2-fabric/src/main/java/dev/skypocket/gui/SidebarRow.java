@@ -60,7 +60,10 @@ final class SidebarRow extends Control {
     public void paint(UiPainter painter) {
         // The selected pill is drawn by ModulesPage so it can slide between rows. Keep this row's
         // hover surface inset horizontally only; no vertical padding, no accent stripe.
-        if (!selected && hovered) {
+        //
+        // Suppressed while baking: the static layer records with neutralPaint on, and a baked hover
+        // surface stays in the texture forever - a row keeps a highlight the cursor left long ago.
+        if (!selected && hovered && !neutralPaint()) {
             float hx = bounds().x() + 16f;
             float hw = bounds().width() - 32f;
             painter.fillRounded(new dev.skypocket.ui.Rect(hx, bounds().y(), hw,

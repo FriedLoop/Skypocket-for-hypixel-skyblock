@@ -100,6 +100,14 @@ public final class InputRouter {
         if (target != null) {
             bubble(target, node -> node.onWheel(event));
         }
+        // Scrolling moves content under a stationary cursor, so what is hovered afterwards is not
+        // what was hovered before. Without recomputing here the old element keeps its hover flag
+        // (its highlight stays on) and the element that scrolled into its place never receives one -
+        // two highlights at once, the stale one only clearing when the mouse happens to move.
+        //
+        // Recomputed after the bubble rather than before: a scroll view updates its content offset
+        // synchronously inside onWheel, so the new positions are already in place here.
+        updateHover(hitTest(event.x(), event.y()));
     }
 
     public void keyDown(KeyEvent event) {

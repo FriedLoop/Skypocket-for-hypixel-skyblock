@@ -26,7 +26,6 @@ import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.LayoutEngine;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
-import dev.skypocket.ui.Painted;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.Rect;
@@ -41,7 +40,6 @@ import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.Style;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
-import dev.skypocket.ui.Text;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.TextMeasurer;
@@ -146,7 +144,6 @@ final class ModulesPage {
      */
     private final boolean withCards;
 
-    private final List<ModuleCard> cards = new ArrayList<>();
     private final List<SidebarRow> rows = new ArrayList<>();
     private final List<NavButton> navButtons = new ArrayList<>();
     private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
@@ -286,7 +283,6 @@ final class ModulesPage {
             return;
         }
         grid.clearChildren();
-        cards.clear();
         List<Feature> visible = visibleFeatures(host.search(), host.selected());
         int cols = PanelGeometry.columns();
         for (int i = 0; i < visible.size(); i++) {
@@ -302,7 +298,6 @@ final class ModulesPage {
                     .position(Style.Position.ABSOLUTE)
                     .left(x).top(y)
                     .width(PanelGeometry.CARD_W).height(PanelGeometry.CARD_H).build(), palette);
-            cards.add(card);
             grid.add(card);
         }
         grid.style(Style.builder().from(grid.style())
@@ -343,14 +338,14 @@ final class ModulesPage {
         if (scroll != null) {
             scroll.visible(false);
         }
-        drawElement(painter, root);
+        dev.skypocket.ui.PaintPass.paintStatic(painter, root);
         if (scroll != null) {
             scroll.visible(scrollVisible);
             painter.pushClip(new Rect(PanelGeometry.SIDEBAR_W, CARDS_TOP,
                     PanelGeometry.contentWidth(), height - CARDS_TOP));
             pose.pushMatrix();
             pose.translate(cardOffsetX, 0f);
-            drawElement(painter, scroll);
+            dev.skypocket.ui.PaintPass.paintStatic(painter, scroll);
             pose.popMatrix();
             painter.popClip();
         }
@@ -376,11 +371,26 @@ final class ModulesPage {
         renderScaleY = cached ? pageCache.lastBlitScaleY() : 1f;
         if (!cached) {
             drawHighlight(painter);
-            drawElement(painter, root);
+            dev.skypocket.ui.PaintPass.paintStatic(painter, root);
         } else {
             pose.scale(renderScaleX, renderScaleY);
+            // Repaint the controls whose appearance is live, the same way UiPage does. The baked
+            // layer was recorded with neutralPaint on, so hover and press are missing from it by
+            // design; leaving them out here means a hovered card or nav button shows nothing until
+            // something else invalidates the cache. That is exactly what hoverHash() in the cache
+            // key used to work around, at the cost of walking every control each frame.
+            java.util.Set<UiElement> dynamic = dev.skypocket.ui.PaintPass.collectDynamic(root);
+            if (!dynamic.isEmpty()) {
+                // An opaque live row must cover the baked text beneath it.
+                Control.overlayPaint(true);
+                try {
+                    dev.skypocket.ui.PaintPass.paintDynamic(painter, root, dynamic);
+                } finally {
+                    Control.overlayPaint(false);
+                }
+            }
             if (search != null && search.isFocused()) {
-                drawElement(painter, search);
+                dev.skypocket.ui.PaintPass.paintStatic(painter, search);
             }
         }
         pose.popMatrix();
@@ -396,7 +406,6 @@ final class ModulesPage {
         hash = hash * 31 + (host.canGoBack() ? 1 : 0);
         hash = hash * 31 + (host.canGoForward() ? 1 : 0);
         hash = hash * 31 + Math.round(highlightY);
-        hash = hash * 31 + hoverHash();
         hash = hash * 31 + (input.focused() == null ? 0 : input.focused().hashCode());
         return hash;
     }
@@ -428,33 +437,7 @@ final class ModulesPage {
                 dev.skypocket.gui.widget.ClickGuiStyle.sidebarSelected());
     }
 
-    private long hoverHash() {
-        long hash = 0L;
-        for (ModuleCard card : cards) {
-            if (card.isHovered()) {
-                hash = hash * 31 + System.identityHashCode(card);
-            }
-        }
-        for (SidebarRow row : rows) {
-            if (row.isHovered()) {
-                hash = hash * 31 + System.identityHashCode(row);
-            }
-        }
-        for (NavButton button : navButtons) {
-            if (button.isHovered()) {
-                hash = hash * 31 + System.identityHashCode(button);
-            }
-            if (button.isPressed()) {
-                // Pressed is visual state too; without it the cached page keeps the unpressed
-                // surface while the button is held down.
-                hash = hash * 31 + 17L * System.identityHashCode(button);
-            }
-        }
-        if (search != null && search.isHovered()) {
-            hash = hash * 31 + System.identityHashCode(search);
-        }
-        return hash;
-    }
+
 
     private void drawBase(GuiGraphicsExtractor graphics) {
         dev.skypocket.render.ScissorTracker.reset(graphics);
@@ -462,54 +445,10 @@ final class ModulesPage {
         Control.neutralPaint(true);
         try {
             drawHighlight(painter);
-            drawElement(painter, root);
+            dev.skypocket.ui.PaintPass.paintStatic(painter, root);
         } finally {
             Control.neutralPaint(false);
         }
-    }
-
-    private void drawElement(McUiPainter painter, UiElement element) {
-        drawElement(painter, element, null);
-    }
-
-    private void drawElement(McUiPainter painter, UiElement element, ScrollView viewport) {
-        if (!element.visible()) {
-            return;
-        }
-        if (viewport != null && !intersects(element, viewport)) {
-            return;
-        }
-        Matrix3x2fStack pose = painter.graphics().pose();
-        pose.pushMatrix();
-        pose.translate(element.offsetX(), element.offsetY());
-        ScrollView nextViewport = element instanceof ScrollView view ? view : viewport;
-        if (element instanceof ScrollView view) {
-            painter.pushClip(view.bounds());
-        }
-        if (element instanceof Painted painted) {
-            painted.paint(painter);
-        } else if (element instanceof Text text) {
-            painter.textWeighted(text.value(), text.bounds().x(), text.bounds().y(),
-                    text.color(), text.fontScale(), text.weight());
-        }
-        for (UiElement child : element.children()) {
-            drawElement(painter, child, nextViewport);
-        }
-        if (element instanceof ScrollView) {
-            painter.popClip();
-        }
-        pose.popMatrix();
-    }
-
-    private static boolean intersects(UiElement element, ScrollView viewport) {
-        float ex = element.visualX();
-        float ey = element.visualY();
-        float vx = viewport.visualX();
-        float vy = viewport.visualY();
-        return ex + element.bounds().width() >= vx
-                && ex <= vx + viewport.bounds().width()
-                && ey + element.bounds().height() >= vy
-                && ey <= vy + viewport.bounds().height();
     }
 
     boolean pointerDown(float x, float y, int modifiers) {

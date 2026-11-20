@@ -95,7 +95,12 @@ final class ModuleCard extends Control {
     @Override
     public void paint(UiPainter painter) {
         McUiPainter mc = (McUiPainter) painter;
-        int cardColor = hovered ? ClickGuiStyle.cardHover() : ClickGuiStyle.card();
+        // Hover is live state and must not be baked. The static layer is recorded with
+        // neutralPaint on, so reading the flag unconditionally would freeze whichever card the
+        // cursor happened to be over into the cached texture - showing a highlight that never
+        // clears, and a second one when something else becomes hovered.
+        boolean live = hovered && !neutralPaint();
+        int cardColor = live ? ClickGuiStyle.cardHover() : ClickGuiStyle.card();
         int cardRadius = GuiMetrics.current().cardRadius();
         painter.shadow(bounds(), cardRadius);
         // Close the antialiased mask edge so the shadow cannot show as a dark 1px line.
@@ -145,7 +150,7 @@ final class ModuleCard extends Control {
         if (configurable) {
             painter.surface(new Rect(btnX, btnY, CARD_BTN_W, CARD_BTN_H),
                     ClickGuiStyle.controlRadius(),
-                    hovered ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
+                    live ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
         } else {
             painter.surface(new Rect(btnX, btnY, CARD_BTN_W, CARD_BTN_H),
                     ClickGuiStyle.controlRadius(), ClickGuiStyle.disabled(), 0);

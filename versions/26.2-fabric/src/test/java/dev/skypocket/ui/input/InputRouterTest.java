@@ -3,6 +3,7 @@ package dev.skypocket.ui.input;
 import dev.skypocket.ui.Box;
 import dev.skypocket.ui.Dimension;
 import dev.skypocket.ui.LayoutEngine;
+import dev.skypocket.ui.ScrollView;
 import dev.skypocket.ui.Size;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.TextMeasurer;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +38,7 @@ class InputRouterTest {
         boolean acceptsPointer = true;
         boolean focusable;
         boolean consumed;
+        boolean hovered;
 
         Probe(String name, Style style) {
             super(style);
@@ -52,6 +55,11 @@ class InputRouterTest {
         public boolean onPointerUp(PointerEvent event) {
             events.add("up");
             return consumed;
+        }
+
+        @Override
+        public void onHoverChanged(boolean value) {
+            hovered = value;
         }
 
         @Override
@@ -369,5 +377,60 @@ class InputRouterTest {
         router.focus(field);
         router.textInput(new TextInputEvent("hello"));
         assertEquals("hello", received[0]);
+    }
+
+    // ---- hover follows content that moves under the cursor -------------------------------
+
+    @Test
+    void scrollingRecomputesWhatIsHovered() {
+        Box root = new Box(sized(100f, 100f));
+        Box content = new Box(Style.builder()
+                .width(Dimension.points(100f))
+                .direction(Style.Direction.COLUMN)
+                .build());
+        // Two full-height rows stacked in a short viewport: scrolling swaps which one is at the top.
+        Probe first = new Probe("first", sized(100f, 100f));
+        Probe second = new Probe("second", sized(100f, 100f));
+        content.add(first);
+        content.add(second);
+        ScrollView view = new ScrollView(Style.builder()
+                .width(Dimension.points(100f)).height(Dimension.points(100f)).build(), content, 50f);
+        root.add(view);
+        InputRouter router = routerFor(root);
+        view.refresh();
+
+        // Hover the first row.
+        router.pointerMove(new PointerEvent(50f, 50f, -1, 0));
+        assertSame(first, router.hovered());
+        assertTrue(first.hovered);
+
+        // Scroll by exactly one row. The cursor has not moved, but a different row is under it now.
+        view.scrollTo(100f);
+        router.wheel(new WheelEvent(50f, 50f, 0f, 0));
+
+        assertSame(second, router.hovered(), "hover follows the content, not the old element");
+        assertTrue(second.hovered, "the row that scrolled into place becomes hovered");
+        assertFalse(first.hovered, "the row that scrolled away must not keep its highlight");
+    }
+
+    @Test
+    void wheelOverSomethingInertStillClearsStaleHover() {
+        Box root = new Box(sized(200f, 200f));
+        Probe top = new Probe("top", Style.builder()
+                .position(Style.Position.ABSOLUTE).left(0f).top(0f)
+                .width(Dimension.points(100f)).height(Dimension.points(100f)).build());
+        root.add(top);
+        InputRouter router = routerFor(root);
+
+        router.pointerMove(new PointerEvent(50f, 50f, -1, 0));
+        assertTrue(top.hovered);
+
+        // A wheel outside the hovered element: nothing consumes it, but the hover must still be
+        // re-evaluated against the cursor position rather than left pointing at the previous
+        // element. The point lands on the root container, which is a valid hit target too.
+        router.wheel(new WheelEvent(180f, 180f, 1f, 0));
+
+        assertFalse(top.hovered, "hover at the old element is stale once the cursor moved");
+        assertSame(root, router.hovered(), "the cursor is over the root container now");
     }
 }
