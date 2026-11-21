@@ -92,7 +92,15 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
                         float columnWidth) {
         this.feature = feature;
         this.palette = palette;
-        this.columnWidth = Math.max(386f, Math.min(columnWidth, width - 58f));
+        // The column is centred in the page, so it can never be wider than the page itself - a
+        // negative left offset would push it out through both edges. 386 is the width the column
+        // wants so its rows stay readable, but it is a preference, not a floor: hosts that open this
+        // page in a small popup (the HUD settings card) hand it a narrower page, and the column has
+        // to give way or it overflows. Clamping the floor to the available width keeps the main panel
+        // on its preferred width while letting a popup shrink.
+        float available = Math.max(0f, width - 58f);
+        float floor = Math.min(386f, available);
+        this.columnWidth = Math.max(floor, Math.min(columnWidth, available));
         // The page's size is fixed at construction; UiPage keeps it and the cache key uses it.
         bounds(width, height);
         rebuild();

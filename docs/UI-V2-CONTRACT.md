@@ -365,6 +365,36 @@ public void mouseMoved(double mouseX, double mouseY) {
 
 **判据**：任何"hover 要等别的操作才刷新"的现象，先查 `mouseMoved` 的转发链。
 
+### 4.3.3 宿主必须履行的四件事 ⚠️
+
+**这是 §4.3.1 和 §4.3.2 的归纳：五次踩坑，四个不同的遗漏点。**
+
+`ui/` 只定义了「节点」，没有定义「宿主」。于是每个 `Screen` 都自己实现一遍平台事件到 `InputRouter` 的转发，而没有任何两份相同。已确认的遗漏：
+
+| # | 职责 | 漏了的后果 | 现状 |
+|---|---|---|---|
+| 1 | 键码转换 `InputKeys.canonical` | 26.3 的 Backspace/Esc/Enter 全部失效（26.2 是 GLFW 码，26.3 是 SDL 码） | `InputBridge.toKernel` |
+| 2 | 修饰符传递（Ctrl/Shift/Alt） | Ctrl+A/C/V/X 全部失效，输入框里的全选/复制/粘贴/剪切都没了 | `InputBridge.modifiersOf` |
+| 3 | 字符过滤 | 把控制字符送进输入框 | `InputBridge.textOf` |
+| 4 | **`minecraft.onTextInputFocusChange(this, true)`** | **`charTyped` 完全不被调用** | ⚠️ **仍散落，无封装** |
+
+**第 4 条最隐蔽，因为它只挡字符流，不挡按键。** 症状是"输入框半坏"：
+
+| 操作 | 走的路径 | 是否受第 4 条影响 |
+|---|---|---|
+| 敲字符 | `charTyped` | ❌ 失效 |
+| Ctrl+V 粘贴 | `keyPressed` → `keyDown` | ✅ 正常 |
+| Ctrl+A 全选 | `keyPressed` | ✅ 正常 |
+| 鼠标点击定位光标 | `mouseClicked` | ✅ 正常 |
+
+所以看起来像"这个输入框有点问题"，而不是"这个屏幕根本不能打字"。**HUD 位置编辑器因此长期无法在取色器里输入数字，却能用 Ctrl+V 粘贴出数字。**
+
+**登记的时机**：`init()` 里登记、`removed()` 里注销。`init` 也会在窗口缩放时重跑，所以登记是幂等的。
+
+**已验证的宿主**（`DevUiTestScreen`、`OneClickScreen` 有；`HudPositionEditorScreen` 曾长期没有）。
+
+**自查**：新写一个 `Screen` 时，先搜 `onTextInputFocusChange`。没有它，文本输入一定不完整。
+
 ### 4.4 控件基类 `Control`
 
 提供：

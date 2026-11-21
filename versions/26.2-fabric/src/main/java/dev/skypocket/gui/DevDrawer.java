@@ -25,6 +25,7 @@ import dev.skypocket.ui.input.Modifiers;
 import dev.skypocket.ui.input.PointerEvent;
 import dev.skypocket.ui.input.TextInputEvent;
 import dev.skypocket.ui.input.WheelEvent;
+import dev.skypocket.ui.mc.InputBridge;
 import dev.skypocket.ui.mc.McUiPainter;
 import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
@@ -279,17 +280,38 @@ final class DevDrawer {
         return true;
     }
 
-    boolean keyPressed(int key, boolean shift, boolean ctrl) {
+    /**
+     * Takes the platform event rather than a bare key code.
+     *
+     * <p>A raw int is not enough to translate into the kernel's canonical key: 26.2 reports GLFW
+     * codes and 26.3 reports SDL codes, so the same physical key is a different number, and the only
+     * reliable way to map one to the other is through the platform's own predicates ({@code
+     * isEscape}, {@code isCycleFocus}, ...). The previous signature forced this method to compare
+     * against {@code InputConstants.KEY_ESCAPE} directly, which silently stopped matching on 26.3 -
+     * the same reason Backspace did nothing in the picker's fields.
+     */
+    boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         if (!open) {
             return false;
         }
-        if (key == InputConstants.KEY_ESCAPE) {
+        if (event.isEscape()) {
             close();
             return true;
         }
         if (input != null) {
-            input.keyDown(new KeyEvent(key, 0, shift ? Modifiers.SHIFT : 0, true));
+            // Carries the modifiers too: the router hands them to the focused control, and text
+            // fields read Ctrl to decide whether a letter means "select all" or "type an A". That
+            // was the second half of the same bug - Ctrl was dropped entirely here.
+            input.keyDown(InputBridge.toKernel(event, true));
         }
+        return true;
+    }
+
+    boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
+        if (!open || input == null) {
+            return false;
+        }
+        input.keyUp(InputBridge.toKernel(event, false));
         return true;
     }
 
@@ -300,6 +322,15 @@ final class DevDrawer {
         if (input != null) {
             input.textInput(new TextInputEvent(String.valueOf(c)));
         }
+        return true;
+    }
+
+    /** IME composition; four of the five hosts never forwarded this. */
+    boolean preedit(String text) {
+        if (!open || input == null) {
+            return false;
+        }
+        input.preedit(new dev.skypocket.ui.input.PreeditEvent(text, text == null ? 0 : text.length()));
         return true;
     }
 

@@ -1178,6 +1178,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean keyReleased(KeyEvent event) {
+        if (devDrawer.keyReleased(event)) {
+            return true;
+        }
         int key = event.key();
         if (InputKeys.isShift(event)) {
             shiftDown = false;
@@ -1223,7 +1226,7 @@ public class OneClickScreen extends Screen {
             return true;
         }
         // The drawer owns its picker's fields; ESC closes the drawer before it closes the screen.
-        if (devDrawer.keyPressed(key, shiftDown, ctrlDown)) {
+        if (devDrawer.keyPressed(event)) {
             return true;
         }
         if (devDrawer.isOpen() && InputKeys.isEscape(event)) {
@@ -1330,6 +1333,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
+        if (devDrawer.preedit(event == null ? "" : event.fullText())) {
+            return true;
+        }
         if (modulesPageActive()) {
             ensureModulesPage();
             modulesPage.layout();

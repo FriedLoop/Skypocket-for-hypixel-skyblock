@@ -50,6 +50,39 @@ public final class ClickGuiMetrics {
         ClickGuiFonts.setRenderScale(effectiveScale);
     }
 
+    /**
+     * Runs {@code body} with the rasterisation scale set to {@code scale}, restoring the previous
+     * value afterwards.
+     *
+     * <p>Glyphs are rasterised at {@code DESIGN_SIZE × renderScale × guiScale} and then placed using
+     * the pose they are drawn under. Those two have to agree: rasterising at one scale and drawing at
+     * another means the texture is resampled, which shows up as soft text. A host that draws a page
+     * under {@code pose.scale(s)} therefore also has to set the raster scale to {@code s}, and it has
+     * to put it back afterwards or every later screen inherits it.
+     *
+     * <p>That pairing is the thing this method exists to keep together. It is easy to write the pose
+     * scale and forget the raster scale - the text then looks merely "not quite right", which is much
+     * harder to notice than a layout error. Both of the hosts that scale a page by hand (the theme
+     * drawer and the HUD settings card) do exactly this, and both had the bug once.
+     */
+    public static <T> T withScale(float scale, java.util.function.Supplier<T> body) {
+        float previous = effectiveScale();
+        setEffectiveScale(scale);
+        try {
+            return body.get();
+        } finally {
+            setEffectiveScale(previous);
+        }
+    }
+
+    /** Void form of {@link #withScale(float, java.util.function.Supplier)}. */
+    public static void withScale(float scale, Runnable body) {
+        withScale(scale, () -> {
+            body.run();
+            return null;
+        });
+    }
+
     /** Window GUI scale, exposed here so widgets do not each query the window. */
     public static float guiScale() {
         Minecraft mc = Minecraft.getInstance();

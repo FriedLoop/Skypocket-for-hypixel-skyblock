@@ -288,9 +288,12 @@ public class HudPositionEditorScreen extends Screen {
 
     @Override
     protected void init() {
-        // No widgets any more. The bottom of the screen belongs to the elements being placed, and the
-        // scale slider went with them (the per-element settings card will own those controls); ESC closes
-        // the screen, which the floating panel says out loud.
+        // Register for text input. Without this the screen never receives charTyped at all, so the
+        // settings card's TextFields - hex and RGBA in the colour picker - could be focused and
+        // selected and pasted into, but never typed into. Pasting worked because Ctrl+V arrives as a
+        // key event; only the character stream is gated by this registration, which is what made the
+        // symptom look like "the field is half working" rather than "this screen cannot type".
+        minecraft.onTextInputFocusChange(this, true);
         StatsBarHudElement.setEditorPreview(true);
         clampPanel();
         // A target without a spec would be a NullPointerException on the first click; say so instead.
@@ -995,11 +998,11 @@ public class HudPositionEditorScreen extends Screen {
      */
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
-        if (!event.isAllowedChatCharacter()) {
-            return false;
-        }
-        String text = event.codepointAsString();
-        if (text.isEmpty()) {
+        // Shared filter: a host that forwards a raw control character into a text field corrupts it,
+        // and each host used to spell this check differently. textOf returns null for anything that
+        // should not be inserted.
+        String text = dev.skypocket.ui.mc.InputBridge.textOf(event);
+        if (text == null) {
             return false;
         }
         return settingsCard.charTyped(text.charAt(0));
@@ -1240,6 +1243,9 @@ public class HudPositionEditorScreen extends Screen {
 
     @Override
     public void removed() {
+        // Paired with the registration in init(): leaving it set would keep routing character input
+        // to a screen that is no longer open.
+        minecraft.onTextInputFocusChange(this, false);
         StatsBarHudElement.setEditorPreview(false);
         super.removed();
     }
