@@ -62,43 +62,48 @@ public final class PanelRenderer {
         fillRoundedBottomToRow(graphics, 0, PANEL_W, ClickGuiStyle.cardRadius(), tabBarColor(), footerRow, PANEL_H);
     }
 
-    /** The two main tabs, top right. */
-    public static void drawTabs(GuiGraphicsExtractor graphics, PanelView view, int mouseX, int mouseY) {
-        drawMainTab(graphics, tabX(), TAB_Y, Localization.tr("功能"), !view.settingsTab(), mouseX, mouseY);
-        drawMainTab(graphics, tab2X(), TAB_Y, Localization.tr("设置"), view.settingsTab(), mouseX, mouseY);
-    }
-
-    /** Bottom footer strip with the unified HUD position editor entry button. */
+    /**
+     * Bottom footer strip: the HUD position entry and the settings button.
+     *
+     * <p>Both are full buttons rather than painted glyphs - each gets a surface, a hover state and a
+     * hit box of its own, because both are clickable. The settings entry used to be a main tab in the
+     * top bar; it moved here so the top bar holds only identity (logo and title) and the bottom bar
+     * holds the actions.
+     */
     public static void drawFooter(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         McUiPainter painter = new McUiPainter(graphics);
         int btnY = footerBtnY();
-        boolean hover = mouseX >= FOOTER_BTN_X && mouseX <= FOOTER_BTN_X + FOOTER_BTN_W
+
+        boolean hudHover = mouseX >= FOOTER_BTN_X && mouseX <= FOOTER_BTN_X + FOOTER_BTN_W
                 && mouseY >= btnY && mouseY <= btnY + FOOTER_BTN_H;
         painter.surface(new Rect(FOOTER_BTN_X, btnY, FOOTER_BTN_W, FOOTER_BTN_H),
                 ClickGuiStyle.controlRadius(),
-                hover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
-        painter.text(Localization.tr("HUD 位置调整"),
-                FOOTER_BTN_X + 14, btnY + 9, ClickGuiStyle.text());
+                hudHover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button(), 0);
+        String hud = Localization.tr("HUD 位置调整");
+        painter.text(hud, FOOTER_BTN_X + (FOOTER_BTN_W - painter.textWidth(hud)) / 2f,
+                btnY + (FOOTER_BTN_H - painter.lineHeight()) / 2f, ClickGuiStyle.text());
+
+        boolean gearHover = mouseX >= FOOTER_GEAR_X && mouseX <= FOOTER_GEAR_X + FOOTER_GEAR_SIZE
+                && mouseY >= btnY && mouseY <= btnY + FOOTER_GEAR_SIZE;
+        int gearBg = gearHover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button();
+        Rect gearBox = new Rect(FOOTER_GEAR_X, btnY, FOOTER_GEAR_SIZE, FOOTER_GEAR_SIZE);
+        painter.surface(gearBox, ClickGuiStyle.controlRadius(), gearBg, 0);
+        // A drawn gear, not a glyph: neither Inter nor Noto Sans SC carries U+2699. The hole is
+        // punched with the button's own background, which is why the current fill is passed in.
+        GearIcon.paint(painter, gearBox, ClickGuiStyle.text(), gearBg);
     }
 
     // ---- internals -------------------------------------------------------------------------
 
-    /** Whether the panel shows the sidebar (i.e. the modules list, not a settings page). */
+    /**
+     * Whether the panel shows the sidebar.
+     *
+     * <p>Always true now. It used to depend on {@code settingsTab}, because the panel-wide settings
+     * page took the full width and hid the sidebar. That page moved into the content area, so it
+     * keeps the sidebar like every other page and the conditional has nothing left to decide.
+     */
     private static boolean showsSidebar(PanelView view) {
-        // The sidebar stays while a module is open: the settings live in the card area, not over the
-        // sidebar, so hiding it here made the settings look like a full-width page.
-        return !view.settingsTab();
-    }
-
-    private static void drawMainTab(GuiGraphicsExtractor graphics, int x, int y, String label,
-                                    boolean selected, int mouseX, int mouseY) {
-        McUiPainter painter = new McUiPainter(graphics);
-        boolean hover = !selected && mouseX >= x && mouseX <= x + TAB_W && mouseY >= y && mouseY <= y + TAB_H;
-        int bg = selected ? ClickGuiStyle.tabSelected() : (hover ? ClickGuiStyle.tabHover() : ClickGuiStyle.tab());
-        painter.surface(new Rect(x, y, TAB_W, TAB_H), ClickGuiStyle.controlRadius(), bg, 0);
-        painter.text(label, x + (TAB_W - painter.textWidth(label)) / 2,
-                y + (TAB_H - painter.lineHeight()) / 2,
-                selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
+        return true;
     }
 
     private static int panelBackgroundColor() {

@@ -21,16 +21,15 @@ public final class PanelGeometry {
     public static final int PANEL_H = 810;
     public static final int ROUND = 16;
 
-    // ---- tab bar and its two main tabs ----
+    // ---- tab bar ----
+    /**
+     * Height of the top strip.
+     *
+     * <p>The strip holds identity only - logo and title. The two main tabs that used to sit at its
+     * right end were removed when the settings entry moved to the footer, so none of the tab's own
+     * geometry (width, height, gap, margin) is left to describe.
+     */
     public static final int TAB_BAR_H = 78;
-    public static final int TAB_W = 146;
-    public static final int TAB_H = 44;
-    /** Top edge of the main tabs. */
-    public static final int TAB_Y = 18;
-    /** Gap between the two main tabs. */
-    public static final int TAB_GAP = 16;
-    /** Distance from the panel's right edge to the last tab. */
-    public static final int TAB_MARGIN = 32;
 
     // ---- cards ----
     public static final int CARD_W = 308;
@@ -87,26 +86,34 @@ public final class PanelGeometry {
     public static final int FOOTER_H = 70;
     /** The content scissor ends exactly at the footer's top edge, so cards are cut there. */
     public static final int CONTENT_BOTTOM = FOOTER_H;
-    /** Footer entry button (opens the unified HUD position editor): 3/4 of the sidebar width,
-     *  centred under the sidebar. */
-    public static final int FOOTER_BTN_W = 218;
-    public static final int FOOTER_BTN_X = (SIDEBAR_W - FOOTER_BTN_W) / 2;
+    /**
+     * Footer buttons, aligned to the sidebar's selected-row highlight.
+     *
+     * <p>The highlight is drawn by the homepage as {@code Rect(16, y, SIDEBAR_W - 32, ...)}, so the
+     * row it marks spans x=16..274. The two footer buttons start and end on that same span, which is
+     * what makes them read as belonging to the sidebar column rather than floating.
+     *
+     * <pre>
+     *   16                                        274
+     *   [ HUD 位置 ][8][ gear ]   214 + 8 + 36 = 258
+     * </pre>
+     */
+    public static final int FOOTER_ROW_LEFT = 16;
+    public static final int FOOTER_ROW_WIDTH = SIDEBAR_W - 32;
     public static final int FOOTER_BTN_H = 36;
+    /** Square, so its height and width are both {@link #FOOTER_BTN_H}. */
+    public static final int FOOTER_GEAR_SIZE = FOOTER_BTN_H;
+    /** Gap between the two footer buttons. */
+    public static final int FOOTER_BTN_GAP = 8;
+    public static final int FOOTER_BTN_W =
+            FOOTER_ROW_WIDTH - FOOTER_GEAR_SIZE - FOOTER_BTN_GAP;
+    public static final int FOOTER_BTN_X = FOOTER_ROW_LEFT;
+    public static final int FOOTER_GEAR_X = FOOTER_BTN_X + FOOTER_BTN_W + FOOTER_BTN_GAP;
 
     private PanelGeometry() {
     }
 
     // ---- fixed positions -------------------------------------------------------------------
-
-    /** Left edge of the first main tab. */
-    public static int tabX() {
-        return PANEL_W - TAB_MARGIN - TAB_W * 2 - TAB_GAP;
-    }
-
-    /** Left edge of the second main tab. */
-    public static int tab2X() {
-        return tabX() + TAB_W + TAB_GAP;
-    }
 
     /** Top of the footer's entry button, centred in the footer strip. */
     public static int footerBtnY() {
@@ -133,9 +140,9 @@ public final class PanelGeometry {
 
     /** Top of the content area: below the search box, or right under the tab bar. */
     public static int contentTop(PanelView view) {
-        // A module's settings live in the card pane now, under the same fixed search bar, so they share
-        // the modules tab's top edge.
-        return view.settingsTab() ? CONTENT_TOP_SETTINGS : CONTENT_TOP_MODULES;
+        // Every content page now sits under the same search bar, including the panel-wide settings
+        // page: it moved into the content area, which means it keeps the sidebar and the search bar.
+        return CONTENT_TOP_MODULES;
     }
 
     /**
@@ -165,9 +172,7 @@ public final class PanelGeometry {
     public static int maxScroll(PanelView view, int settingsHeight) {
         int visible = contentBottom() - contentTop(view);
         int content;
-        if (view.settingsTab()) {
-            content = settingsHeight;
-        } else if (view.viewingFeature() == null) {
+        if (view.viewingFeature() == null) {
             int count = visibleFeatures(view).size();
             int rows = (count + columns() - 1) / columns();
             content = rows * (CARD_H + CARD_GAP);

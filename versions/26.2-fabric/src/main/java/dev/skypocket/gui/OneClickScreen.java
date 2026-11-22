@@ -122,7 +122,8 @@ public class OneClickScreen extends Screen {
     private long animStartMs;
 
     private int scrollY;
-    private boolean settingsTab;
+    /** Id of the synthetic feature that carries the panel-wide settings page. */
+    private static final String PANEL_SETTINGS_ID = "__settings";
     private String search = "";
     private Category selected = null;
     private Feature viewingFeature;
@@ -246,20 +247,47 @@ public class OneClickScreen extends Screen {
 
     /** Snapshot of the state the panel geometry reads (see {@link PanelGeometry}). */
     private PanelView view() {
-        return new PanelView(settingsTab, viewingFeature, selected, scrollY, search, features);
+        return new PanelView(viewingFeature, selected, scrollY, search, features);
+    }
+
+    /**
+     * Whether the panel-wide settings page is the current content.
+     *
+     * <p>This used to be its own boolean field, set in parallel with {@code viewingFeature} and
+     * checked from eighteen places. It is now derived from the same navigation state every other page
+     * uses, so the settings page sits in the back/forward history like a module does and cannot drift
+     * out of sync with what is on screen.
+     */
+    private boolean settingsTabActive() {
+        return viewingFeature == panelFeature;
+    }
+
+    /**
+     * Resolves a navigation id to its feature.
+     *
+     * <p>The panel settings page is not a registered module - it must not appear in the card grid -
+     * so the registry cannot find it and this screen resolves that one id itself. Everything else
+     * goes through {@link ModuleRegistry}.
+     */
+    private Feature resolve(String id) {
+        if (PANEL_SETTINGS_ID.equals(id)) {
+            return panelFeature;
+        }
+        return ModuleRegistry.byId(id);
     }
 
     private boolean statsPageActive() {
         // Every module with settings now uses the v2 page; empty modules cannot be opened.
-        return settingsTab || (viewingFeature != null && viewingFeature.hasSettings());
+        return settingsTabActive()
+                || (viewingFeature != null && viewingFeature.hasSettings());
     }
 
     private boolean modulesPageActive() {
-        return !settingsTab && viewingFeature == null;
+        return viewingFeature == null;
     }
 
     private boolean moduleChromeActive() {
-        return !settingsTab && viewingFeature != null && transitionProgress() >= 1f;
+        return viewingFeature != null && transitionProgress() >= 1f;
     }
 
     private final ModulesPage.Host modulesHost = new ModulesPage.Host() {
@@ -343,17 +371,17 @@ public class OneClickScreen extends Screen {
     }
 
     private float statsPageTop() {
-        return contentTop() + (settingsTab ? 14f : 32f);
+        return contentTop() + 32f;
     }
 
     private float statsPageWidth() {
-        // Main settings has no sidebar/search/back column, so it gets the full panel width. Module
-        // pages still live beside the sidebar.
-        return settingsTab ? PANEL_W - 32f : contentWidth();
+        // Every content page, the panel-wide settings included, lives beside the sidebar now. The
+        // settings page used to take the full panel width because it had no sidebar of its own.
+        return contentWidth();
     }
 
     private float statsPageLeft() {
-        return settingsTab ? 32f : SIDEBAR_W;
+        return SIDEBAR_W;
     }
 
     /** Page-cache blit origin snapped to a whole GUI-scaled unit. */
@@ -370,14 +398,14 @@ public class OneClickScreen extends Screen {
             // Keep the page through the 180 ms slide-out so drawPane can animate the outgoing side.
             return;
         }
-        Feature target = settingsTab ? panelFeature : viewingFeature;
+        Feature target = viewingFeature;
         if (target == null) {
             return;
         }
         float height = Math.max(35f, contentBottom() - statsPageTop());
         if (statsPage == null || statsPageFeature != target || statsPageHeight != height) {
             float pageWidth = statsPageWidth();
-            float columnWidth = settingsTab
+            float columnWidth = settingsTabActive()
                     ? pageWidth - 30f
                     : Math.min(1002f, pageWidth - 58f);
             statsPage = new SettingsPage(target, Ui2Theme.palette(),
@@ -417,7 +445,7 @@ public class OneClickScreen extends Screen {
 
     private int contentTop() {
         PanelView view = view();
-        if (!view.settingsTab() && view.viewingFeature() != null) {
+        if (view.viewingFeature() != null) {
             // Same top as the card grid, so the module's settings start where its card was.
             return PanelGeometry.CONTENT_TOP_MODULES;
         }
@@ -593,7 +621,15 @@ public class OneClickScreen extends Screen {
                             ConfigManager.touch();
                         }),
                         new Setting.ActionSetting("UI v2 测试页", () ->
-                                Minecraft.getInstance().gui.setScreen(new DevUiTestScreen()))
+                                Minecraft.getInstance().gui.setScreen(new DevUiTestScreen())),
+                        // Shell layering experiments. Not persisted: these answer whether the panel
+                        // still needs its own stratum and its shell texture, then go away.
+                        new Setting.BooleanSetting("实验：面板分层 stratum",
+                                dev.skypocket.render.PanelExperiment::panelStratum,
+                                dev.skypocket.render.PanelExperiment::setPanelStratum),
+                        new Setting.BooleanSetting("实验：外壳缓存",
+                                dev.skypocket.render.PanelExperiment::shellCache,
+                                dev.skypocket.render.PanelExperiment::setShellCache)
                 ), false).subtitle("字体与渲染调试选项"),
 
                 new Setting.Header("HUD 字体", "选择 HUD 文本使用的字体；切换后立即重新测量"),
@@ -729,13 +765,11 @@ public class OneClickScreen extends Screen {
 
     /** The current view with a different feature/scroll, for drawing the outgoing side. */
     private PanelView viewWith(Feature feature, int paneScroll) {
-        return new PanelView(false, feature, selected, paneScroll, search, ModuleRegistry.features());
+        return new PanelView(feature, selected, paneScroll, search, ModuleRegistry.features());
     }
     /** Browser-style history for the card pane: "" is the grid, otherwise a module id. */
     private final java.util.ArrayDeque<String> backStack = new java.util.ArrayDeque<>();
     private final java.util.ArrayDeque<String> forwardStack = new java.util.ArrayDeque<>();
-    /** Module the settings tab was opened from, re-inserted when returning to the module grid. */
-    private String settingsReturnId = "";
 
     /** Opens a module (or the grid when {@code id} is null), remembering where we came from. */
     private void navigate(String id) {
@@ -744,7 +778,7 @@ public class OneClickScreen extends Screen {
             return;
         }
         if (!target.isEmpty()) {
-            Feature feature = ModuleRegistry.byId(target);
+            Feature feature = resolve(target);
             // A module without settings has no detail page; the card click is already swallowed,
             // but keyboard/history paths must not create one either.
             if (feature == null || !feature.hasSettings()) {
@@ -777,14 +811,13 @@ public class OneClickScreen extends Screen {
     }
 
     private void applyNavigation(String id) {
-        Feature next = id == null || id.isEmpty() ? null : ModuleRegistry.byId(id);
+        Feature next = id == null || id.isEmpty() ? null : resolve(id);
         if (next != null && !next.hasSettings()) {
             return;
         }
         if (modulesPage != null) {
             modulesPage.clearHover();
         }
-        settingsReturnId = "";
         if (statsPage != null) {
             statsPage.closePopups();
             transitionPage = statsPage;
@@ -810,14 +843,22 @@ public class OneClickScreen extends Screen {
         PanelRenderer.drawBackground(graphics, view());
         // GUI blits can be reordered by their bounds; put the background in its own lower
         // stratum so page content is always composited above it.
-        graphics.nextStratum();
+        //
+        // Behind a switch while the claim is being tested: see PanelExperiment.panelStratum().
+        if (dev.skypocket.render.PanelExperiment.panelStratum()) {
+            graphics.nextStratum();
+        }
         GuiPanelCache.PanelContent shellContent =
                 (shellGraphics, shellMouseX, shellMouseY, shellDelta) -> {
-                    PanelRenderer.drawTabs(shellGraphics, view(), shellMouseX, shellMouseY);
+                    // The main tabs are gone: the top bar carries only the logo and title, which are
+                    // drawn after the content so they stay above it. The footer holds the actions.
                     PanelRenderer.drawFooter(shellGraphics, shellMouseX, shellMouseY);
                 };
-        if (!shellCache.draw(graphics, shellCacheKey(lmx, lmy, scaleX, scaleY),
-                PANEL_W, PANEL_H, scaleX, scaleY, !animFinished(), shellContent, lmx, lmy, 0f)) {
+        boolean shellFromCache = dev.skypocket.render.PanelExperiment.shellCache()
+                && shellCache.draw(graphics, shellCacheKey(lmx, lmy, scaleX, scaleY),
+                        PANEL_W, PANEL_H, scaleX, scaleY, !animFinished(), shellContent,
+                        lmx, lmy, 0f);
+        if (!shellFromCache) {
             shellContent.drawContent(graphics, lmx, lmy, 0f);
         }
 
@@ -842,8 +883,8 @@ public class OneClickScreen extends Screen {
                 drawModuleChrome(graphics);
             }
             // Settings tab spans the panel; a module's settings stay inside the card pane.
-            scissorContentArea(graphics, settingsTab ? 0 : SIDEBAR_W, top, PANEL_W);
-            if (!settingsTab) {
+            scissorContentArea(graphics, SIDEBAR_W, top, PANEL_W);
+            if (viewingFeature != null) {
                 dev.skypocket.ui.mc.McUiPainter titlePainter =
                         new dev.skypocket.ui.mc.McUiPainter(graphics);
                 titlePainter.text(viewingFeature.name(), SIDEBAR_W + 35,
@@ -878,25 +919,23 @@ public class OneClickScreen extends Screen {
 
     private long shellCacheKey(int lmx, int lmy, float scaleX, float scaleY) {
         long key = System.identityHashCode(this);
-        key = key * 31 + (settingsTab ? 1 : 0);
+        key = key * 31 + (settingsTabActive() ? 1 : 0);
         key = key * 31 + ConfigManager.revision();
         key = key * 31 + Math.round(ClickGuiFonts.deviceFactor() * 1000f);
         key = key * 31 + Math.round(scaleX * 1000f);
         key = key * 31 + Math.round(scaleY * 1000f);
+        // Hover is part of the key because the cached strip paints it. The main tabs used to be in
+        // here too; they are gone, so only the footer's two buttons remain.
         int hover = 0;
-        if (lmy >= PanelGeometry.TAB_Y && lmy <= PanelGeometry.TAB_Y + PanelGeometry.TAB_H) {
-            if (lmx >= PanelGeometry.tabX() && lmx <= PanelGeometry.tabX() + PanelGeometry.TAB_W) {
+        int footerY = PanelGeometry.footerBtnY();
+        if (lmy >= footerY && lmy <= footerY + PanelGeometry.FOOTER_BTN_H) {
+            if (lmx >= PanelGeometry.FOOTER_BTN_X
+                    && lmx <= PanelGeometry.FOOTER_BTN_X + PanelGeometry.FOOTER_BTN_W) {
                 hover = 1;
-            } else if (lmx >= PanelGeometry.tab2X()
-                    && lmx <= PanelGeometry.tab2X() + PanelGeometry.TAB_W) {
+            } else if (lmx >= PanelGeometry.FOOTER_GEAR_X
+                    && lmx <= PanelGeometry.FOOTER_GEAR_X + PanelGeometry.FOOTER_GEAR_SIZE) {
                 hover = 2;
             }
-        }
-        int footerY = PanelGeometry.footerBtnY();
-        if (lmx >= PanelGeometry.FOOTER_BTN_X
-                && lmx <= PanelGeometry.FOOTER_BTN_X + PanelGeometry.FOOTER_BTN_W
-                && lmy >= footerY && lmy <= footerY + PanelGeometry.FOOTER_BTN_H) {
-            hover = 3;
         }
         return key * 31 + hover;
     }
@@ -949,19 +988,15 @@ public class OneClickScreen extends Screen {
             return true;
         }
 
-        // Shell chrome is only the main tabs and the footer button now.
+        // Shell chrome is only the footer's two buttons now.
         PanelInput.Hit hit = PanelInput.hit(lx, ly);
         switch (hit.kind()) {
-            case MODULES_TAB -> {
-                showModules();
-                return true;
-            }
-            case SETTINGS_TAB -> {
-                showSettings();
-                return true;
-            }
             case FOOTER_BUTTON -> {
                 Minecraft.getInstance().gui.setScreen(new HudPositionEditorScreen(this));
+                return true;
+            }
+            case FOOTER_SETTINGS -> {
+                showSettings();
                 return true;
             }
             case NONE -> {
@@ -988,39 +1023,29 @@ public class OneClickScreen extends Screen {
 
 
     private void showModules() {
-        String returnId = settingsTab ? settingsReturnId : "";
-        boolean changed = settingsTab || viewingFeature != null;
-        if (modulesPage != null) {
-            modulesPage.clearHover();
-        }
-        settingsTab = false;
-        viewingFeature = null;
-        settingsReturnId = "";
-        if (changed) {
-            if (!returnId.isEmpty()) {
-                // Returning from the settings tab should keep the module page it replaced in
-                // history, so Back goes to that module rather than the empty grid.
-                backStack.push(returnId);
-                forwardStack.clear();
-            }
-            scrollY = 0;
-            rebuildSettingsWidgets();
-        }
-    }
-
-    private void showSettings() {
-        if (settingsTab) {
+        if (viewingFeature == null) {
             return;
         }
         if (modulesPage != null) {
             modulesPage.clearHover();
         }
-        settingsReturnId = currentId();
-        settingsTab = true;
-        viewingFeature = null;
-        scrollY = 0;
-        rebuildSettingsWidgets();
-        ensureStatsPage();
+        // Goes through the same history as any other navigation, so Back returns to whatever was
+        // open rather than always landing on the grid.
+        backStack.push(currentId());
+        forwardStack.clear();
+        applyNavigation("");
+    }
+
+    private void showSettings() {
+        if (settingsTabActive()) {
+            return;
+        }
+        if (modulesPage != null) {
+            modulesPage.clearHover();
+        }
+        backStack.push(currentId());
+        forwardStack.clear();
+        applyNavigation(PANEL_SETTINGS_ID);
     }
 
     @Override

@@ -310,7 +310,7 @@ final class ModulesPage {
 
     private static List<Feature> visibleFeatures(String query, Category selected) {
         return dev.skypocket.gui.PanelGeometry.visibleFeatures(
-                new PanelView(false, null, selected, 0, query, ModuleRegistry.features()));
+                new PanelView(null, selected, 0, query, ModuleRegistry.features()));
     }
 
     void layout() {
