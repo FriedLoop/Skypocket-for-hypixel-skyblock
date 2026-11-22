@@ -148,16 +148,24 @@ public class OneClickScreen extends Screen {
     private static final int TEXT_REGION_MODULES = 0;
     private static final int TEXT_REGION_CHROME = 1;
     private static final int TEXT_REGION_SETTINGS = 2;
+    private static final int TEXT_REGION_TOPBAR = 3;
 
     /**
      * Clears text focus in every pane except the one about to receive a click.
      *
      * <p>Focus is what decides where typed characters go, so there must be exactly one owner. The
      * panes cannot coordinate this between themselves - they do not share a router and SettingsPage
-     * has no idea a sidebar exists. The screen is the only place that sees all three, so it is where
-     * the handover belongs.
+     * has no idea a sidebar exists. The screen is the only place that sees all of them, so it is
+     * where the handover belongs.
+     *
+     * <p>The top bar is such a pane now that the search box moved out of the pages: without it, a
+     * caret left in the search box kept receiving characters after the user had clicked into a
+     * module's settings.
      */
     private void focusOnly(int region) {
+        if (region != TEXT_REGION_TOPBAR) {
+            topBar.clearFocus();
+        }
         if (region != TEXT_REGION_MODULES && modulesPage != null) {
             modulesPage.clearFocus();
         }
@@ -292,7 +300,20 @@ public class OneClickScreen extends Screen {
 
     private final ModulesPage.Host modulesHost = new ModulesPage.Host() {
         @Override public String search() { return search; }
-        @Override public void setSearch(String value) { search = value; scrollY = 0; }
+        /**
+         * Search text changed.
+         *
+         * <p>The card grid has to be rebuilt here: the search box lives in the top bar now, so it no
+         * longer shares a page with the grid and cannot call the grid's own refresh. It used to, and
+         * the grid filtered itself as a side effect of owning the field.
+         */
+        @Override public void setSearch(String value) {
+            search = value;
+            scrollY = 0;
+            if (modulesPage != null) {
+                modulesPage.refreshCards();
+            }
+        }
         @Override public Category selected() { return selected; }
         @Override public void setSelected(Category category) {
             if (viewingFeature != null) {
@@ -316,6 +337,14 @@ public class OneClickScreen extends Screen {
             feature.setEnabled(!feature.isEnabled());
         }
     };
+
+    /**
+     * The top bar's search box and navigation arrows.
+     *
+     * <p>They are not part of any page: they sit above the content area, outside its scissor, and stay
+     * put across every page. Created once, because they own focus and caret state.
+     */
+    private final TopBarControls topBar = new TopBarControls(modulesHost, Ui2Theme.palette());
 
     private void ensureModulesPage() {
         if (!modulesPageActive()) {
@@ -444,12 +473,9 @@ public class OneClickScreen extends Screen {
     }
 
     private int contentTop() {
-        PanelView view = view();
-        if (view.viewingFeature() != null) {
-            // Same top as the card grid, so the module's settings start where its card was.
-            return PanelGeometry.CONTENT_TOP_MODULES;
-        }
-        return PanelGeometry.contentTop(view);
+        // Every page starts at the same row now: the search box that used to sit above the content
+        // moved into the top bar.
+        return PanelGeometry.CONTENT_TOP;
     }
 
     private void clampScroll() {
@@ -900,6 +926,13 @@ public class OneClickScreen extends Screen {
             graphics.disableScissor();
         }
 
+        // The search box and arrows live in the top bar, above the content area and outside its
+        // scissor - which is why they cannot be part of a page's tree. Drawn after the content so
+        // nothing can overlap them.
+        topBar.sync();
+        topBar.layout();
+        topBar.draw(graphics);
+
         // Title sits above the cached shell; the footer is part of the shell slot.
         int logoSource = ClickGuiMetrics.nearestLogoSample(46);
         net.minecraft.resources.Identifier logo = ModuleIcon.logo(logoSource);
@@ -967,6 +1000,15 @@ public class OneClickScreen extends Screen {
 
         if (!dev.skypocket.util.MouseButtons.isLeft(event.button())) {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
+        }
+
+        // The top bar is above the content area and outside its scissor, so it gets the press first.
+        // A press in the bar that misses every control still counts as handled: the bar is furniture,
+        // and letting it fall through to the page would let a click on empty bar space move a card.
+        if (ly < TAB_BAR_H) {
+            topBar.pointerDown(lx, ly, 0, shiftDown ? Modifiers.SHIFT : 0);
+            focusOnly(TEXT_REGION_TOPBAR);
+            return true;
         }
 
         // The homepage owns everything between the tab bar and the footer.
@@ -1056,6 +1098,10 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (topBar.hasPointerCapture()) {
+            topBar.pointerMove(lx, ly, shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (modulesPageActive()) {
             ensureModulesPage();
             modulesPage.layout();
@@ -1087,6 +1133,11 @@ public class OneClickScreen extends Screen {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
+        if (topBar.hasFocus() || topBar.hasPointerCapture()) {
+            topBar.pointerUp(lx, ly, Math.max(0, event.button()),
+                    shiftDown ? Modifiers.SHIFT : 0);
+            return true;
+        }
         if (modulesPageActive()) {
             ensureModulesPage();
             modulesPage.layout();
@@ -1172,10 +1223,21 @@ public class OneClickScreen extends Screen {
             devDrawer.mouseMoved(mouseX, mouseY, width, height);
             return;
         }
+        // The top bar needs the move regardless of which page is showing: it is not part of a page,
+        // and its arrows only highlight if their router sees the pointer.
+        layout();
+        double barX = localX(mouseX);
+        double barY = localY(mouseY);
+        if (barY < TAB_BAR_H) {
+            topBar.pointerMove(barX, barY, shiftDown ? Modifiers.SHIFT : 0);
+        } else {
+            // Leaving the bar has to clear its hover, or an arrow stays lit while the pointer is over
+            // the content area.
+            topBar.pointerMove(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, 0);
+        }
         if (modulesPageActive() || moduleChromeActive() || statsPageActive()) {
-            layout();
-            double lx = localX(mouseX);
-            double ly = localY(mouseY);
+            double lx = barX;
+            double ly = barY;
             if (modulesPageActive()) {
                 ensureModulesPage();
                 modulesPage.layout();
@@ -1204,6 +1266,10 @@ public class OneClickScreen extends Screen {
     @Override
     public boolean keyReleased(KeyEvent event) {
         if (devDrawer.keyReleased(event)) {
+            return true;
+        }
+        if (topBar.keyUp(new dev.skypocket.ui.input.KeyEvent(
+                canonicalKey(event), 0, pageModifiers(event), false))) {
             return true;
         }
         int key = event.key();
@@ -1256,6 +1322,18 @@ public class OneClickScreen extends Screen {
         }
         if (devDrawer.isOpen() && InputKeys.isEscape(event)) {
             devDrawer.close();
+            return true;
+        }
+        // The top bar holds the search box, which takes typed characters. Escape releases its focus
+        // before it is allowed to close the screen, so the first ESC in a search box just steps out
+        // of the box.
+        if (topBar.hasFocus()) {
+            if (event.isEscape()) {
+                topBar.clearFocus();
+                return true;
+            }
+            topBar.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                    pageModifiers(event), true));
             return true;
         }
         if (modulesPageActive()) {
@@ -1325,14 +1403,9 @@ public class OneClickScreen extends Screen {
             if (!typed.isEmpty() && devDrawer.charTyped(typed.charAt(0))) {
                 return true;
             }
-            if (modulesPageActive()) {
-                ensureModulesPage();
-                if (modulesPage.hasFocus()) {
-                    modulesPage.layout();
-                    modulesPage.searchInput(typed);
-                    return true;
-                }
-                return false;
+            if (topBar.hasFocus()) {
+                topBar.textInput(typed);
+                return true;
             }
             if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
                 ensureModuleChrome();
@@ -1359,6 +1432,11 @@ public class OneClickScreen extends Screen {
     @Override
     public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
         if (devDrawer.preedit(event == null ? "" : event.fullText())) {
+            return true;
+        }
+        if (topBar.preedit(new dev.skypocket.ui.input.PreeditEvent(
+                event == null ? "" : event.fullText(),
+                event == null ? 0 : event.caretPosition()))) {
             return true;
         }
         if (modulesPageActive()) {

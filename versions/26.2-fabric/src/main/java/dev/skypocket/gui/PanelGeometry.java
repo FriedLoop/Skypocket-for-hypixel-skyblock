@@ -67,20 +67,29 @@ public final class PanelGeometry {
     /** Top of the first sidebar row (below the tab bar). */
     public static final int SIDEBAR_TOP = TAB_BAR_H + 16;
 
-    // ---- search box (after SIDEBAR_W: SEARCH_X/W are derived from it) ----
-    public static final int SEARCH_Y = 92;
+    // ---- search box and navigation ----
+    //
+    // They belong to the top bar now, not to the content column: the bar holds identity (logo, title)
+    // on the left and the navigation tools on the right, and the content column starts directly below
+    // it. Their x positions are unchanged - the sidebar still decides where the column begins.
+    public static final int SEARCH_H = 36;
+    /** Vertically centred in the top bar. */
+    public static final int SEARCH_Y = (TAB_BAR_H - SEARCH_H) / 2;
     /** Back/forward buttons sit where the search box used to start. */
     public static final int NAV_SIZE = 36;
     public static final int NAV_GAP = 8;
     public static final int NAV_X = SIDEBAR_W + 32;
     public static final int SEARCH_X = NAV_X + (NAV_SIZE + NAV_GAP) * 2;
     public static final int SEARCH_W = PANEL_W - SIDEBAR_W - 64 - (NAV_SIZE + NAV_GAP) * 2;
-    public static final int SEARCH_H = 36;
 
-    /** Top of the content area on the modules tab (below the search box). */
-    public static final int CONTENT_TOP_MODULES = 146;
-    /** Top of the content area on the settings tab / a feature's detail page. */
-    public static final int CONTENT_TOP_SETTINGS = 100;
+    /**
+     * Top of the content area.
+     *
+     * <p>Both pages start here. The value used to differ per page because the search box lived inside
+     * the content column and shorter pages pulled their content up beside it; the search box moved to
+     * the top bar, so nothing is left above the content except the bar itself.
+     */
+    public static final int CONTENT_TOP = TAB_BAR_H + 16;
 
     // ---- footer ----
     public static final int FOOTER_H = 70;
@@ -138,11 +147,15 @@ public final class PanelGeometry {
 
     // ---- content area ----------------------------------------------------------------------
 
-    /** Top of the content area: below the search box, or right under the tab bar. */
+    /**
+     * Top of the content area: directly under the top bar.
+     *
+     * <p>Takes a view for historical reasons - it used to differ per page, and used to sit below the
+     * search box. Both of those are gone: the search box moved into the top bar, and every page starts
+     * at the same row.
+     */
     public static int contentTop(PanelView view) {
-        // Every content page now sits under the same search bar, including the panel-wide settings
-        // page: it moved into the content area, which means it keeps the sidebar and the search bar.
-        return CONTENT_TOP_MODULES;
+        return CONTENT_TOP;
     }
 
     /**

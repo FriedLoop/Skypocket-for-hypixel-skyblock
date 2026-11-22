@@ -75,7 +75,6 @@ import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.widget.Control;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
-import dev.skypocket.ui.widget.TextField;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
 import dev.skypocket.ui.widget.WidgetPalette;
@@ -94,9 +93,8 @@ import dev.skypocket.gui.PanelGeometry;
 import java.util.List;
 import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
-import java.util.function.BooleanSupplier;
 
-/** The homepage's v2 element tree: sidebar, search, navigation and module cards. */
+/** The homepage's v2 element tree: the sidebar and the module cards. */
 final class ModulesPage {
     interface Host {
         String search();
@@ -121,8 +119,7 @@ final class ModulesPage {
     }
 
     private static final int SIDEBAR_TOP_LOCAL = PanelGeometry.SIDEBAR_TOP - PanelGeometry.TAB_BAR_H;
-    private static final int SEARCH_TOP = PanelGeometry.SEARCH_Y - PanelGeometry.TAB_BAR_H;
-    private static final int CARDS_TOP = PanelGeometry.CONTENT_TOP_MODULES - PanelGeometry.TAB_BAR_H;
+    private static final int CARDS_TOP = PanelGeometry.CONTENT_TOP - PanelGeometry.TAB_BAR_H;
     private static final int HIGHLIGHT_MS = 160;
 
     private final Host host;
@@ -145,12 +142,10 @@ final class ModulesPage {
     private final boolean withCards;
 
     private final List<SidebarRow> rows = new ArrayList<>();
-    private final List<NavButton> navButtons = new ArrayList<>();
     private final GuiPanelCache.Slot pageCache = new GuiPanelCache.Slot();
     private Box root;
     private Box grid;
     private ScrollView scroll;
-    private TextField search;
     private InputRouter input;
     private UiElement lastFocused;
     private long renderRevision;
@@ -218,28 +213,6 @@ final class ModulesPage {
         highlightInitialized = true;
         page.add(sidebar);
 
-        search = new TextField(Localization.tr("搜索..."), null,
-                Style.builder().position(Style.Position.ABSOLUTE)
-                        .left(PanelGeometry.SEARCH_X).top(SEARCH_TOP)
-                        .width(PanelGeometry.SEARCH_W).height(PanelGeometry.SEARCH_H).build(),
-                palette);
-        search.text(host.search());
-        search.onChange(value -> {
-            host.setSearch(value);
-            refreshCards();
-        });
-        page.add(search);
-
-        navButtons.clear();
-        NavButton back = new NavButton("←", host::canGoBack, host::goBack, palette,
-                PanelGeometry.NAV_X, SEARCH_TOP);
-        NavButton forward = new NavButton("→", host::canGoForward, host::goForward, palette,
-                PanelGeometry.NAV_X + PanelGeometry.NAV_SIZE + PanelGeometry.NAV_GAP, SEARCH_TOP);
-        navButtons.add(back);
-        navButtons.add(forward);
-        page.add(back);
-        page.add(forward);
-
         if (withCards) {
             grid = new Box(Style.builder().width(PanelGeometry.contentWidth())
                     .height(Math.max(1f, cardContentHeight())).build());
@@ -277,7 +250,7 @@ final class ModulesPage {
         return Math.max(1f, rows * (PanelGeometry.CARD_H + PanelGeometry.CARD_GAP));
     }
 
-    /** Rebuilds only the card children, keeping the search field and its focus intact. */
+    /** Rebuilds only the card children. */
     void refreshCards() {
         if (grid == null) {
             return;
@@ -333,7 +306,7 @@ final class ModulesPage {
         pose.pushMatrix();
         pose.translate(0f, PanelGeometry.TAB_BAR_H);
         drawHighlight(painter);
-        // Draw the sidebar/search/navigation without the scroll pane.
+        // Draw the sidebar without the scroll pane.
         boolean scrollVisible = scroll != null && scroll.visible();
         if (scroll != null) {
             scroll.visible(false);
@@ -388,9 +361,6 @@ final class ModulesPage {
                 } finally {
                     Control.overlayPaint(false);
                 }
-            }
-            if (search != null && search.isFocused()) {
-                dev.skypocket.ui.PaintPass.paintStatic(painter, search);
             }
         }
         pose.popMatrix();
@@ -452,23 +422,8 @@ final class ModulesPage {
     }
 
     boolean pointerDown(float x, float y, int modifiers) {
-        // The search field lives above the scroll layer. Resolve it by its visual box first:
-        // if the generic hit-test lands on a decorator instead, the user still gets a focused field.
-        if (search != null && search.visible() && insideSearch(x, y)) {
-            input.focus(search);
-            input.capture(search);
-            search.onPointerDown(new PointerEvent(x, y, 0, modifiers));
-            return true;
-        }
         input.pointerDown(new PointerEvent(x, y, 0, modifiers));
         return true;
-    }
-
-    private boolean insideSearch(float x, float y) {
-        float sx = search.visualX();
-        float sy = search.visualY();
-        return x >= sx && y >= sy && x < sx + search.bounds().width()
-                && y < sy + search.bounds().height();
     }
 
     boolean pointerMove(float x, float y, int modifiers) {
@@ -509,15 +464,6 @@ final class ModulesPage {
         return input.focused() != null;
     }
 
-    /**
-     * Sends a character straight to the homepage search field. The homepage has no other
-     * text target, so this avoids depending on the generic focus router's current node
-     * when the cursor is already visibly inside the search box.
-     */
-    boolean searchInput(String value) {
-        return search != null && search.onTextInput(new TextInputEvent(value));
-    }
-
     boolean hasPointerCapture() {
         return input.captured() != null;
     }
@@ -536,61 +482,4 @@ final class ModulesPage {
         input.focus(null);
     }
 
-    private static final class NavButton extends Control {
-        private final String glyph;
-        private final BooleanSupplier enabled;
-        private final Runnable action;
-
-        NavButton(String glyph, BooleanSupplier enabled, Runnable action, WidgetPalette palette,
-                  float x, float y) {
-            super(Style.builder().position(Style.Position.ABSOLUTE)
-                    .left(x).top(y)
-                    .width(PanelGeometry.NAV_SIZE).height(PanelGeometry.NAV_SIZE).build(),
-                    palette);
-            this.glyph = glyph;
-            this.enabled = enabled;
-            this.action = action;
-        }
-
-        @Override
-        public boolean focusable() {
-            return false;
-        }
-
-        @Override
-        protected void activate() {
-            if (enabled.getAsBoolean()) {
-                action.run();
-            }
-        }
-
-        @Override
-        public boolean onPointerDown(PointerEvent event) {
-            if (!enabled.getAsBoolean()) {
-                return true;
-            }
-            pressed = true;
-            return true;
-        }
-
-        @Override
-        public boolean onPointerUp(PointerEvent event) {
-            if (pressed) {
-                activate();
-            }
-            pressed = false;
-            return true;
-        }
-
-        @Override
-        public void paint(dev.skypocket.ui.UiPainter painter) {
-            boolean on = enabled.getAsBoolean();
-            painter.surface(bounds(), dev.skypocket.gui.widget.ClickGuiStyle.controlRadius(),
-                    pressed ? palette.pressed()
-                            : hovered && on ? palette.hover() : palette.background(), 0);
-            painter.text(glyph, bounds().x() + (bounds().width() - painter.textWidth(glyph)) / 2f,
-                    bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
-                    on ? palette.text() : palette.muted());
-        }
-    }
 }
