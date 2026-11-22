@@ -237,7 +237,13 @@ public final class Dropdown extends Control implements dev.skypocket.ui.PopupOwn
         int border = focused && !neutralPaint() ? palette.focus() : 0;
         painter.surface(new dev.skypocket.ui.Rect(fieldX, fieldY, fieldW, fieldH),
                 palette.radius(), palette.field(), border);
-        painter.text(value, fieldX + 8f,
+        // Centred in the space left of the arrow, not in the whole field: centring across the full
+        // width pushed the text right and it read as off-centre against the symmetric padding.
+        float valueLeft = fieldX + 8f;
+        float valueRight = fieldX + fieldW - 8f - arrowW;
+        float valueW = painter.textWidth(value);
+        float valueX = valueLeft + Math.max(0f, (valueRight - valueLeft - valueW) / 2f);
+        painter.text(value, valueX,
                 fieldY + (fieldH - painter.lineHeight()) / 2f, palette.text());
         painter.text(arrow, fieldX + fieldW - 8f - arrowW,
                 fieldY + (fieldH - painter.lineHeight()) / 2f, palette.muted());

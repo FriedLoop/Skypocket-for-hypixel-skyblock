@@ -83,6 +83,13 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
     };
     /** The scrolling column; kept because the page still styles its scrollbar after building. */
     private ScrollView scroll;
+    /**
+     * Scroll offset carried across a rebuild.
+     *
+     * <p>Set at the end of {@link #build()} and applied by the next layout, because the tree - and
+     * with it the ScrollView - does not exist until then. Zero means "nothing to restore".
+     */
+    private float rebuildScrollOffset;
 
     public SettingsPage(Feature feature, WidgetPalette palette, float width, float height) {
         this(feature, palette, width, height, Math.min(1002f, Math.max(386f, width - 58f)));
@@ -123,6 +130,11 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
 
     @Override
     protected dev.skypocket.ui.UiElement build() {
+        // The rebuild replaces the tree, and with it the ScrollView that holds the scroll offset.
+        // Without this the page jumps to the top whenever something rebuilds it - most visibly when a
+        // dropdown collapses after a selection, because its height is ~276px shorter folded than
+        // open. Reapplied in layout() once the new tree exists.
+        float previousScroll = scrollOffset();
         colorFields.clear();
         dropdowns.clear();
         // Custom-row dropdowns are re-registered by the rows that are built again below, so the old
@@ -162,6 +174,10 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
                     .build());
             page.add(bar);
         }
+        // Restore after the new ScrollView exists. ScrollView scrollTo clamps to the new content
+        // height, which is the right behaviour for a genuine scroll and the reason the offset has to
+        // be re-applied here rather than carried inside the tree.
+        rebuildScrollOffset = previousScroll;
         return page;
     }
 
@@ -171,6 +187,12 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
                 new Size(ClickGuiFonts.width(
                         dev.skypocket.i18n.Localization.auto(text)), ClickGuiFonts.lineHeight());
         layout(measurer);
+        // A rebuild captured the offset before the tree was replaced; put it back now that the new
+        // ScrollView has been laid out and knows its content height.
+        if (rebuildScrollOffset > 0f) {
+            restoreScroll(rebuildScrollOffset);
+            rebuildScrollOffset = 0f;
+        }
     }
 
     /**

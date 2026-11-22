@@ -317,6 +317,34 @@ public abstract class UiPage {
         return null;
     }
 
+    /** Current scroll offset of the page's column, or 0 when it has none. */
+    public final float scrollOffset() {
+        if (root == null) {
+            return 0f;
+        }
+        ScrollView scroll = findScrollView(root);
+        return scroll == null ? 0f : scroll.scrollY();
+    }
+
+    /**
+     * Restores a scroll offset after a layout pass, keeping the page where the user left it.
+     *
+     * <p>A page whose content shrinks - a dropdown collapsing, a group folding up - re-clamps the
+     * scroll to the new, smaller maximum, which reads as "selecting an option jumped me back to the
+     * top". The maximum is genuinely smaller, so the clamp is correct; what is wrong is that the
+     * content change was not the user scrolling. Capture {@link #scrollOffset()} before the change and
+     * hand it back here afterwards.
+     */
+    public final void restoreScroll(float offset) {
+        if (root == null || offset <= 0f) {
+            return;
+        }
+        ScrollView scroll = findScrollView(root);
+        if (scroll != null) {
+            scroll.scrollTo(offset);
+        }
+    }
+
     public final float renderScaleX() {
         return renderScaleX;
     }
