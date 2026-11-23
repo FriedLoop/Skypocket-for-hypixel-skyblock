@@ -33,12 +33,11 @@ import java.util.Set;
  * reuses revision 0), {@link #revision()}, the scroll position, and
  * the config revision. See UI-V2-CONTRACT.md §5.2.
  */
-public abstract class UiPage {
+public abstract class UiPage implements dev.skypocket.ui.host.Layer {
     private final RenderCache cache = dev.skypocket.ui.mc.McRenderCache.create();
     private final OverlayHost overlays = new OverlayHost();
 
     /** Screen-to-design mapping supplied by the host; identity until one is set. */
-    private PageTransform transform = PageTransform.NONE;
 
     /** Popup owners whose floating layers this page drives; see {@link #trackPopup}. */
     private final java.util.List<PopupOwner> popupOwners = new java.util.ArrayList<>();
@@ -113,6 +112,60 @@ public abstract class UiPage {
 
     public final float height() {
         return height;
+    }
+
+    // ---- Layer ---------------------------------------------------------------------------
+
+    /**
+     * Where this page sits, in host coordinates.
+     *
+     * <p>The origin and the size are the host's to decide: this page does not know where it
+     * was placed. That is why the rect is reported rather than stored once - a host that
+     * repositions the page between frames needs the report to move with it.
+     */
+    @Override
+    public dev.skypocket.ui.Rect boundsOnScreen() {
+        return new dev.skypocket.ui.Rect(originX, originY, width, height);
+    }
+
+    /** The page is drawn by its host whenever it exists; visibility is the host's question. */
+    @Override
+    public boolean isOpen() {
+        return true;
+    }
+
+    @Override
+    public void paint(dev.skypocket.ui.UiPainter painter) {
+        // A layer paints into Minecraft's GUI, which needs a pose and a scissor, so the
+        // painter is the MC one. The cast documents that this entry point is for hosts.
+        draw(((dev.skypocket.ui.mc.McUiPainter) painter).graphics(), renderScaleX(),
+                renderScaleY(), false);
+    }
+
+    @Override
+    public boolean hasFocus() {
+        return input().focused() != null;
+    }
+
+    /** Releases keyboard focus; the host calls this when focus moves to another layer. */
+    @Override
+    public void clearFocus() {
+        input().focus(null);
+    }
+
+    @Override
+    public boolean hasPointerCapture() {
+        return input().captured() != null;
+    }
+
+    /** Where the host placed this page, in host coordinates. */
+    private float originX;
+    private float originY;
+
+    /** Tells the page where the host put it. Hosts call this before laying out. */
+    public final void origin(float x, float y) {
+        this.originX = x;
+        this.originY = y;
     }
 
     /** Lays the tree and every overlay out. Call once per frame before drawing. */
@@ -362,26 +415,27 @@ public abstract class UiPage {
     // platform code so ESC and backspace silently did nothing.
     //
     // Taking screen coordinates and raw platform events makes each of those impossible: the
-    // conversion is here, and there is one method per event with no optional pieces.
+    // ---- input ---------------------------------------------------------------------------
+    //
+    // Coordinates are page-local design units. The host converts: it is the only thing that knows
+    // the page's origin and how the pose scaled it, and for an animating host it is also the only
+    // thing that knows the animation state. Pages used to do this themselves through a PageTransform
+    // the host installed; that meant every page carried a step the host could have done once, and it
+    // could not express a host whose transform changes per frame.
 
-    /** Sets how screen coordinates map into this page's design space. */
-    public final void transform(PageTransform value) {
-        this.transform = value == null ? PageTransform.NONE : value;
+    public boolean pointerDown(float x, float y, int button, int modifiers) {
+        input().pointerDown(new PointerEvent(x, y, button, modifiers));
+        return true;
     }
 
-    public final void pointerDown(double screenX, double screenY, int button, int modifiers) {
-        input().pointerDown(new PointerEvent(transform.toDesignX(screenX),
-                transform.toDesignY(screenY), button, modifiers));
+    public boolean pointerMove(float x, float y, int modifiers) {
+        input().pointerMove(new PointerEvent(x, y, -1, modifiers));
+        return true;
     }
 
-    public final void pointerMove(double screenX, double screenY, int button, int modifiers) {
-        input().pointerMove(new PointerEvent(transform.toDesignX(screenX),
-                transform.toDesignY(screenY), button, modifiers));
-    }
-
-    public final void pointerUp(double screenX, double screenY, int button, int modifiers) {
-        input().pointerUp(new PointerEvent(transform.toDesignX(screenX),
-                transform.toDesignY(screenY), button, modifiers));
+    public boolean pointerUp(float x, float y, int button, int modifiers) {
+        input().pointerUp(new PointerEvent(x, y, button, modifiers));
+        return true;
     }
 
     /**
@@ -390,14 +444,13 @@ public abstract class UiPage {
      * <p>Separate from {@link #pointerMove} on purpose: a drag must not change what is hovered, and
      * a plain move must not be treated as one. Hosts that only forward drags get no hover at all.
      */
-    public final void mouseMoved(double screenX, double screenY) {
-        input().pointerMove(new PointerEvent(transform.toDesignX(screenX),
-                transform.toDesignY(screenY), -1, 0));
+    public void mouseMoved(float x, float y) {
+        input().pointerMove(new PointerEvent(x, y, -1, 0));
     }
 
-    public final void wheel(double screenX, double screenY, double amount, int modifiers) {
-        input().wheel(new WheelEvent(transform.toDesignX(screenX),
-                transform.toDesignY(screenY), (float) amount, modifiers));
+    public boolean wheel(float x, float y, float amount, int modifiers) {
+        input().wheel(new WheelEvent(x, y, amount, modifiers));
+        return true;
     }
 
     /**
@@ -408,33 +461,28 @@ public abstract class UiPage {
      * {@code event.key()} straight through works for letters (their codes coincide) and silently
      * breaks every named key.
      */
-    public final void keyDown(net.minecraft.client.input.KeyEvent event) {
-        if (event == null) {
-            return;
-        }
-        input().keyDown(new KeyEvent(dev.skypocket.ui.input.InputKeys.canonical(event), 0,
-                keyModifiers(event), true));
+    @Override
+    public boolean keyDown(KeyEvent event) {
+        input().keyDown(event);
+        return true;
     }
 
-    public final void keyUp(net.minecraft.client.input.KeyEvent event) {
-        if (event == null) {
-            return;
-        }
-        input().keyUp(new KeyEvent(dev.skypocket.ui.input.InputKeys.canonical(event), 0,
-                keyModifiers(event), false));
+    @Override
+    public boolean keyUp(KeyEvent event) {
+        input().keyUp(event);
+        return true;
     }
 
-    /** Forwards typed text; ignores characters the game would not accept in chat. */
-    public final void textInput(net.minecraft.client.input.CharacterEvent event) {
-        if (event != null && event.isAllowedChatCharacter()) {
-            input().textInput(new TextInputEvent(event.codepointAsString()));
-        }
+    @Override
+    public boolean textInput(String text) {
+        input().textInput(new TextInputEvent(text));
+        return true;
     }
 
-    /** Forwards IME composition state, which text fields show inline. */
-    public final void preedit(net.minecraft.client.input.PreeditEvent event) {
-        input().preedit(new PreeditEvent(event == null ? "" : event.fullText(),
-                event == null ? 0 : event.caretPosition()));
+    @Override
+    public boolean preedit(PreeditEvent event) {
+        input().preedit(event);
+        return true;
     }
 
     /** Whether this page wants ESC handled by itself rather than by the host. */

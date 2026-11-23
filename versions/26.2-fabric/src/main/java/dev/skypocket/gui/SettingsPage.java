@@ -244,49 +244,33 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
         return renderScaleY();
     }
 
+    // The base forwards these to the router; this page adds popup dismissal on top. Overriding
+    // rather than keeping a parallel set of methods is what removed the second input convention -
+    // the page used to have both a screen-coordinate pair and a page-coordinate pair, and callers
+    // had to remember which to use.
+
+    @Override
     public boolean pointerDown(float x, float y, int button, int modifiers) {
-        input().pointerDown(new PointerEvent(x, y, button, modifiers));
+        boolean handled = super.pointerDown(x, y, button, modifiers);
         closePopupsOutside();
-        return true;
+        return handled;
     }
 
-    public boolean pointerMove(float x, float y, int modifiers) {
-        input().pointerMove(PointerEvent.move(x, y, modifiers));
-        return true;
-    }
-
+    @Override
     public boolean pointerUp(float x, float y, int button, int modifiers) {
-        input().pointerUp(new PointerEvent(x, y, button, modifiers));
+        boolean handled = super.pointerUp(x, y, button, modifiers);
         closePopupsOutside();
-        return true;
+        return handled;
     }
 
-    public boolean wheel(float x, float y, float delta, int modifiers) {
-        input().wheel(new WheelEvent(x, y, delta, modifiers));
-        return true;
-    }
-
+    @Override
     public boolean keyDown(KeyEvent event) {
-        input().keyDown(event);
+        boolean handled = super.keyDown(event);
         closePopupsOutside();
-        return true;
+        return handled;
     }
 
-    public boolean keyUp(KeyEvent event) {
-        input().keyUp(event);
-        return true;
-    }
-
-    public boolean textInput(String text) {
-        input().textInput(new TextInputEvent(text));
-        return true;
-    }
-
-    public boolean preedit(PreeditEvent event) {
-        input().preedit(event);
-        return true;
-    }
-
+    @Override
     public void clearFocus() {
         input().focus(null);
     }

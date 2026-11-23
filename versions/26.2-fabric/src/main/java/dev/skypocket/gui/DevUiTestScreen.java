@@ -14,7 +14,6 @@ import dev.skypocket.ui.Text;
 import dev.skypocket.ui.TextMeasurer;
 import dev.skypocket.ui.TextWeight;
 import dev.skypocket.ui.UiElement;
-import dev.skypocket.ui.PageTransform;
 import dev.skypocket.ui.UiPage;
 import dev.skypocket.ui.widget.Button;
 import dev.skypocket.ui.widget.Card;
@@ -77,18 +76,8 @@ public final class DevUiTestScreen extends Screen {
         if (minecraft != null) {
             minecraft.onTextInputFocusChange(this, true);
         }
-        // The page converts pointer positions back through the same transform the pose applies.
-        page.transform(new PageTransform() {
-            @Override
-            public float toDesignX(double screenX) {
-                return (float) ((screenX - originX()) / scaleX());
-            }
-
-            @Override
-            public float toDesignY(double screenY) {
-                return (float) ((screenY - originY()) / scaleY());
-            }
-        });
+        // Pointer positions are converted here, by the host: it owns the pose and is the only thing
+        // that knows the origin and scale the page is drawn with.
         // The page is a fixed design surface; only rebuild here, sizing happens while drawing.
         page.rebuild();
     }
@@ -161,22 +150,31 @@ public final class DevUiTestScreen extends Screen {
         return Math.round((height - PANEL_H * scaleY()) / 2f);
     }
 
+    /** Screen point -> page design units; the inverse of the pose applied while drawing. */
+    private float pageX(double screenX) {
+        return (float) ((screenX - originX()) / scaleX());
+    }
+
+    private float pageY(double screenY) {
+        return (float) ((screenY - originY()) / scaleY());
+    }
+
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
-        page.pointerDown(event.x(), event.y(), 0, modifiers());
+        page.pointerDown(pageX(event.x()), pageY(event.y()), 0, modifiers());
         return true;
     }
 
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx,
                                 double dy) {
-        page.pointerMove(event.x(), event.y(), 0, modifiers());
+        page.pointerMove(pageX(event.x()), pageY(event.y()), modifiers());
         return true;
     }
 
     @Override
     public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        page.pointerUp(event.x(), event.y(), 0, modifiers());
+        page.pointerUp(pageX(event.x()), pageY(event.y()), 0, modifiers());
         return true;
     }
 
@@ -184,12 +182,12 @@ public final class DevUiTestScreen extends Screen {
     public void mouseMoved(double x, double y) {
         // Hover only updates from a move event; without this the option rows never see
         // onHoverChanged and a menu has no highlight at all.
-        page.mouseMoved(x, y);
+        page.mouseMoved(pageX(x), pageY(y));
     }
 
     @Override
     public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        page.wheel(x, y, vertical, modifiers());
+        page.wheel(pageX(x), pageY(y), (float) vertical, modifiers());
         return true;
     }
 
@@ -199,21 +197,21 @@ public final class DevUiTestScreen extends Screen {
             onClose();
             return true;
         }
-        // The page converts the platform key code itself; see UiPage.keyDown.
-        page.keyDown(event);
+        // InputBridge owns the version-specific key codes; the page takes kernel events.
+        page.keyDown(dev.skypocket.ui.mc.InputBridge.toKernel(event, true));
         return true;
     }
 
     @Override
     public boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
-        page.keyUp(event);
+        page.keyUp(dev.skypocket.ui.mc.InputBridge.toKernel(event, false));
         return true;
     }
 
     @Override
     public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
-        page.textInput(event);
-        return true;
+        String text = dev.skypocket.ui.mc.InputBridge.textOf(event);
+        return text != null && page.textInput(text);
     }
 
     /** Modifier bits for pointer events; this screen does not track them, so none are applied. */
