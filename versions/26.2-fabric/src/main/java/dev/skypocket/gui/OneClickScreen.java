@@ -103,7 +103,7 @@ import static dev.skypocket.render.GuiPixels.scissorRow;
  * standalone entry (not a feature module). The Modules tab shows a two-level
  * navigation sidebar on the left and a centered card grid on the right.
  */
-public class OneClickScreen extends Screen {
+public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
 
     // All panel geometry (sizes, positions, hit tests) lives in PanelGeometry; the constants below
     // are imported statically so the drawing code keeps reading as plain names.
@@ -697,8 +697,13 @@ public class OneClickScreen extends Screen {
         rebuildSettingsWidgets();
     }
 
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+    /**
+     * Paints the whole panel at the current animation and scale.
+     *
+     * <p>Takes the pointer because several parts of the shell resolve hover parametrically rather
+     * than keeping it on an element - the footer buttons and the shell cache key both read it.
+     */
+    private void paintPanel(GuiGraphicsExtractor graphics, double mouseX, double mouseY, float delta) {
         dev.skypocket.render.ScissorTracker.reset(graphics);
         // Finish the close animation (then actually leave the screen).
         if (closing && animFinished()) {
@@ -729,7 +734,7 @@ public class OneClickScreen extends Screen {
 
         // The theme drawer is drawn last, in screen space: it floats above the panel and is never part
         // of the panel's cached image.
-        devDrawer.draw(graphics, mouseX, mouseY, width, height);
+        devDrawer.draw(graphics, (int) mouseX, (int) mouseY, width, height);
     }
 
 
@@ -985,8 +990,65 @@ public class OneClickScreen extends Screen {
         }
     }
 
+
+    // ---- UiHost: the top bar is the first pane migrated -------------------------------------
+
+    /** The top bar, as a layer. Created once; its bounds and visibility never change. */
+    private final PaneLayer topBarLayer = new PaneLayer(
+            () -> new dev.skypocket.ui.Rect(0f, 0f, PanelGeometry.PANEL_W, PanelGeometry.TAB_BAR_H),
+            () -> true,
+            topBar);
+
+    /**
+     * Layers the host dispatches over, lowest first.
+     *
+     * <p>Only the top bar so far. The remaining panes are still routed by the hand-written handlers,
+     * which is deliberate: this migration is done one pane at a time so a regression can be
+     * attributed to a pane instead of to a 400-line commit.
+     */
+    @Override
+    protected java.util.List<dev.skypocket.ui.host.Layer> layers() {
+        return java.util.List.of(topBarLayer);
+    }
+
+    /**
+     * Screen to panel design space: inverts the open/close animation, the panel offset and the panel
+     * scale, in that order. The animation is why this cannot live in a layer - it is a property of
+     * the whole panel, not of anything inside it.
+     */
+    @Override
+    protected float toDesignX(double screenX) {
+        return (float) localX(screenX);
+    }
+
+    @Override
+    protected float toDesignY(double screenY) {
+        return (float) localY(screenY);
+    }
+
+    /** Sizes the panel and lays out its panes. Idempotent; called before every event and frame. */
+    @Override
+    protected void ensureLaidOut() {
+        layout();
+    }
+
+    @Override
+    protected void paintHost(GuiGraphicsExtractor graphics, float partialTick) {
+        // The pointer is read from the game rather than plumbed through the host contract: the
+        // panel's hover state is resolved here, and UiHost has no reason to know about it.
+        double mxs = minecraft == null ? 0 : minecraft.mouseHandler.xpos();
+        double mys = minecraft == null ? 0 : minecraft.mouseHandler.ypos();
+        double gs = minecraft == null ? 1 : minecraft.getWindow().getGuiScale();
+        paintPanel(graphics, mxs / gs, mys / gs, partialTick);
+    }
+
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+        // Layers already migrated are dispatched by the host; the panes not yet migrated are
+        // still routed by hand below. The host runs first: the top bar sits above the content area.
+        if (super.mouseClicked(event, doubled)) {
+            return true;
+        }
         if (closing) {
             return false;
         }
@@ -1006,7 +1068,7 @@ public class OneClickScreen extends Screen {
         // A press in the bar that misses every control still counts as handled: the bar is furniture,
         // and letting it fall through to the page would let a click on empty bar space move a card.
         if (ly < TAB_BAR_H) {
-            topBar.pointerDown(lx, ly, 0, shiftDown ? Modifiers.SHIFT : 0);
+            topBar.pointerDown((float) lx, (float) ly, 0, shiftDown ? Modifiers.SHIFT : 0);
             focusOnly(TEXT_REGION_TOPBAR);
             return true;
         }
@@ -1092,6 +1154,11 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        // Layers already migrated are dispatched by the host; the panes not yet migrated are
+        // still routed by hand below. The host runs first: the top bar sits above the content area.
+        if (super.mouseDragged(event, deltaX, deltaY)) {
+            return true;
+        }
         if (devDrawer.mouseDragged(event.x(), event.y(), width, height)) {
             return true;
         }
@@ -1099,7 +1166,7 @@ public class OneClickScreen extends Screen {
         double lx = localX(event.x());
         double ly = localY(event.y());
         if (topBar.hasPointerCapture()) {
-            topBar.pointerMove(lx, ly, shiftDown ? Modifiers.SHIFT : 0);
+            topBar.pointerMove((float) lx, (float) ly, shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
         if (modulesPageActive()) {
@@ -1129,12 +1196,15 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        if (super.mouseReleased(event)) {
+            return true;
+        }
         devDrawer.mouseReleased();
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
         if (topBar.hasFocus() || topBar.hasPointerCapture()) {
-            topBar.pointerUp(lx, ly, Math.max(0, event.button()),
+            topBar.pointerUp((float) lx, (float) ly, Math.max(0, event.button()),
                     shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
@@ -1164,6 +1234,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
+            return true;
+        }
         if (devDrawer.mouseScrolled(mouseX, mouseY, verticalAmount, width, height)) {
             return true;
         }
@@ -1216,6 +1289,7 @@ public class OneClickScreen extends Screen {
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
+        super.mouseMoved(mouseX, mouseY);
         // The drawer floats above everything, so it takes the move first and swallows it while
         // open. Without this the drawer's router never sees a pointer move, and its rows keep a
         // stale hover until some other event happens to re-run hover detection.
@@ -1229,11 +1303,11 @@ public class OneClickScreen extends Screen {
         double barX = localX(mouseX);
         double barY = localY(mouseY);
         if (barY < TAB_BAR_H) {
-            topBar.pointerMove(barX, barY, shiftDown ? Modifiers.SHIFT : 0);
+            topBar.pointerMove((float) barX, (float) barY, shiftDown ? Modifiers.SHIFT : 0);
         } else {
             // Leaving the bar has to clear its hover, or an arrow stays lit while the pointer is over
             // the content area.
-            topBar.pointerMove(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, 0);
+            topBar.pointerMove(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, 0);
         }
         if (modulesPageActive() || moduleChromeActive() || statsPageActive()) {
             double lx = barX;
@@ -1265,6 +1339,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean keyReleased(KeyEvent event) {
+        if (super.keyReleased(event)) {
+            return true;
+        }
         if (devDrawer.keyReleased(event)) {
             return true;
         }
@@ -1302,6 +1379,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (super.keyPressed(event)) {
+            return true;
+        }
         if (closing) {
             return true;
         }
@@ -1394,6 +1474,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean charTyped(CharacterEvent event) {
+        if (super.charTyped(event)) {
+            return true;
+        }
         if (closing) {
             return false;
         }
@@ -1431,6 +1514,9 @@ public class OneClickScreen extends Screen {
 
     @Override
     public boolean preeditUpdated(net.minecraft.client.input.PreeditEvent event) {
+        if (super.preeditUpdated(event)) {
+            return true;
+        }
         if (devDrawer.preedit(event == null ? "" : event.fullText())) {
             return true;
         }

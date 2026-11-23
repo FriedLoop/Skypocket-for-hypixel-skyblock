@@ -8,6 +8,7 @@ import dev.skypocket.ui.Size;
 import dev.skypocket.ui.Style;
 import dev.skypocket.ui.TextMeasurer;
 import dev.skypocket.ui.UiElement;
+import dev.skypocket.ui.UiPainter;
 import dev.skypocket.ui.UiPlatform;
 import dev.skypocket.ui.input.InputRouter;
 import dev.skypocket.ui.input.KeyEvent;
@@ -37,7 +38,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * That is deliberate - a page rebuilds its tree on config changes, but these controls hold focus and
  * caret state that a rebuild would discard mid-typing.
  */
-final class TopBarControls {
+final class TopBarControls implements PaneLayer.Pane {
     private static final TextMeasurer MEASURER = (text, maxWidth) ->
             new Size(UiPlatform.textWidth(text), UiPlatform.lineHeight());
 
@@ -127,7 +128,8 @@ final class TopBarControls {
         return x >= 0 && x < PanelGeometry.PANEL_W && y >= 0 && y < PanelGeometry.TAB_BAR_H;
     }
 
-    boolean pointerDown(double x, double y, int button, int modifiers) {
+    @Override
+    public boolean pointerDown(float x, float y, int button, int modifiers) {
         if (!inBar(x, y)) {
             return false;
         }
@@ -135,7 +137,8 @@ final class TopBarControls {
         return true;
     }
 
-    boolean pointerMove(double x, double y, int modifiers) {
+    @Override
+    public boolean pointerMove(float x, float y, int modifiers) {
         if (!inBar(x, y)) {
             return false;
         }
@@ -143,7 +146,8 @@ final class TopBarControls {
         return true;
     }
 
-    boolean pointerUp(double x, double y, int button, int modifiers) {
+    @Override
+    public boolean pointerUp(float x, float y, int button, int modifiers) {
         if (!inBar(x, y)) {
             return false;
         }
@@ -151,20 +155,24 @@ final class TopBarControls {
         return true;
     }
 
-    boolean hasFocus() {
+    @Override
+    public boolean hasFocus() {
         return input.focused() != null;
     }
 
     /** True while a drag started inside the bar is still in progress. */
-    boolean hasPointerCapture() {
+    @Override
+    public boolean hasPointerCapture() {
         return input.captured() != null;
     }
 
-    void clearFocus() {
+    @Override
+    public void clearFocus() {
         input.focus(null);
     }
 
-    boolean keyDown(KeyEvent event) {
+    @Override
+    public boolean keyDown(KeyEvent event) {
         if (!hasFocus()) {
             return false;
         }
@@ -172,7 +180,8 @@ final class TopBarControls {
         return true;
     }
 
-    boolean keyUp(KeyEvent event) {
+    @Override
+    public boolean keyUp(KeyEvent event) {
         if (!hasFocus()) {
             return false;
         }
@@ -180,7 +189,8 @@ final class TopBarControls {
         return true;
     }
 
-    boolean textInput(String text) {
+    @Override
+    public boolean textInput(String text) {
         if (!hasFocus()) {
             return false;
         }
@@ -188,11 +198,31 @@ final class TopBarControls {
         return true;
     }
 
-    boolean preedit(PreeditEvent event) {
+    @Override
+    public boolean preedit(PreeditEvent event) {
         if (!hasFocus()) {
             return false;
         }
         input.preedit(event);
         return true;
+    }
+    @Override
+    public float scale() {
+        // The bar is drawn 1:1 in panel design units; nothing scales inside it.
+        return 1f;
+    }
+
+    @Override
+    public void paint(UiPainter painter) {
+        // The bar paints itself with the MC painter in draw(); this entry point exists so a host
+        // that already holds a pose can paint it without knowing the concrete type.
+        dev.skypocket.ui.mc.McUiPainter mc = (dev.skypocket.ui.mc.McUiPainter) painter;
+        draw(mc.graphics());
+    }
+
+    @Override
+    public boolean wheel(float x, float y, float delta, int modifiers) {
+        // Nothing in the bar scrolls: the search field is single-line and the arrows are buttons.
+        return false;
     }
 }
