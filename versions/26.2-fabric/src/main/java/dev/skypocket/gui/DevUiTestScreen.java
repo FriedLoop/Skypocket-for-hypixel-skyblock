@@ -42,7 +42,7 @@ import java.util.List;
  *
  * <p>Four sections, in the order the contract covers them: layout, widgets, style, interaction.
  */
-public final class DevUiTestScreen extends Screen {
+public final class DevUiTestScreen extends dev.skypocket.ui.mc.host.UiHost {
     private static final float PAD = 12f;
     private static final float GAP = 8f;
 
@@ -68,21 +68,24 @@ public final class DevUiTestScreen extends Screen {
         super(Component.literal("UI v2 Test"));
     }
 
+    /**
+     * The page is the only layer: this screen exists to exercise one page.
+     */
     @Override
-    protected void init() {
-        // Taking text-input focus is what makes the screen receive character events at all.
-        // Without it a TextField never sees charTyped and typing silently does nothing - the same
-        // requirement OneClickScreen satisfies in its own init.
-        if (minecraft != null) {
-            minecraft.onTextInputFocusChange(this, true);
-        }
-        // Pointer positions are converted here, by the host: it owns the pose and is the only thing
-        // that knows the origin and scale the page is drawn with.
-        // The page is a fixed design surface; only rebuild here, sizing happens while drawing.
-        page.rebuild();
+    protected java.util.List<dev.skypocket.ui.host.Layer> layers() {
+        return java.util.List.of(page);
     }
 
     @Override
+    protected void init() {
+        // The host registers for text input in init(); without it charTyped is never
+        // called and typing silently does nothing.
+        registerTextInput();
+        // The page is a fixed design surface; only rebuild here, sizing happens while
+        // drawing.
+        page.rebuild();
+    }
+
     /**
      * Draws the page, scaled to fit the window exactly like the real panel.
      *
@@ -100,14 +103,26 @@ public final class DevUiTestScreen extends Screen {
      * <p><b>Converting the pointer into design space.</b> Hit testing happens in design units; passing
      * screen pixels made every control respond where it was not.
      */
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+    /**
+     * Sizes the page and lays it out.
+     *
+     * <p>Separate from painting because input arrives before the first frame and dispatch reads the
+     * page's bounds to decide whether the pointer is over it. While this only ran inside
+     * {@code paintHost}, the page still reported a zero-sized rect on the first click and every
+     * handler declined it.
+     */
+    @Override
+    protected void ensureLaidOut() {
+        page.bounds(PANEL_W, PANEL_H);
+        page.origin(originX(), originY());
+        page.layout(MEASURER);
+    }
+
+    @Override
+    protected void paintHost(GuiGraphicsExtractor graphics, float partialTick) {
         float scaleX = scaleX();
         float scaleY = scaleY();
         ClickGuiMetrics.setEffectiveScale(scaleX);
-        page.bounds(PANEL_W, PANEL_H);
-        page.layout(MEASURER);
-
-
 
         var pose = graphics.pose();
         pose.pushMatrix();
@@ -151,76 +166,15 @@ public final class DevUiTestScreen extends Screen {
     }
 
     /** Screen point -> page design units; the inverse of the pose applied while drawing. */
-    private float pageX(double screenX) {
+    @Override
+    protected float toDesignX(double screenX) {
         return (float) ((screenX - originX()) / scaleX());
     }
 
-    private float pageY(double screenY) {
+    @Override
+    protected float toDesignY(double screenY) {
         return (float) ((screenY - originY()) / scaleY());
     }
-
-    @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
-        page.pointerDown(pageX(event.x()), pageY(event.y()), 0, modifiers());
-        return true;
-    }
-
-    @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx,
-                                double dy) {
-        page.pointerMove(pageX(event.x()), pageY(event.y()), modifiers());
-        return true;
-    }
-
-    @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
-        page.pointerUp(pageX(event.x()), pageY(event.y()), 0, modifiers());
-        return true;
-    }
-
-    @Override
-    public void mouseMoved(double x, double y) {
-        // Hover only updates from a move event; without this the option rows never see
-        // onHoverChanged and a menu has no highlight at all.
-        page.mouseMoved(pageX(x), pageY(y));
-    }
-
-    @Override
-    public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        page.wheel(pageX(x), pageY(y), (float) vertical, modifiers());
-        return true;
-    }
-
-    @Override
-    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        if (page.shouldCloseOnEscape(event)) {
-            onClose();
-            return true;
-        }
-        // InputBridge owns the version-specific key codes; the page takes kernel events.
-        page.keyDown(dev.skypocket.ui.mc.InputBridge.toKernel(event, true));
-        return true;
-    }
-
-    @Override
-    public boolean keyReleased(net.minecraft.client.input.KeyEvent event) {
-        page.keyUp(dev.skypocket.ui.mc.InputBridge.toKernel(event, false));
-        return true;
-    }
-
-    @Override
-    public boolean charTyped(net.minecraft.client.input.CharacterEvent event) {
-        String text = dev.skypocket.ui.mc.InputBridge.textOf(event);
-        return text != null && page.textInput(text);
-    }
-
-    /** Modifier bits for pointer events; this screen does not track them, so none are applied. */
-    private int modifiers() {
-        return 0;
-    }
-
-    /** Modifier bits taken from a key event, which carries them. */
-
 
     @Override
     public void onClose() {

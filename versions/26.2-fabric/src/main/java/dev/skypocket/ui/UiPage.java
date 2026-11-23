@@ -117,15 +117,19 @@ public abstract class UiPage implements dev.skypocket.ui.host.Layer {
     // ---- Layer ---------------------------------------------------------------------------
 
     /**
-     * Where this page sits, in host coordinates.
+     * Where this page sits, in the host's <em>design</em> space.
      *
-     * <p>The origin and the size are the host's to decide: this page does not know where it
-     * was placed. That is why the rect is reported rather than stored once - a host that
-     * repositions the page between frames needs the report to move with it.
+     * <p>Not screen pixels. Dispatch converts the pointer into design space once - that is what lets
+     * a host animate its own transform without every layer knowing - so a layer reports its box in
+     * that same space. A page fills its host, so the box starts at the host origin.
+     *
+     * <p>Reporting screen coordinates here instead put the two spaces one subtraction apart, and the
+     * symptom was precise: every control responded up and to the left of the cursor by exactly the
+     * host's on-screen offset.
      */
     @Override
     public dev.skypocket.ui.Rect boundsOnScreen() {
-        return new dev.skypocket.ui.Rect(originX, originY, width, height);
+        return new dev.skypocket.ui.Rect(0f, 0f, width, height);
     }
 
     /** The page is drawn by its host whenever it exists; visibility is the host's question. */
