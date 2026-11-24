@@ -265,6 +265,14 @@ public final class SettingsPage extends dev.skypocket.ui.UiPage {
 
     @Override
     public boolean keyDown(KeyEvent event) {
+        // A popup takes ESC before the host sees it. The host closes the screen on ESC when no layer
+        // claims it, so without this the first ESC over an open colour picker would discard the whole
+        // GUI - and the edit in progress with it. The key code is already canonical here, so it is
+        // compared against Keys rather than through InputKeys.
+        if (event.key() == dev.skypocket.ui.input.Keys.ESCAPE && hasOpenPopup()) {
+            closePopups();
+            return true;
+        }
         boolean handled = super.keyDown(event);
         closePopupsOutside();
         return handled;

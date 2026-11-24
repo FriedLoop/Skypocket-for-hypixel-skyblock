@@ -176,6 +176,12 @@ final class TopBarControls implements PaneLayer.Pane {
         if (!hasFocus()) {
             return false;
         }
+        // ESC is the host's to interpret, not this pane's. Reporting it as consumed while the caret
+        // is still in the search box meant the host never got the chance to clear focus, so the first
+        // ESC appeared to do nothing at all.
+        if (event.key() == dev.skypocket.ui.input.Keys.ESCAPE) {
+            return false;
+        }
         input.keyDown(event);
         return true;
     }

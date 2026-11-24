@@ -467,6 +467,13 @@ public abstract class UiPage implements dev.skypocket.ui.host.Layer {
      */
     @Override
     public boolean keyDown(KeyEvent event) {
+        // ESC belongs to the host, which uses it to drop focus and then to close the screen. A page
+        // reporting it as consumed - the way it reports every other key - leaves the caret stuck in
+        // the field and makes the first ESC look dead. SettingsPage overrides this to claim ESC when
+        // it has an open popup, which is the one case where a page really does own the key.
+        if (event.key() == dev.skypocket.ui.input.Keys.ESCAPE) {
+            return false;
+        }
         input().keyDown(event);
         return true;
     }
