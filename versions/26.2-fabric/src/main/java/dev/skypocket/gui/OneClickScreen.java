@@ -422,6 +422,21 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         return (Math.round(offY + statsPageTop() * scaleY) - offY) / scaleY;
     }
 
+    /**
+     * The settings page, built if this frame needs it - or null when there is nothing to show.
+     *
+     * <p>Callers used to assume ensureStatsPage() always produced a page and dereferenced the field
+     * directly. It does not: with no feature open there is no page to build, and the very first mouse
+     * move after opening the GUI hit that null. Every forwarding site now asks this instead.
+     */
+    private SettingsPage statsPageOrNull() {
+        if (!statsPageActive()) {
+            return null;
+        }
+        ensureStatsPage();
+        return statsPage;
+    }
+
     private void ensureStatsPage() {
         if (!statsPageActive()) {
             // Keep the page through the 180 ms slide-out so drawPane can animate the outgoing side.
@@ -921,13 +936,20 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
                 titlePainter.text(viewingFeature.name(), SIDEBAR_W + 35,
                         top - scrollY + 4, dev.skypocket.gui.widget.ClickGuiStyle.text());
             }
-            ensureStatsPage();
-            statsPage.layout();
-            Matrix3x2fStack pagePose = graphics.pose();
-            pagePose.pushMatrix();
-            pagePose.translate(statsPageDrawLeft(), statsPageDrawTop());
-            statsPage.draw(graphics, scaleX, scaleY, false);
-            pagePose.popMatrix();
+            SettingsPage settingsPage = statsPageOrNull();
+            if (settingsPage != null) {
+                // Lay it out before drawing. A page built this frame - which happens on every theme
+                // edit, because the palette it captured has been replaced - has no laid-out tree yet,
+                // so every element still reports a zero-sized box and the whole page piles up in the
+                // top-left corner. ModulesPage and SettingsPage's other hosts both call layout() on
+                // the same line; this path lost it.
+                settingsPage.layout();
+                Matrix3x2fStack pagePose = graphics.pose();
+                pagePose.pushMatrix();
+                pagePose.translate(statsPageDrawLeft(), statsPageDrawTop());
+                settingsPage.draw(graphics, scaleX, scaleY, false);
+                pagePose.popMatrix();
+            }
             graphics.disableScissor();
         }
 
@@ -1000,15 +1022,131 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             topBar);
 
     /**
+     * The homepage, as a layer.
+     *
+     * <p>Its bounds start at the content top rather than at the panel origin: the pane is laid out
+     * relative to the tab bar, which is why the hand-written path used to subtract TAB_BAR_H from
+     * every coordinate it forwarded.
+     */
+    private final PaneLayer modulesLayer = new PaneLayer(
+            () -> new dev.skypocket.ui.Rect(0f, TAB_BAR_H, PanelGeometry.PANEL_W,
+                    contentBottom() - TAB_BAR_H),
+            this::modulesPageActive,
+            new PaneLayer.Pane() {
+                @Override public void paint(dev.skypocket.ui.UiPainter painter) {
+                    // Drawing still goes through the existing path; see paintHost.
+                }
+                @Override public float scale() { return 1f; }
+                @Override public boolean pointerDown(float x, float y, int b, int m) {
+                    ensureModulesPage();
+                    return modulesPage != null && modulesPage.pointerDown(x, y, b, m);
+                }
+                @Override public boolean pointerMove(float x, float y, int m) {
+                    return modulesPage != null && modulesPage.pointerMove(x, y, m);
+                }
+                @Override public boolean pointerUp(float x, float y, int b, int m) {
+                    return modulesPage != null && modulesPage.pointerUp(x, y, b, m);
+                }
+                @Override public boolean wheel(float x, float y, float d, int m) {
+                    return modulesPage != null && modulesPage.wheel(x, y, d, m);
+                }
+                @Override public boolean keyDown(dev.skypocket.ui.input.KeyEvent e) {
+                    return modulesPage != null && modulesPage.keyDown(e);
+                }
+                @Override public boolean keyUp(dev.skypocket.ui.input.KeyEvent e) {
+                    return modulesPage != null && modulesPage.keyUp(e);
+                }
+                @Override public boolean textInput(String t) {
+                    return modulesPage != null && modulesPage.textInput(t);
+                }
+                @Override public boolean preedit(dev.skypocket.ui.input.PreeditEvent e) {
+                    return modulesPage != null && modulesPage.preedit(e);
+                }
+                @Override public boolean hasFocus() {
+                    return modulesPage != null && modulesPage.hasFocus();
+                }
+                @Override public void clearFocus() {
+                    if (modulesPage != null) {
+                        modulesPage.clearFocus();
+                    }
+                }
+                @Override public boolean hasPointerCapture() {
+                    return modulesPage != null && modulesPage.hasPointerCapture();
+                }
+            });
+
+    /**
      * Layers the host dispatches over, lowest first.
      *
-     * <p>Only the top bar so far. The remaining panes are still routed by the hand-written handlers,
-     * which is deliberate: this migration is done one pane at a time so a regression can be
-     * attributed to a pane instead of to a 400-line commit.
+     * <p>The top bar and the homepage so far. The remaining panes are still routed by the
+     * hand-written handlers, which is deliberate: this migration is done one pane at a time so a
+     * regression can be attributed to a pane instead of to a 400-line commit.
      */
+    /**
+     * The module page's chrome: the sidebar and the strip above the settings column.
+     *
+     * <p>Its interactive area is an L, not a rectangle - everything in the content column belongs to
+     * the settings page instead - which is why it overrides the hit test rather than relying on the
+     * bounding box. {@code inModuleChrome} already expressed exactly this shape; the adapter reuses
+     * it rather than restating the arithmetic.
+     */
+    private final PaneLayer moduleChromeLayer = new PaneLayer(
+            () -> new dev.skypocket.ui.Rect(0f, TAB_BAR_H, PanelGeometry.PANEL_W,
+                    contentBottom() - TAB_BAR_H),
+            this::moduleChromeActive,
+            new PaneLayer.Pane() {
+                @Override public void paint(dev.skypocket.ui.UiPainter painter) {
+                    // Drawing still goes through the existing path; see paintHost.
+                }
+                @Override public float scale() { return 1f; }
+                @Override public boolean pointerDown(float x, float y, int b, int m) {
+                    ensureModuleChrome();
+                    return moduleChrome != null && moduleChrome.pointerDown(x, y, b, m);
+                }
+                @Override public boolean pointerMove(float x, float y, int m) {
+                    return moduleChrome != null && moduleChrome.pointerMove(x, y, m);
+                }
+                @Override public boolean pointerUp(float x, float y, int b, int m) {
+                    return moduleChrome != null && moduleChrome.pointerUp(x, y, b, m);
+                }
+                @Override public boolean wheel(float x, float y, float d, int m) {
+                    return moduleChrome != null && moduleChrome.wheel(x, y, d, m);
+                }
+                @Override public boolean keyDown(dev.skypocket.ui.input.KeyEvent e) {
+                    return moduleChrome != null && moduleChrome.keyDown(e);
+                }
+                @Override public boolean keyUp(dev.skypocket.ui.input.KeyEvent e) {
+                    return moduleChrome != null && moduleChrome.keyUp(e);
+                }
+                @Override public boolean textInput(String t) {
+                    return moduleChrome != null && moduleChrome.textInput(t);
+                }
+                @Override public boolean preedit(dev.skypocket.ui.input.PreeditEvent e) {
+                    return moduleChrome != null && moduleChrome.preedit(e);
+                }
+                @Override public boolean hasFocus() {
+                    return moduleChrome != null && moduleChrome.hasFocus();
+                }
+                @Override public void clearFocus() {
+                    if (moduleChrome != null) {
+                        moduleChrome.clearFocus();
+                    }
+                }
+                @Override public boolean hasPointerCapture() {
+                    return moduleChrome != null && moduleChrome.hasPointerCapture();
+                }
+            },
+            // The L: the sidebar column, plus the strip above the settings page. Same test the
+            // hand-written dispatcher used, expressed against design-space coordinates.
+            (x, y) -> moduleChromeActive()
+                    && y >= TAB_BAR_H && y < contentBottom()
+                    && (x < PanelGeometry.SIDEBAR_W || y < statsPageTop()));
+
     @Override
     protected java.util.List<dev.skypocket.ui.host.Layer> layers() {
-        return java.util.List.of(topBarLayer);
+        // Lowest first. The top bar is above both pages; the settings column sits to the right of
+        // the chrome, so their hit areas do not overlap except on the boundary row.
+        return java.util.List.of(modulesLayer, moduleChromeLayer, topBarLayer);
     }
 
     /**
@@ -1064,33 +1202,13 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
         }
 
-        // The top bar is above the content area and outside its scissor, so it gets the press first.
-        // A press in the bar that misses every control still counts as handled: the bar is furniture,
-        // and letting it fall through to the page would let a click on empty bar space move a card.
-        if (ly < TAB_BAR_H) {
-            topBar.pointerDown((float) lx, (float) ly, 0, shiftDown ? Modifiers.SHIFT : 0);
-            focusOnly(TEXT_REGION_TOPBAR);
-            return true;
-        }
+        // The top bar is a layer now; the host gave it the press above.
 
-        // The homepage owns everything between the tab bar and the footer.
-        if (modulesPageActive() && ly >= TAB_BAR_H && ly < contentBottom()) {
-            ensureModulesPage();
-            modulesPage.layout();
-            focusOnly(TEXT_REGION_MODULES);
-            modulesPage.pointerDown((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
+        // The homepage used to be handled here. It is a layer now, so the host above already gave it
+        // the press if it was under the pointer.
 
-        if (inModuleChrome(lx, ly)) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            focusOnly(TEXT_REGION_CHROME);
-            moduleChrome.pointerDown((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
+        // The module chrome and the settings column are layers now; the host routed the press to
+        // whichever of them owned the point.
 
         // Shell chrome is only the footer's two buttons now.
         PanelInput.Hit hit = PanelInput.hit(lx, ly);
@@ -1113,11 +1231,10 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (!inBody(lx, ly)) {
             return false;
         }
-        if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.layout();
+        SettingsPage settingsPage = statsPageOrNull();
+        if (settingsPage != null) {
             focusOnly(TEXT_REGION_SETTINGS);
-            statsPage.pointerDown(statsLocalX(lx), statsLocalY(ly),
+            settingsPage.pointerDown(statsLocalX(lx), statsLocalY(ly),
                     Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
             return true;
         }
@@ -1165,28 +1282,15 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
-        if (topBar.hasPointerCapture()) {
-            topBar.pointerMove((float) lx, (float) ly, shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.layout();
-            modulesPage.pointerMove((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasPointerCapture()) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            moduleChrome.pointerMove((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
+        // The top bar is a layer; the host already routed the drag.
+        // The homepage is a layer; the host already routed the move.
+        // The module chrome is a layer too, and it is the one that captures a drag that started on
+        // its sidebar; the host asked it before reaching here.
         if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.layout();
-            statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly), shiftDown ? Modifiers.SHIFT : 0);
+            SettingsPage settingsPage = statsPageOrNull();
+            if (settingsPage != null) {
+                settingsPage.pointerMove(statsLocalX(lx), statsLocalY(ly), shiftDown ? Modifiers.SHIFT : 0);
+            }
             return true;
         }
         float anim = animScale();
@@ -1203,30 +1307,15 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
-        if (topBar.hasFocus() || topBar.hasPointerCapture()) {
-            topBar.pointerUp((float) lx, (float) ly, Math.max(0, event.button()),
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.layout();
-            modulesPage.pointerUp((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasPointerCapture()) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            moduleChrome.pointerUp((float) lx, (float) ly - TAB_BAR_H,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
+        // The top bar is a layer; the host already routed the release.
+        // The homepage is a layer; the host already routed the release.
+        // The module chrome is a layer; it released its own capture.
         if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.layout();
-            statsPage.pointerUp(statsLocalX(lx), statsLocalY(ly),
-                    Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
+            SettingsPage settingsPage = statsPageOrNull();
+            if (settingsPage != null) {
+                settingsPage.pointerUp(statsLocalX(lx), statsLocalY(ly),
+                Math.max(0, event.button()), shiftDown ? Modifiers.SHIFT : 0);
+            }
             return true;
         }
         return super.mouseReleased(new MouseButtonEvent(lx, ly, event.buttonInfo()));
@@ -1249,25 +1338,14 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             // (outside the GUI, over the tab strip, or over the footer).
             return false;
         }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.layout();
-            modulesPage.wheel((float) lx, (float) ly - TAB_BAR_H, (float) verticalAmount,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
-        if (moduleChromeActive() && inModuleChrome(lx, ly)) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            moduleChrome.wheel((float) lx, (float) ly - TAB_BAR_H, (float) verticalAmount,
-                    shiftDown ? Modifiers.SHIFT : 0);
-            return true;
-        }
+        // The homepage is a layer; the host already routed the wheel.
+        // The module chrome is a layer; the host already offered it the wheel.
         if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.layout();
-            statsPage.wheel(statsLocalX(lx), statsLocalY(ly), (float) verticalAmount,
-                    shiftDown ? Modifiers.SHIFT : 0);
+            SettingsPage settingsPage = statsPageOrNull();
+            if (settingsPage != null) {
+                settingsPage.wheel(statsLocalX(lx), statsLocalY(ly), (float) verticalAmount,
+                shiftDown ? Modifiers.SHIFT : 0);
+            }
             return true;
         }
         scrollY -= (int) (verticalAmount * 20);
@@ -1297,43 +1375,38 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             devDrawer.mouseMoved(mouseX, mouseY, width, height);
             return;
         }
-        // The top bar needs the move regardless of which page is showing: it is not part of a page,
-        // and its arrows only highlight if their router sees the pointer.
+        // The top bar and the homepage are layers; the host already gave them the move. What is left
+        // here are the panes not migrated yet.
         layout();
         double barX = localX(mouseX);
         double barY = localY(mouseY);
-        if (barY < TAB_BAR_H) {
-            topBar.pointerMove((float) barX, (float) barY, shiftDown ? Modifiers.SHIFT : 0);
-        } else {
-            // Leaving the bar has to clear its hover, or an arrow stays lit while the pointer is over
-            // the content area.
-            topBar.pointerMove(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, 0);
+        // Only the panes still routed by hand. The condition names the two that remain -
+        // moduleChrome and statsPage - rather than "any pane is active": the homepage is a layer now,
+        // and testing for it here let the pointer fall into the statsPage branch below with no page
+        // built yet, which was a null dereference on the first mouse move after opening the GUI.
+        double lx = barX;
+        double ly = barY;
+        // The module chrome is a layer with an L-shaped hit area; the settings column beside it is
+        // not covered by that shape, so exactly one of the two accepts any given point and the host
+        // has already asked both. Only the settings page is left to hover here.
+        if (inBody(lx, ly)) {
+            hoverStatsPage(lx, ly);
         }
-        if (modulesPageActive() || moduleChromeActive() || statsPageActive()) {
-            double lx = barX;
-            double ly = barY;
-            if (modulesPageActive()) {
-                ensureModulesPage();
-                modulesPage.layout();
-                modulesPage.pointerMove((float) lx, (float) ly - TAB_BAR_H,
-                        shiftDown ? Modifiers.SHIFT : 0);
-            } else if (moduleChromeActive()) {
-                ensureModuleChrome();
-                moduleChrome.layout();
-                moduleChrome.pointerMove((float) lx, (float) ly - TAB_BAR_H,
-                        shiftDown ? Modifiers.SHIFT : 0);
-                if (!inModuleChrome(lx, ly)) {
-                    ensureStatsPage();
-                    statsPage.layout();
-                    statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
-                            shiftDown ? Modifiers.SHIFT : 0);
-                }
-            } else if (inBody(lx, ly)) {
-                ensureStatsPage();
-                statsPage.layout();
-                statsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
-                        shiftDown ? Modifiers.SHIFT : 0);
-            }
+    }
+
+    /** Forwards a move to the settings page, if there is one to forward to. */
+    private void hoverStatsPage(double lx, double ly) {
+        if (!statsPageActive()) {
+            return;
+        }
+        ensureStatsPage();
+        if (statsPage == null) {
+            return;
+        }
+        SettingsPage settingsPage = statsPageOrNull();
+        if (settingsPage != null) {
+            settingsPage.pointerMove(statsLocalX(lx), statsLocalY(ly),
+            shiftDown ? Modifiers.SHIFT : 0);
         }
     }
 
@@ -1345,10 +1418,6 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (devDrawer.keyReleased(event)) {
             return true;
         }
-        if (topBar.keyUp(new dev.skypocket.ui.input.KeyEvent(
-                canonicalKey(event), 0, pageModifiers(event), false))) {
-            return true;
-        }
         int key = event.key();
         if (InputKeys.isShift(event)) {
             shiftDown = false;
@@ -1356,21 +1425,10 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (InputKeys.isControl(event)) {
             ctrlDown = false;
         }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
-                    pageModifiers(event), false));
-            return true;
-        }
-        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
-            ensureModuleChrome();
-            moduleChrome.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
-                    pageModifiers(event), false));
-            return true;
-        }
-        if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+        // The module chrome is a layer; the host already offered it the key.
+        SettingsPage released = statsPageOrNull();
+        if (released != null) {
+            released.keyUp(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
                     pageModifiers(event), false));
             return true;
         }
@@ -1416,47 +1474,24 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
                     pageModifiers(event), true));
             return true;
         }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.layout();
+        // The module chrome is a layer; the host already offered it the key.
+        SettingsPage escapeTarget = statsPageOrNull();
+        if (escapeTarget != null) {
             if (event.isEscape()) {
-                if (modulesPage.hasFocus()) {
-                    modulesPage.clearFocus();
+                // A popup gets the first ESC: closing the whole GUI out from under an open colour
+                // picker loses the edit the user was in the middle of.
+                if (escapeTarget.hasOpenPopup()) {
+                    escapeTarget.closePopups();
                 } else {
                     onClose();
                 }
                 return true;
             }
-            if (modulesPage.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
-                    pageModifiers(event), true))) {
-                return true;
+            SettingsPage settingsPage = statsPageOrNull();
+            if (settingsPage != null) {
+                settingsPage.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
+                pageModifiers(event), true));
             }
-            return super.keyPressed(event);
-        }
-        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            if (event.isEscape()) {
-                moduleChrome.clearFocus();
-                return true;
-            }
-            moduleChrome.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
-                    pageModifiers(event), true));
-            return true;
-        }
-        if (statsPageActive()) {
-            ensureStatsPage();
-            if (event.isEscape()) {
-                if (statsPage.hasOpenPopup()) {
-                    statsPage.closePopups();
-                } else {
-                    onClose();
-                }
-                return true;
-            }
-            statsPage.layout();
-            statsPage.keyDown(new dev.skypocket.ui.input.KeyEvent(canonicalKey(event), 0,
-                    pageModifiers(event), true));
             return true;
         }
         if (InputKeys.isEscape(event)) {
@@ -1486,20 +1521,12 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             if (!typed.isEmpty() && devDrawer.charTyped(typed.charAt(0))) {
                 return true;
             }
-            if (topBar.hasFocus()) {
-                topBar.textInput(typed);
-                return true;
-            }
-            if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
-                ensureModuleChrome();
-                moduleChrome.layout();
-                moduleChrome.textInput(typed);
-                return true;
-            }
+            // The module chrome is a layer; the host already offered it the text.
             if (statsPageActive()) {
-                ensureStatsPage();
-                statsPage.layout();
-                statsPage.textInput(typed);
+                SettingsPage settingsPage = statsPageOrNull();
+                if (settingsPage != null) {
+                    settingsPage.textInput(typed);
+                }
                 return true;
             }
         }
@@ -1520,28 +1547,10 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (devDrawer.preedit(event == null ? "" : event.fullText())) {
             return true;
         }
-        if (topBar.preedit(new dev.skypocket.ui.input.PreeditEvent(
-                event == null ? "" : event.fullText(),
-                event == null ? 0 : event.caretPosition()))) {
-            return true;
-        }
-        if (modulesPageActive()) {
-            ensureModulesPage();
-            modulesPage.layout();
-            modulesPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
-                    event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
-            return true;
-        }
-        if (moduleChromeActive() && moduleChrome != null && moduleChrome.hasFocus()) {
-            ensureModuleChrome();
-            moduleChrome.layout();
-            moduleChrome.preedit(new dev.skypocket.ui.input.PreeditEvent(
-                    event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
-            return true;
-        }
-        if (statsPageActive()) {
-            ensureStatsPage();
-            statsPage.preedit(new dev.skypocket.ui.input.PreeditEvent(
+        // The module chrome is a layer; the host already offered it the composition.
+        SettingsPage preeditTarget = statsPageOrNull();
+        if (preeditTarget != null) {
+            preeditTarget.preedit(new dev.skypocket.ui.input.PreeditEvent(
                     event == null ? "" : event.fullText(), event == null ? 0 : event.caretPosition()));
             return true;
         }

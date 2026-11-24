@@ -353,15 +353,9 @@ public abstract class UiHost extends Screen {
 
     // ---- helpers -------------------------------------------------------------------------
 
-    /** Whether {@code layer} is showing and covers the point. */
+    /** Whether {@code layer} is showing and takes a pointer at this point. */
     protected boolean accepts(Layer layer, float x, float y) {
-        if (!layer.isOpen()) {
-            return false;
-        }
-        Rect bounds = layer.boundsOnScreen();
-        return bounds.width() > 0 && bounds.height() > 0
-                && x >= bounds.x() && x < bounds.right()
-                && y >= bounds.y() && y < bounds.bottom();
+        return layer.isOpen() && layer.contains(x, y);
     }
 
     /** Host space -> layer-local. Layers paint at their own origin, so the offset comes off here. */

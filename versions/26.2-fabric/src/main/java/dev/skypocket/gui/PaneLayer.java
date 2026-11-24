@@ -26,6 +26,8 @@ final class PaneLayer implements Layer {
     private final Supplier<Rect> bounds;
     private final BooleanSupplier open;
     private final Pane pane;
+    /** Optional non-rectangular hit test; null means "use the bounding box". */
+    private final java.util.function.BiPredicate<Float, Float> hitTest;
 
     /** The operations a pane has to offer. Implemented per pane kind, not per instance. */
     interface Pane {
@@ -62,9 +64,27 @@ final class PaneLayer implements Layer {
      * @param pane   the pane itself
      */
     PaneLayer(Supplier<Rect> bounds, BooleanSupplier open, Pane pane) {
+        this(bounds, open, pane, null);
+    }
+
+    /**
+     * @param hitTest overrides the rectangular hit test when the pane's interactive area is not a
+     *                rectangle; null means "use {@code bounds}"
+     */
+    PaneLayer(Supplier<Rect> bounds, BooleanSupplier open, Pane pane,
+              java.util.function.BiPredicate<Float, Float> hitTest) {
         this.bounds = bounds;
         this.open = open;
         this.pane = pane;
+        this.hitTest = hitTest;
+    }
+
+    @Override
+    public boolean contains(float x, float y) {
+        if (hitTest != null) {
+            return hitTest.test(x, y);
+        }
+        return Layer.super.contains(x, y);
     }
 
     @Override

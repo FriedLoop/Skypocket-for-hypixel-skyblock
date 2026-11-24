@@ -95,7 +95,7 @@ import dev.skypocket.util.Easing;
 import dev.skypocket.gui.PanelGeometry;
 
 /** The homepage's v2 element tree: the sidebar and the module cards. */
-final class ModulesPage {
+final class ModulesPage implements PaneLayer.Pane {
     interface Host {
         String search();
 
@@ -421,12 +421,14 @@ final class ModulesPage {
         }
     }
 
-    boolean pointerDown(float x, float y, int modifiers) {
-        input.pointerDown(new PointerEvent(x, y, 0, modifiers));
+    @Override
+    public boolean pointerDown(float x, float y, int button, int modifiers) {
+        input.pointerDown(new PointerEvent(x, y, button, modifiers));
         return true;
     }
 
-    boolean pointerMove(float x, float y, int modifiers) {
+    @Override
+    public boolean pointerMove(float x, float y, int modifiers) {
         input.pointerMove(PointerEvent.move(x, y, modifiers));
         return true;
     }
@@ -440,46 +442,74 @@ final class ModulesPage {
         }
     }
 
-    boolean pointerUp(float x, float y, int modifiers) {
-        input.pointerUp(new PointerEvent(x, y, 0, modifiers));
+    @Override
+    public boolean pointerUp(float x, float y, int button, int modifiers) {
+        input.pointerUp(new PointerEvent(x, y, button, modifiers));
         return true;
     }
 
-    boolean wheel(float x, float y, float delta, int modifiers) {
+    @Override
+    public boolean wheel(float x, float y, float delta, int modifiers) {
         input.wheel(new WheelEvent(x, y, delta, modifiers));
         return true;
     }
 
-    boolean keyDown(KeyEvent event) {
+    @Override
+    public boolean keyDown(KeyEvent event) {
         input.keyDown(event);
         return true;
     }
 
-    boolean keyUp(KeyEvent event) {
+    @Override
+    public boolean keyUp(KeyEvent event) {
         input.keyUp(event);
         return true;
     }
 
-    boolean hasFocus() {
+    @Override
+    public boolean hasFocus() {
         return input.focused() != null;
     }
 
-    boolean hasPointerCapture() {
+    @Override
+    public boolean hasPointerCapture() {
         return input.captured() != null;
     }
 
-    boolean textInput(String value) {
+    @Override
+    public boolean textInput(String value) {
         input.textInput(new TextInputEvent(value));
         return true;
     }
 
-    boolean preedit(PreeditEvent event) {
+    @Override
+    public boolean preedit(PreeditEvent event) {
         input.preedit(event);
         return true;
     }
 
-    void clearFocus() {
+    @Override
+    public void clearFocus() {
         input.focus(null);
     }
 
+
+    // ---- PaneLayer.Pane --------------------------------------------------------------------
+
+    /**
+     * Paints through a painter the host already prepared.
+     *
+     * <p>The host's pose and scale are already applied, so this forwards straight to the existing
+     * draw path. The scale is passed as 1 because the pose carries it - the cache is keyed on the
+     * raster scale rather than on a second multiplicative factor.
+     */
+    @Override
+    public void paint(dev.skypocket.ui.UiPainter painter) {
+        draw(((dev.skypocket.ui.mc.McUiPainter) painter).graphics(), 1f, 1f, false);
+    }
+
+    @Override
+    public float scale() {
+        return 1f;
+    }
 }

@@ -26,10 +26,29 @@ public interface Layer {
     /**
      * Where this layer sits on screen, in the host's coordinate space.
      *
-     * <p>Used both for hit testing and for the caller to decide whether a point is in the layer at
-     * all. Returning a zero-sized rect means "not visible right now".
+     * <p>Used for hit testing and for the caller to decide whether a point is in the layer at all.
+     * Returning a zero-sized rect means "not visible right now".
+     *
+     * <p>This is the bounding box, not necessarily the whole interactive area: a layer whose
+     * clickable region is not a rectangle overrides {@link #contains(float, float)}.
      */
     Rect boundsOnScreen();
+
+    /**
+     * Whether this layer takes a pointer at the given host-space point.
+     *
+     * <p>Defaults to the bounding box. Override when the interactive area is not rectangular - the
+     * ClickGUI's module chrome, for one, accepts the sidebar and the strip above the settings page
+     * but not the settings area itself, which is an L-shape that no single rect describes.
+     *
+     * <p>Called per event, so an implementing layer may consult animation state.
+     */
+    default boolean contains(float x, float y) {
+        Rect bounds = boundsOnScreen();
+        return bounds.width() > 0 && bounds.height() > 0
+                && x >= bounds.x() && x < bounds.right()
+                && y >= bounds.y() && y < bounds.bottom();
+    }
 
     /** Whether this layer is showing and should receive input. */
     boolean isOpen();
