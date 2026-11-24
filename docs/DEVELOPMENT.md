@@ -223,7 +223,7 @@ util                               零依赖
       - **内容区下边界只有一个来源，而且必须是"设备行"**：`contentBottomRow()` 直接给出**设备行**（= 裁剪真正能落到的行，即 `guiScale` 的整数倍设备像素），`contentBottom()` 只是把它换算成设计单位供命中检测用。**底 tab 条（`fillRoundedBottomToRow`）、主体渐变（`fillVerticalGradientToRow`）、侧边栏件（`fillDeviceToRow`）、裁剪（`scissorContentArea`）全部共用这一个设备行**；与这条边界相接的新元素也必须用这组 `*ToRow` 函数，不要用设计坐标版。（`fillDeviceToRow` / `fillVerticalGradientToRow` / `fillRoundedBottomToRow` 与 `scissorRow` / `scissorFloor` / `snapSize` / `pushDeviceSpace` 都在 `render/GuiPixels`。）
         - **不要在"设计 ↔ 设备"之间来回换算**：`ScreenRectangle` 把裁剪量化到整 GUI 单位，所以"把该设备行换算回设计单位（int）再让绘制按设计坐标吸附"会**再取整一次**，必然差 1 个设备像素 —— **实测症状**就是"卡片蒙版下边缘比底部 tab 上边缘高 1px"（这是第二次踩：第一版直接把设计坐标给裁剪，差 1~2px；第二版换算回设计单位，仍差 1px）。要精确落到某设备行，绘制入口必须能接收设备行。
       - **交互必须用和裁剪同一套边界**：`PanelGeometry.inPanel`（面板矩形）/ `inBody`（面板内、上下两条半透明条之间）；页面内容的命中由 UI v2 树自己负责（`ModulesPage.pointerDown` → `InputRouter` → 控件 `contains()`），而 `ModulesPage` 只在 `ly >= TAB_BAR_H && ly < contentBottom()` 的区间内接管指针。**关键原因**：滚动后卡片会排到裁剪区之外（只是被裁掉、**没有**被移走），所以不能只按行/列区间比 y —— 否则就是"鼠标在 GUI 以外或底 tab 区域仍能选中卡片并交互"（实测）。`mouseReleased` / `mouseDragged` 故意不设限：拖拽要在面板外也能正常结束。
-      - **"点到了什么"和"点了之后做什么"仍然分开，但分两层**：外壳 chrome 由 `gui/PanelInput.hit(lx, ly)` 解析成 `PanelInput.Hit`（`Kind` = `MODULES_TAB` / `SETTINGS_TAB` / `FOOTER_BUTTON` / `NONE`），**只做判断、不改状态**，`OneClickScreen.mouseClicked` 负责映射成动作（翻页、打开 HUD 编辑器）；页面内部（侧边栏行、搜索框、卡片、开关、导航按钮）则是**真实控件对象**，由 v2 的 `InputRouter` 命中并直接触发自己的 `onPointerDown`。新增面板可点元素时：先判断它属于外壳还是页面 —— 外壳加进 `PanelInput` 的 `Kind` 与 `switch`，页面就造一个 `Control` 挂到树里，**不要**再往事件方法里写布局算术。
+      - **"点到了什么"和"点了之后做什么"仍然分开，但分两层**：外壳 chrome 由 `gui/PanelInput.hit(lx, ly)` 解析成 `PanelInput.Hit`（`Kind` = `FOOTER_BUTTON` / `FOOTER_SETTINGS` / `NONE`；主 tab 已删除，设置入口移到底栏），**只做判断、不改状态**，`OneClickScreen.mouseClicked` 负责映射成动作（翻页、打开 HUD 编辑器）；页面内部（侧边栏行、搜索框、卡片、开关、导航按钮）则是**真实控件对象**，由 v2 的 `InputRouter` 命中并直接触发自己的 `onPointerDown`。新增面板可点元素时：先判断它属于外壳还是页面 —— 外壳加进 `PanelInput` 的 `Kind` 与 `switch`，页面就造一个 `Control` 挂到树里，**不要**再往事件方法里写布局算术。
         - **外壳判定顺序就是语义**（tabs → 底栏按钮），不要重排：`lx == SIDEBAR_W` 那一列属于侧边栏而不是卡片网格（两者边界相接），但这一判定现在在 `ModulesPage` 的树布局里，不在 `PanelInput` 中。
       - **紧挨着的行/列必须用半开区间**（`>= from && < from + 长度`）：两端都闭时，边界那一像素**同时属于上一行和下一行**（下一行起点正是上一行终点），于是 hover 高亮会盖住两个分类（实测："鼠标放在分类标签中间，选中预览显示在两个分类上"）。v2 里这条由 `UiElement.contains` 统一实现（`x < bounds.right() && y < bounds.bottom()`），`SidebarRow`、`Dropdown` 的行都用它 —— 自己写命中判定时必须照抄这个半开区间。卡片网格因为 `CARD_GAP = 24` 有间隔不会互相命中，但新增紧贴的行/列时必须注意。
     4. **blit 保持 1:1**：因为第 3 条，纹理尺寸正好等于 `panelWidth × scaleX × guiScale`（整数），blit 目标矩形（整数 pose 单位）落在同一个网格上，所以 `exactScale` 修正因子正好是 1（保留它作为兜底：万一尺寸/缩放不再对齐，它会自动把 blit 拉回 1 texel = 1 设备像素）。
@@ -356,8 +356,9 @@ util                               零依赖
 | 控件（`Control` 家族：`Switch`/`Slider`/`Button`/`Card`/`ColorField`/`Dropdown`/`Segmented`/`TextField`/`Scrollbar`） | ✅ 已落地 |
 | 设置页（`SettingsPage`） | ✅ 已落地 |
 | 首页模块网格（`ModulesPage` + `SidebarRow` + `ModuleCard` + `NavButton`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
-| **外壳 chrome**（面板背景 / 顶部主 tabs / 底栏） | ⬜ 仍是 `PanelRenderer` 手工绘制 + `shellCache` 整块烘焙 |
-| 主题抽屉（`DevDrawer`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
+| 宿主层（`ui/host/Layer`、`ui/mc/host/UiHost`、`gui/PaneLayer`） | ✅ 已落地；ClickGUI 的 4/5 个 pane 走它分发 |
+| **外壳 chrome**（面板背景 / 底栏） | ⬜ 仍是 `PanelRenderer` 手工绘制 + `shellCache` 整块烘焙；顶部条已改为 v2 控件树 |
+| 主题抽屉（`DevDrawer`） | ✅ 已落地，页面内零 `graphics.*` 直绘；**未接入 `UiHost`**（屏幕坐标 + 穿透 + 模态，见 `UIHOST-DESIGN.md` §9）|
 
 **已定方向**：
 

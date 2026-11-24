@@ -410,6 +410,43 @@ public void mouseMoved(double mouseX, double mouseY) {
 
 **`dynamicOverlay()` 是性能陷阱**：返回 true 会让整个面板缓存失效，每帧重绘该控件。`CrosshairGrid` 曾因此每帧画 450 次，帧数从三位数掉到两位数。
 
+### 4.5 宿主：`Layer` 与 `UiHost`
+
+页面之上还有一层：宿主。它持有若干个 `Layer`，把平台事件分发给它们。设计见 `UIHOST-DESIGN.md`，这里只记契约。
+
+```java
+public interface Layer {
+    Rect boundsOnScreen();      // 宿主【设计】空间，不是屏幕像素
+    boolean isOpen();
+    float scale();              // 层内设计单位 → 宿主设计单位
+    boolean contains(float x, float y);   // 默认用 bounds；非矩形命中区可覆写
+    void paint(UiPainter painter);
+    // 9 个输入方法，坐标是【层局部】空间
+    boolean pointerDown(float x, float y, int button, int modifiers);
+    ...
+    boolean hasFocus();
+    void clearFocus();
+    boolean hasPointerCapture();
+}
+```
+
+`UiHost` 一次实现 9 个输入方法。子类只提供：`layers()`、`toDesignX/Y()`、`ensureLaidOut()`、`paintHost()`。
+
+#### 三条必须遵守的约定
+
+**① `boundsOnScreen()` 报告的是宿主设计空间。** 宿主已经用 `toDesignX/Y` 把指针从屏幕坐标转成设计坐标，层再报告屏幕像素就会差一个减法——症状是每个控件都响应在光标左上，偏移量正好等于宿主原点。
+
+**② 层只在真的消费了事件时才返回 true。** `keyDown` 无条件返回 true 会让宿主以为事件已被处理，于是它不再执行"没层要就清焦点"的兜底。`TopBarControls` 曾因此让搜索框里的第一次 ESC 完全无效。
+
+例外：ESC 应该放行给宿主，除非层有非它不可的理由（`SettingsPage` 在弹窗打开时消费 ESC，否则宿主会关掉整个 GUI 并丢弃正在编辑的颜色）。
+
+**③ 非矩形的命中区要覆写 `contains()`。** 模块 chrome 接受侧栏和设置页上方的窄条，但不接受设置页本身——那是 L 形，单个 `Rect` 表达不了。
+
+#### 不在 `Layer` 里的东西
+
+- **弹窗**（取色器、下拉列表）属于层的内部状态，宿主看不见，也不该看见。
+- **锚定绘制顺序**（谁会盖住谁）是宿主的业务，`layers()` 的返回顺序就是绘制顺序。
+
 ---
 
 ## 5. 缓存
