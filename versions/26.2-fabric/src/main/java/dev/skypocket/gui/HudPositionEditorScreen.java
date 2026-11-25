@@ -225,6 +225,16 @@ public class HudPositionEditorScreen extends Screen {
     private static final int PANEL_TITLE_H = 16;
     private static final int PANEL_PAD = 8;
     private static final int PANEL_LINE_H = 11;
+
+    /**
+     * Scale applied to this card's text.
+     *
+     * <p>ClickGuiFonts lays text out at a design size of 18; the card was drawn with Minecraft's own
+     * Font at about 9, and its row height is 11. Drawing at the design size put 18px glyphs on an 11px
+     * row, so consecutive lines overlapped. Half the design size is the same number of pixels the card
+     * used to use, which is why the layout numbers below did not have to change.
+     */
+    private static final float CARD_TEXT_SCALE = 0.5f;
     /** Rows of text inside the panel: selection, position, size, two hint rows. */
     private static final int PANEL_ROWS = 5;
     /** Grid spacing in GUI pixels, and the colour of a normal line. */
@@ -741,6 +751,19 @@ public class HudPositionEditorScreen extends Screen {
 
     /** The floating card: selection, position, size and the hints. Drawn on top of everything. */
     private void drawPanel(GuiGraphicsExtractor graphics, ModConfig cfg) {
+        // Everything this card measures or draws happens at the card's own text scale, so the size it
+        // computes and the size it paints use one number. Push and pop around the whole body rather
+        // than per call: updatePanelSize measures the same strings drawPanel paints, and letting the
+        // two run at different scales is what made the card size itself from the wrong width.
+        ClickGuiFonts.pushScreenTextScale(CARD_TEXT_SCALE);
+        try {
+            drawPanelContents(graphics, cfg);
+        } finally {
+            ClickGuiFonts.popScreenTextScale();
+        }
+    }
+
+    private void drawPanelContents(GuiGraphicsExtractor graphics, ModConfig cfg) {
         updatePanelSize(cfg);
         ensurePanelPlaced();
         int x = panelX;
@@ -752,9 +775,13 @@ public class HudPositionEditorScreen extends Screen {
                 0xE6000000 | (ClickGuiStyle.cardFloat() & 0xFFFFFF));
         GuiPixels.fillRoundedTopRect(graphics, x, y, panelW, PANEL_TITLE_H, 4,
                 0xE6000000 | (ClickGuiStyle.cardFloatTitle() & 0xFFFFFF));
+        // Drawn through ClickGuiFonts, not the vanilla Font. The screen already pins the
+        // rasterisation scale to 1 for the rest of its drawing, so this is the same size as the panel
+        // sections and it shares their hinting and weight - one font for the whole GUI instead of two
+        // that nearly match.
         String title = Localization.tr("HUD 位置调整");
-        graphics.text(font, title, x + panelW / 2 - font.width(title) / 2,
-                y + (PANEL_TITLE_H - 8) / 2 + 1, ClickGuiStyle.text(), false);
+        ClickGuiFonts.drawText(graphics, title, x + panelW / 2 - ClickGuiFonts.width(title) / 2f,
+                y + (PANEL_TITLE_H - ClickGuiFonts.lineHeight()) / 2f, ClickGuiStyle.text(), false);
 
         List<String> rows = panelRows(cfg);
         int tx = x + PANEL_PAD;
@@ -794,28 +821,30 @@ public class HudPositionEditorScreen extends Screen {
     /** Sizes the card to its widest row, so nothing is ever clipped by a fixed width. */
     private void updatePanelSize(ModConfig cfg) {
         // The title counts too, otherwise a long one would stick out of the card.
-        int widest = font.width(Localization.tr("HUD 位置调整"));
+        int widest = ClickGuiFonts.width(Localization.tr("HUD 位置调整"));
         for (String row : panelRows(cfg)) {
-            widest = Math.max(widest, font.width(row));
+            widest = Math.max(widest, ClickGuiFonts.width(row));
         }
         panelW = Math.max(PANEL_MIN_W,
                 Math.min(Math.min(PANEL_MAX_W, width - 20), widest + PANEL_PAD * 2));
     }
 
     private void row(GuiGraphicsExtractor graphics, String text, int x, int y, int color) {
-        graphics.text(font, text, x, y, color, false);
+        ClickGuiFonts.drawText(graphics, text, x, y, color, false);
     }
 
     /** Shortens {@code text} with an ellipsis when it does not fit in {@code maxWidth}. */
     private String fit(String text, int maxWidth) {
-        if (font.width(text) <= maxWidth) {
+        // Measured with the same font that draws it. Mixing the two made the ellipsis land in the
+        // wrong place and the card size itself from a width nothing was painted at.
+        if (ClickGuiFonts.width(text) <= maxWidth) {
             return text;
         }
-        int ellipsis = font.width("…");
+        int ellipsis = ClickGuiFonts.width("…");
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < text.length(); i++) {
             char ch = text.charAt(i);
-            if (font.width(out.toString() + ch) + ellipsis > maxWidth) {
+            if (ClickGuiFonts.width(out.toString() + ch) + ellipsis > maxWidth) {
                 break;
             }
             out.append(ch);
