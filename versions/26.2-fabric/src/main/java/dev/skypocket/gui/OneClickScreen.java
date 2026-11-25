@@ -1247,12 +1247,13 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        // Layers already migrated are dispatched by the host; the panes not yet migrated are
-        // still routed by hand below. The host runs first: the top bar sits above the content area.
-        if (super.mouseDragged(event, deltaX, deltaY)) {
+        // The drawer floats above the layers and is not one of them, so it is asked first - the
+        // same order mouseClicked uses. Asking the host first meant a drag started inside the drawer
+        // was delivered to the page underneath, and the drawer never saw its own drag.
+        if (devDrawer.mouseDragged(event.x(), event.y(), width, height)) {
             return true;
         }
-        if (devDrawer.mouseDragged(event.x(), event.y(), width, height)) {
+        if (super.mouseDragged(event, deltaX, deltaY)) {
             return true;
         }
         layout();
@@ -1270,10 +1271,13 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
+        // Released before the host, and unconditionally: the drawer's router clears its pressed
+        // state here. Letting the host consume the release first left the drawer believing the
+        // button was still down, so the next press on it did nothing.
+        devDrawer.mouseReleased();
         if (super.mouseReleased(event)) {
             return true;
         }
-        devDrawer.mouseReleased();
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
@@ -1286,10 +1290,11 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        if (super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
+        // Drawer first, for the same reason as the press: it is above every layer.
+        if (devDrawer.mouseScrolled(mouseX, mouseY, verticalAmount, width, height)) {
             return true;
         }
-        if (devDrawer.mouseScrolled(mouseX, mouseY, verticalAmount, width, height)) {
+        if (super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount)) {
             return true;
         }
         // Expanded dropdown lists consume the wheel when the cursor is over them
