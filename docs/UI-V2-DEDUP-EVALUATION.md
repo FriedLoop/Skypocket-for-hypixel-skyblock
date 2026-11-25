@@ -28,7 +28,7 @@
 | `UiPage.cacheKey` | 简单 | 框架版：identity + renderRevision + scroll + configRevision |
 | `SettingsPage.pageCacheKey` | 简单 | 与框架版等价 |
 | `ModulesPage.pageCacheKey` | **复杂** | 除常规项外还混入 `hoverHash()` |
-| `OneClickScreen.shellCacheKey` | 中等 | 把鼠标位置和 scale 折进去 |
+| ~~`OneClickScreen.shellCacheKey`~~ | — | **已删除**：它随 `shellCache` 一起移除，见 `DEVELOPMENT.md` 的外壳说明 |
 
 **已查明 `ModulesPage` 为什么复杂**（原先的猜测是错的）：
 

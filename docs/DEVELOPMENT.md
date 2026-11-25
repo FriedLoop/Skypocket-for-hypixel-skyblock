@@ -198,7 +198,7 @@ util                               零依赖
 - **面板整体渲染到离屏纹理缓存（`GuiPanelCache`）**：MC 26.2 的 GUI 是"状态树 → 每帧重新排版/建网格"，所以面板每帧的 `fill`/`text` 次数就是每帧开销（卡片/设置多的页面几千个元素）。缓存机制：面板内容录进私有 `GuiRenderState` → **在主 GUI pass 之前**（`GameRendererMixin` 注入 `render` 的 HEAD，此时没有 pass 打开）用自建 `GuiRenderer` 烘进离屏目标 → 之后每帧只 1 次 blit。
   - **烘焙时的两个临时替换**（都在 `finally` 里还原）：把 `GameRenderer.mainRenderTarget` 指向离屏目标；把 `GameRenderState.windowRenderState` 的 `width/height/guiScale` 改成"面板就是整个窗口"。GUI 的投影和裁剪区**都来自这个 state**，所以面板自身坐标直接落在纹理像素上，不需要任何坐标补偿，1 纹素 = 1 屏幕像素。
   - **配置写入必须通知缓存**：`ConfigManager.revision()` 只在 `ConfigManager.save()` 里自增，而绝大多数设置是**裸写字段**（`cfg.x = v`），所以 `Setting`（`BooleanSetting`/`SliderSetting`/`ColorSetting`/`DropdownSetting`/`TextFieldSetting`/`GroupSetting`/`ChoiceSetting`，通过四个 `touch(...)` 重载）和 `Module.setEnabled` 都把 setter 包了一层 `ConfigManager.touch()`。**新增任何会改变面板外观的写入路径都必须走这层包装**，否则缓存不会失效：**实测症状**是"启用面板缓存后开关模块，按钮显示更新很慢（要等鼠标移动改变 hover 键、或 600 帧兜底才刷新），像卡了一下"；滑条同理（拖动过程中面板一直显示旧值）。
-  - **失效条件集中在各页自己的缓存键**（`ModulesPage.pageCacheKey()` / `SettingsPage.pageCacheKey()` / `OneClickScreen.shellCacheKey(lmx, lmy, scaleX, scaleY)` / `ColorPickerPanel.staticCacheKey(scaleX, scaleY)`）：翻页/选中分类/滚动/搜索/侧边栏高亮/配置 revision（`ConfigManager.revision()`）/内容 revision（语言、布局重建）/设备缩放/开合动画是否结束/聚焦控件 + **hover 签名**（按"光标在哪个元素上"而不是原始坐标，所以在一张卡片内移动鼠标不会使缓存失效；设置/功能详情页因为控件自己画 hover，退化到"聚焦控件 + 控件自身 hover 标志"）。
+  - **失效条件集中在各页自己的缓存键**（`ModulesPage.pageCacheKey()` / `SettingsPage.pageCacheKey()` / `ColorPickerPanel.staticCacheKey(scaleX, scaleY)`）：翻页/选中分类/滚动/搜索/侧边栏高亮/配置 revision（`ConfigManager.revision()`）/内容 revision（语言、布局重建）/设备缩放/开合动画是否结束/聚焦控件 + **hover 签名**（按"光标在哪个元素上"而不是原始坐标，所以在一张卡片内移动鼠标不会使缓存失效；设置/功能详情页因为控件自己画 hover，退化到"聚焦控件 + 控件自身 hover 标志"）。
     - **面板状态来自 `PanelView`**（翻页/选中/滚动/搜索/features）与页面自己的字段；**新增会改变面板像素的状态时，必须加进对应页的 `pageCacheKey()`** —— 漏了就是"偶发一帧旧画面"。
     - **随时间变化的东西必须在键里，否则会冻住**：缓存只在键变化时重烘，所以任何**自己会动**的控件（动画开关、进度、拖拽中的拾色器、闪烁提示）都必须让键跟着变 —— 现有两种处理：把动画值本身放进键（`sidebarHighlightY` 这样做的），或在设置页只哈希"聚焦控件 + 控件自身的 hover 标志"（此时控件内部状态变化仍会重烘）。新加动画控件时先想清楚它属于哪一种。
   - **抖动保护**：缓存键连续两帧都变（拖滑条、开合动画、拖面板）时**不烘焙、直接直绘**，避免"每帧多烘一次"比直绘还贵；内容稳定两帧后才录一次，下一帧 HEAD 烘焙。另有 600 帧的强制重录兜底。
@@ -357,7 +357,7 @@ util                               零依赖
 | 设置页（`SettingsPage`） | ✅ 已落地 |
 | 首页模块网格（`ModulesPage` + `SidebarRow` + `ModuleCard` + `NavButton`） | ✅ 已落地，页面内零 `graphics.*` 直绘 |
 | 宿主层（`ui/host/Layer`、`ui/mc/host/UiHost`、`gui/PaneLayer`） | ✅ 已落地；ClickGUI 的 4/5 个 pane 走它分发 |
-| **外壳 chrome**（面板背景 / 底栏） | ⬜ 仍是 `PanelRenderer` 手工绘制 + `shellCache` 整块烘焙；顶部条已改为 v2 控件树 |
+| **外壳 chrome**（面板背景 / 底栏） | ⬜ `PanelRenderer` 手工绘制，但不再经 `shellCache` 烘焙——改为按顺序实时绘制。顶部条已是 v2 控件树 |
 | 主题抽屉（`DevDrawer`） | ✅ 已落地，页面内零 `graphics.*` 直绘；**未接入 `UiHost`**（屏幕坐标 + 穿透 + 模态，见 `UIHOST-DESIGN.md` §9）|
 
 **已定方向**：
@@ -620,7 +620,8 @@ tools/check-kernel-purity.ps1   （由 build 的 checkKernelPurity 任务调用�
 - 颜色弹层、文本设置、准星自定义行均走 v2
 - HUD 右键设置弹窗也内嵌 `SettingsPage`
 - 首页（模块网格）**整个页面已是 v2 树**：`ModulesPage` 构建 `Box`/`ScrollView`/`TextField`/`NavButton`，侧边栏和卡片是真实的 `SidebarRow`/`ModuleCard`（`extends Control`）节点，命中由 `InputRouter` 按 `Control.contains()` 分派。该文件里已无任何直接 `graphics.fill/blit/text` 调用
-- **仍留在 v2 之外的是"外壳 chrome"三块**：面板背景（`PanelRenderer.drawBackground`）、顶部主 tabs（`drawTabs`）、底栏（`drawFooter`）。它们由 `OneClickScreen` 用 `GuiGraphicsExtractor` 手工绘制，整体经 `shellCache` 烘成一张纹理，命中走 `PanelInput.hit`。外壳是静态的、不参与布局，所以未迁移不影响正确性，只是与页面层风格不统一
+- **仍留在 v2 之外的是外壳的两块背景**：面板背景（`PanelRenderer.drawBackground`）和底栏（`drawFooter`）。它们由 `OneClickScreen` 用 `GuiGraphicsExtractor` 手工绘制，命中走 `PanelInput.hit`。外壳是静态的、不参与布局，所以未迁移不影响正确性，只是与页面层风格不统一。
+- **外壳不再烘成纹理**：`shellCache` 已删除。它缓存的内容是两个圆角矩形、两段文字和一个手绘齿轮，却要一张 1348×810 的离屏纹理、一个二十行的缓存键（其中一半是为了让被冻住的 hover 能失效）和一个 `nextStratum()` 补丁来防止那次 blit 被重排到实时背景下面。改为按顺序实时绘制后，补丁也不需要了
 - `OneClickScreen` 里唯一残留的直接绘制调用是标题栏 logo 的那一次 `graphics.blit`
 - 旧的设置视图与旧 widget 构建路径已删除
 

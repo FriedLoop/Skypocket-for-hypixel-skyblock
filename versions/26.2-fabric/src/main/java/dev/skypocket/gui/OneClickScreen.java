@@ -130,7 +130,6 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
     private final List<Feature> features;
     private final List<Setting> panelSettings;
     private final Feature panelFeature;
-    private final GuiPanelCache.Slot shellCache = new GuiPanelCache.Slot();
     private ModulesPage modulesPage;
     private float modulesPageHeight = -1f;
     private ModulesPage moduleChrome;
@@ -620,15 +619,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
                             ConfigManager.touch();
                         }),
                         new Setting.ActionSetting("UI v2 测试页", () ->
-                                Minecraft.getInstance().gui.setScreen(new DevUiTestScreen())),
-                        // Shell layering experiments. Not persisted: these answer whether the panel
-                        // still needs its own stratum and its shell texture, then go away.
-                        new Setting.BooleanSetting("实验：面板分层 stratum",
-                                dev.skypocket.render.PanelExperiment::panelStratum,
-                                dev.skypocket.render.PanelExperiment::setPanelStratum),
-                        new Setting.BooleanSetting("实验：外壳缓存",
-                                dev.skypocket.render.PanelExperiment::shellCache,
-                                dev.skypocket.render.PanelExperiment::setShellCache)
+                                Minecraft.getInstance().gui.setScreen(new DevUiTestScreen()))
                 ), false).subtitle("字体与渲染调试选项"),
 
                 new Setting.Header("HUD 字体", "选择 HUD 文本使用的字体；切换后立即重新测量"),
@@ -839,32 +830,17 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
     }
 
     private void drawPanel(GuiGraphicsExtractor graphics, int lmx, int lmy, float delta) {
-        // The cache records drawPanel with its own extractor. Start that recording with an empty
-        // scissor tracker so custom text states capture the scissor that belongs to this pass.
         dev.skypocket.render.ScissorTracker.reset(graphics);
-        // The translucent body must stay live: a cached body blit can be layered over live page
-        // content and grey it out. Cache only the non-overlapping tabs/footer strip.
         PanelRenderer.drawBackground(graphics, view());
-        // GUI blits can be reordered by their bounds; put the background in its own lower
-        // stratum so page content is always composited above it.
+        // The footer is drawn live, in sequence, with nothing cached above it.
         //
-        // Behind a switch while the claim is being tested: see PanelExperiment.panelStratum().
-        if (dev.skypocket.render.PanelExperiment.panelStratum()) {
-            graphics.nextStratum();
-        }
-        GuiPanelCache.PanelContent shellContent =
-                (shellGraphics, shellMouseX, shellMouseY, shellDelta) -> {
-                    // The main tabs are gone: the top bar carries only the logo and title, which are
-                    // drawn after the content so they stay above it. The footer holds the actions.
-                    PanelRenderer.drawFooter(shellGraphics, shellMouseX, shellMouseY);
-                };
-        boolean shellFromCache = dev.skypocket.render.PanelExperiment.shellCache()
-                && shellCache.draw(graphics, shellCacheKey(lmx, lmy, scaleX, scaleY),
-                        PANEL_W, PANEL_H, scaleX, scaleY, !animFinished(), shellContent,
-                        lmx, lmy, 0f);
-        if (!shellFromCache) {
-            shellContent.drawContent(graphics, lmx, lmy, 0f);
-        }
+        // It used to be baked into a full-panel offscreen texture and blitted back, which bought
+        // exactly this: two rounded rects, two labels and one drawn gear - against a 1348x810
+        // render target, a twenty-line cache key whose hover hit test existed only because the
+        // texture froze hover, and a nextStratum() call to stop that blit from being reordered
+        // under the live background. That trade is the wrong way round, and it is why the shell
+        // needed a stratum to begin with: the panel now paints back to front and needs none.
+        PanelRenderer.drawFooter(graphics, lmx, lmy);
 
         int top = contentTop();
         if (transitionProgress() < 1f) {
@@ -933,29 +909,6 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         ClickGuiFonts.drawTextWeighted(graphics, "SkyPocket", titleX, 26,
                 dev.skypocket.gui.widget.ClickGuiStyle.text(), true,
                 ClickGuiFonts.HEADING_SCALE, dev.skypocket.render.FontLab.Weight.SEMIBOLD);
-    }
-
-    private long shellCacheKey(int lmx, int lmy, float scaleX, float scaleY) {
-        long key = System.identityHashCode(this);
-        key = key * 31 + (settingsTabActive() ? 1 : 0);
-        key = key * 31 + ConfigManager.revision();
-        key = key * 31 + Math.round(ClickGuiFonts.deviceFactor() * 1000f);
-        key = key * 31 + Math.round(scaleX * 1000f);
-        key = key * 31 + Math.round(scaleY * 1000f);
-        // Hover is part of the key because the cached strip paints it. The main tabs used to be in
-        // here too; they are gone, so only the footer's two buttons remain.
-        int hover = 0;
-        int footerY = PanelGeometry.footerBtnY();
-        if (lmy >= footerY && lmy <= footerY + PanelGeometry.FOOTER_BTN_H) {
-            if (lmx >= PanelGeometry.FOOTER_BTN_X
-                    && lmx <= PanelGeometry.FOOTER_BTN_X + PanelGeometry.FOOTER_BTN_W) {
-                hover = 1;
-            } else if (lmx >= PanelGeometry.FOOTER_GEAR_X
-                    && lmx <= PanelGeometry.FOOTER_GEAR_X + PanelGeometry.FOOTER_GEAR_SIZE) {
-                hover = 2;
-            }
-        }
-        return key * 31 + hover;
     }
 
     /** The theme editor drawer (replaces the old studio screen; see {@link DevDrawer}). */
