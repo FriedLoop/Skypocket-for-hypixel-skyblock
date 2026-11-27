@@ -115,6 +115,22 @@ repositories {
     mavenCentral()
 }
 
+// Essential Loom adds a repository named "MavenCentralLWJGL" that takes exclusive ownership of
+// org.lwjgl resolution. For 26.2 it points at Maven Central, but 26.2 needs
+// org.lwjgl:lwjgl-freetype:3.4.1-mojang-2.15.0.3 - one of Mojang's own FreeType builds, which exists
+// only on libraries.minecraft.net. Because the repository claims the whole group, the "Mojang"
+// repository that loom also registers is never consulted, and the build fails saying the module does
+// not exist. 26.3 asks for 3.4.3-mojang-2.15.0 by a route that does not trip this, which is why only
+// one version broke, and why clearing the Gradle cache never helped: nothing was cached to begin with.
+//
+// Pointing that repository's URL at Mojang's host fixes it without touching resolution rules: the
+// name and its exclusivity stay as loom set them, only the host changes.
+repositories.whenObjectAdded {
+    if (this is MavenArtifactRepository && name == "MavenCentralLWJGL") {
+        setUrl("https://libraries.minecraft.net/")
+    }
+}
+
 dependencies {
     "minecraft"("com.mojang:minecraft:$mcVersion")
 
