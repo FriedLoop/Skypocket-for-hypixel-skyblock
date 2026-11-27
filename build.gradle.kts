@@ -360,7 +360,16 @@ tasks.register<Exec>("checkDocs") {
     isIgnoreExitValue = false
 }
 
-tasks.named("check") { dependsOn("checkDocs", "checkKernelPurity") }
+tasks.register<Exec>("checkIconAtlas") {
+    group = "verification"
+    description = "Fails if the icon atlas PNGs do not match the dimensions AtlasSize.java assumes."
+    val script = rootProject.file("tools/check-icon-atlas.ps1")
+    onlyIf { script.exists() }
+    commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.absolutePath)
+    isIgnoreExitValue = false
+}
+
+tasks.named("check") { dependsOn("checkDocs", "checkKernelPurity", "checkIconAtlas") }
 
 tasks.register("printSources") {
     doLast {

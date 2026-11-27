@@ -65,10 +65,24 @@ util                               零依赖
 
 违反这条方向会有两类后果：`config ↔ render` 曾经互相 import，导致两者都无法单独理解；`ui` 曾经 import `gui` 的 `InputKeys`，形成循环。
 
-**两个守卫都会在 `build` 时拦截违规**：
+**三个守卫都会在 `build` 时拦截违规**：
 
 - `checkDocs`（`tools/check-docs.ps1`）：`ui/` 不得 import `gui` / `config` / `feature` 等上层
 - `checkKernelPurity`（`tools/check-kernel-purity.ps1`）：`ui/` 不得取 `Minecraft` 服务（字节码级检查，见 §10.3）
+- `checkIconAtlas`（`tools/check-icon-atlas.ps1`）：图标图集 PNG 的实际尺寸必须等于 `AtlasSize.java` 的声明
+
+### 为什么 `checkIconAtlas` 存在
+
+图标功能上线时**同一个 bug 出了两次，方向相反**：
+
+| 次数 | 现象 | 原因 |
+|---|---|---|
+| 1 | 卡片图标被纵向拉长并截断 | `icons-large.png` 实际 1536×960，代码按正方形 1536×1536 算 v 坐标 |
+| 2 | 侧边栏和齿轮被压扁 | 修复时把"图集必须是正方形"套用到两个图集，`icons.png` 变成 768×768，而代码期望 768×256 |
+
+**两次都不是"代码写错"，而是"两个文件的数字必须一致，但没有机制保证"。** 而且两次的症状都是"图标变形"，不指向任何行号。
+
+现在数字只在 `AtlasSize.java` 声明一次，`IconAtlas` / `ModuleIcons` 都从那里取值，渲染脚本 `tools/render-icons.mjs` 断言同一组数字，构建时再校验一次实际 PNG。改图集就要动这两处，脚本和构建都会提醒。
 
 ### 2.1 每个包放什么、不放什么
 
