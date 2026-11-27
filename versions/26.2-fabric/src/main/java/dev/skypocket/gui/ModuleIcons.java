@@ -23,7 +23,8 @@ import java.util.Map;
  * rather than silently drawing someone else's glyph.
  */
 final class ModuleIcons {
-    private static final int CELL = AtlasSize.LARGE_CELL;
+    private static final int CELL = AtlasSize.largeCell();
+    private static final int PAD = AtlasSize.PADDING;
     private static final int COLUMNS = AtlasSize.LARGE_COLUMNS;
     private static final int ATLAS_W = AtlasSize.largeWidth();
     private static final int ATLAS_H = AtlasSize.largeHeight();
@@ -69,17 +70,21 @@ final class ModuleIcons {
         float x = box.x() + (box.width() - side) / 2f;
         float y = box.y() + (box.height() - side) / 2f;
 
-        int u = (cell % COLUMNS) * CELL;
-        int v = (cell / COLUMNS) * CELL;
+        int u = (cell % COLUMNS) * CELL + PAD;
+        int v = (cell / COLUMNS) * CELL + PAD;
+        int iconSize = CELL - PAD * 2;
         int w = Math.max(1, Math.round(side));
         int h = Math.max(1, Math.round(side));
 
         // The last two size arguments are the atlas dimensions, not the cell's. Passing CELL for both
         // normalises u/v against a cell-sized texture and samples the whole atlas into the
         // destination - the icon comes out as scrambled pixels.
+        // Drawn with the atlas already carrying its antialiasing - see render-icons.mjs. The
+        // linear-sampler overload exists but does not take effect here, so the edges are softened
+        // in the texture itself rather than by the sampler.
         mc.graphics().blit(
                 net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
-                Math.round(x), Math.round(y), u, v, w, h, CELL, CELL, ATLAS_W, ATLAS_H,
+                Math.round(x), Math.round(y), u, v, w, h, iconSize, iconSize, ATLAS_W, ATLAS_H,
                 color);
         return true;
     }

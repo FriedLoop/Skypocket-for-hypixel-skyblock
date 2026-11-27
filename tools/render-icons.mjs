@@ -60,6 +60,32 @@ const TEX_DIR = join(repo, 'versions', '26.2-fabric', 'src', 'main', 'resources'
 const STROKE = 2;
 
 /**
+ * Transparent margin around each cell's icon, in pixels.
+ *
+ * EXPERIMENT: the first attempt at small cells produced icons with transparent pinholes at fixed
+ * positions - the icons were drawn from empty pixels in the atlas. The cell was the size of the icon
+ * itself, leaving no margin, so any sub-pixel error in the sampled u/v landed in a neighbouring cell
+ * or in its blank edge. Padding gives that error somewhere harmless to land.
+ *
+ * This is a hypothesis under test, not a settled decision.
+ */
+const PADDING = 4;
+
+/**
+ * Gaussian blur applied to each cell before it goes into the atlas, in pixels of the cell.
+ *
+ * The panel draws these icons smaller than their cells with nearest-neighbour sampling, which turns
+ * resvg's antialiased edges back into hard ones - the icons read as staircases while the text, drawn
+ * through a linear sampler, did not. The linear-sampler blit overload was tried and had no visible
+ * effect on this pipeline, so the softening is baked into the texture instead: with a 1px blur the
+ * proportion of partial-alpha edge pixels doubles when sampled down to the display size.
+ *
+ * 1.0 is the smallest radius that measurably helps; beyond it the icons start to look out of focus
+ * rather than smooth.
+ */
+const BLUR = 1.0;
+
+/**
  * The atlas dimensions the Java side has baked in, as "WxH".
  *
  * Duplicated on purpose, and asserted below. The alternative - deriving the height at runtime from
@@ -67,8 +93,8 @@ const STROKE = 2;
  * invalidates every v coordinate, and the only symptom is icons drawn squashed or from the wrong
  * cell. Failing the render is louder and happens once, at the change.
  */
-const SMALL_EXPECTED = '768x256';
-const LARGE_EXPECTED = '1536x960';
+const SMALL_EXPECTED = '480x160';
+const LARGE_EXPECTED = '1552x970';
 
 /**
  * The small set: the footer settings button and the sidebar category rows.
@@ -77,7 +103,13 @@ const LARGE_EXPECTED = '1536x960';
  * inserting here without updating there shifts every icon.
  */
 const SMALL = {
-  cell: 128,
+  // The cell size is the size the icon is *displayed* at, not a larger source. See renderCell():
+  // the icon is rasterised at OVERSAMPLE times this and scaled down in software, because the game
+  // blits with nearest-neighbour - a 128px cell drawn at 24px threw away every antialiased pixel
+  // and produced the hard edges this set used to have.
+  // 72 = 24 x 3, for the same reason as the large set - see the note there.
+  cell: 72,
+  oversample: 4,
   columns: 6,
   out: join(TEX_DIR, 'icons.png'),
   icons: [
@@ -109,7 +141,16 @@ const SMALL = {
  *     splashes into fewer, and a compress metaphor says that in a way a droplet did not.
  */
 const LARGE = {
-  cell: 192,
+  // 186 = 62 x 3, an integer multiple of the size the icon is drawn at.
+  //
+  // The cell cannot be the draw size: the game samples with nearest-neighbour and the panel scales,
+  // so a cell that is only slightly larger than the target (74 for 62, a 1.19 ratio) makes some
+  // screen pixels skip a source pixel and others sample one twice. On a 1-2px stroke that reads as
+  // single-pixel pinholes and bumps at fixed positions - which is exactly what a 74px cell produced.
+  // A large integer reduction averages the error away instead, at the cost of the hard edges this
+  // was originally meant to fix; that trade is settled elsewhere.
+  cell: 186,
+  oversample: 4,
   // 8 columns -> 64 cells. The set has 35 icons; the spare room is deliberate, because a grid atlas
   // wastes whatever does not fit the grid and growing 36 -> 64 costs 4MB anyway. Going past 64 means
   // either a second atlas or a packing algorithm, which is a different order of complexity - see the
@@ -164,11 +205,28 @@ function prepare(svg) {
     .replace(/stroke-width="2"/g, `stroke-width="${STROKE}"`);
 }
 
-function render(svg, size) {
-  return new Resvg(svg, {
-    fitTo: { mode: 'width', value: size },
+/**
+ * Rasterises one cell: oversample, then reduce in software.
+ *
+ * <p>The second half is the point. Minecraft blits GUI textures with nearest-neighbour sampling, so
+ * a cell larger than the size it is drawn at loses all of its antialiasing - an atlas rendered at
+ * 192px and drawn at 62px measured 3% partially-transparent pixels, which is why the icons looked
+ * like staircases while the text, drawn through a linear-filtered sampler, did not.
+ *
+ * <p>Doing the reduction here means the cell arrives at the exact size it is used at, with 28-55%
+ * of its edge pixels in between. resvg still rasterises at 4x to give the downscale something to
+ * work with; reducing from a bare target-size render would just move the same problem.
+ */
+async function renderCell(sharp, svg, target, oversample) {
+  const big = new Resvg(svg, {
+    fitTo: { mode: 'width', value: target * oversample },
     background: 'rgba(0,0,0,0)',
-  }).render();
+  }).render().asPng();
+  const resized = sharp(big).resize(target, target, { kernel: 'lanczos3' });
+  // Blur after resizing, not before: blurring first and then reducing would average the blur away.
+  return BLUR > 0
+    ? resized.blur(BLUR).png().toBuffer()
+    : resized.png().toBuffer();
 }
 
 async function build(sharp, set, label) {
@@ -190,23 +248,26 @@ async function build(sharp, set, label) {
   // ever disagree. That is why the check below exists rather than a comment asking people to
   // remember: growing a set past its current row count changes every UV, and the failure at runtime
   // is "icons squashed", which does not point here.
+  // The cell is the icon plus its margin; the icon is drawn at `cell` and centred inside.
+  const paddedCell = cell + PADDING * 2;
   const rows = Math.ceil(icons.length / columns);
   const composites = [];
   const missing = [];
 
-  icons.forEach((icon, i) => {
+  for (let i = 0; i < icons.length; i++) {
+    const icon = icons[i];
     const file = join(SVG_DIR, `${icon.file}.svg`);
     if (!existsSync(file)) {
       missing.push(`${icon.name} (${icon.file}.svg)`);
-      return;
+      continue;
     }
     const svg = prepare(readFileSync(file, 'utf8'));
     composites.push({
-      input: render(svg, cell).asPng(),
-      left: (i % columns) * cell,
-      top: Math.floor(i / columns) * cell,
+      input: await renderCell(sharp, svg, cell, set.oversample),
+      left: (i % columns) * paddedCell + PADDING,
+      top: Math.floor(i / columns) * paddedCell + PADDING,
     });
-  });
+  }
 
   if (missing.length) {
     throw new Error(
@@ -214,10 +275,10 @@ async function build(sharp, set, label) {
       'Run tools/fetch-lucide.mjs to download them.');
   }
 
-  const base = sharp.default({
+  const base = sharp({
     create: {
-      width: columns * cell,
-      height: rows * cell,
+      width: columns * paddedCell,
+      height: rows * paddedCell,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
@@ -228,7 +289,7 @@ async function build(sharp, set, label) {
   writeFileSync(out, png);
 
   const expected = label === 'icons.png' ? SMALL_EXPECTED : LARGE_EXPECTED;
-  const actual = `${columns * cell}x${rows * cell}`;
+  const actual = `${columns * paddedCell}x${rows * paddedCell}`;
   const sizeNote = actual === expected ? '' : `  <-- EXPECTED ${expected}`;
   console.log(`  ${label.padEnd(12)} ${icons.length} icons -> ${actual}${sizeNote}`);
   if (actual !== expected) {
@@ -284,10 +345,11 @@ function writeJavaTable(largeSet) {
 }
 
 async function main() {
-  const sharp = await import('sharp').catch(() => null);
-  if (!sharp) {
+  const sharpMod = await import('sharp').catch(() => null);
+  if (!sharpMod) {
     throw new Error('This script needs `sharp`.\nRun: cd tools && npm install');
   }
+  const sharp = sharpMod.default;
   await build(sharp, SMALL, 'icons.png');
   await build(sharp, LARGE, 'icons-large.png');
   writeJavaTable(LARGE);

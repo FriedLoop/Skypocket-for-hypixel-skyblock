@@ -37,7 +37,8 @@ final class IconAtlas {
         LAYERS,
     }
 
-    private static final int CELL = AtlasSize.SMALL_CELL;
+    private static final int CELL = AtlasSize.smallCell();
+    private static final int PAD = AtlasSize.PADDING;
     private static final int COLUMNS = AtlasSize.SMALL_COLUMNS;
     private static final int ATLAS_W = AtlasSize.smallWidth();
     private static final int ATLAS_H = AtlasSize.smallHeight();
@@ -67,8 +68,9 @@ final class IconAtlas {
 
         int col = icon.ordinal() % COLUMNS;
         int row = icon.ordinal() / COLUMNS;
-        int u = col * CELL;
-        int v = row * CELL;
+        int u = col * CELL + PAD;
+        int v = row * CELL + PAD;
+        int iconSize = CELL - PAD * 2;
 
         // blit takes destination size in whole pixels; round outward so a fractional box still
         // covers the space it was given rather than leaving a hairline gap.
@@ -77,9 +79,12 @@ final class IconAtlas {
         // The last two size arguments are the atlas dimensions, not the cell's. Passing CELL for both
         // normalises the u/v against a 128x128 texture instead of the real 768x256 one, which samples
         // the whole atlas into the destination: the icon came out as scrambled pixels.
+        // Drawn with the atlas already carrying its antialiasing - see render-icons.mjs. The
+        // linear-sampler overload exists but does not take effect here, so the edges are softened
+        // in the texture itself rather than by the sampler.
         mc.graphics().blit(
                 net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, TEXTURE,
-                Math.round(x), Math.round(y), u, v, w, h, CELL, CELL, ATLAS_W, ATLAS_H,
+                Math.round(x), Math.round(y), u, v, w, h, iconSize, iconSize, ATLAS_W, ATLAS_H,
                 color);
     }
 }

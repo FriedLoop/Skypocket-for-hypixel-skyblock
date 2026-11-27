@@ -65,13 +65,17 @@ $sizeFile = Join-Path $java 'AtlasSize.java'
 if (-not (Test-Path $sizeFile)) {
     $failures.Add("缺少 AtlasSize.java")
 } else {
+    # A tile is the icon plus a transparent margin on each side. The margin is what keeps a
+    # sub-pixel sampling error from landing on a blank pixel, so it is part of the size.
+    $pad = Read-Constant $sizeFile 'PADDING'
+
     $sets = @(
         @{ Name = 'icons.png';
-           Cell = (Read-Constant $sizeFile 'SMALL_CELL')
+           Cell = (Read-Constant $sizeFile 'SMALL_ICON') + $pad * 2
            Cols = (Read-Constant $sizeFile 'SMALL_COLUMNS')
            Rows = (Read-Constant $sizeFile 'SMALL_ROWS') },
         @{ Name = 'icons-large.png';
-           Cell = (Read-Constant $sizeFile 'LARGE_CELL')
+           Cell = (Read-Constant $sizeFile 'LARGE_ICON') + $pad * 2
            Cols = (Read-Constant $sizeFile 'LARGE_COLUMNS')
            Rows = (Read-Constant $sizeFile 'LARGE_ROWS') }
     )
