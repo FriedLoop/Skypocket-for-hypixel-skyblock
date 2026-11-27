@@ -262,9 +262,6 @@ public class HudPositionEditorScreen extends Screen {
     /** What the mouse tests against - larger than the dot, so a 3 px square is still easy to grab. */
     private static final int HANDLE_HIT = 7;
 
-    /** The value may be larger than the bar (it rises above the top edge); this caps it. */
-    private static final float VALUE_MAX_SCALE = 3.0f;
-
     /** What one wheel notch changes the scale by: the same grid the sliders snap to. */
     private static final float WHEEL_STEP = ModConfig.SCALE_GRID;
     /** Resize mode 4: dragging a non-bar element's corner scales it. */

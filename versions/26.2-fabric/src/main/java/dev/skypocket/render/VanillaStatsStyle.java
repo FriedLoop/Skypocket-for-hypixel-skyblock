@@ -41,8 +41,6 @@ public final class VanillaStatsStyle {
 
     private static final Identifier HEART_CONTAINER =
             Identifier.withDefaultNamespace("hud/heart/container");
-    private static final Identifier HEART_CONTAINER_BLINKING =
-            Identifier.withDefaultNamespace("hud/heart/container_blinking");
     private static final Identifier HEART_FULL = Identifier.withDefaultNamespace("hud/heart/full");
     private static final Identifier HEART_HALF = Identifier.withDefaultNamespace("hud/heart/half");
     private static final Identifier HEART_ABSORBING_FULL =

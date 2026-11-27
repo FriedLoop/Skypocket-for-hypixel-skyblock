@@ -42,7 +42,6 @@ public final class AntialiasingRenderer {
     private static final int EDGE_THRESHOLD = 0;
     private static final int EDGE_THRESHOLD_MIN = 1;
     private static final int SUBPIX = 2;
-    private static final int SHARPEN = 3;
 
     /**
      * One-click strengths: edge threshold, threshold floor, sub-pixel amount.

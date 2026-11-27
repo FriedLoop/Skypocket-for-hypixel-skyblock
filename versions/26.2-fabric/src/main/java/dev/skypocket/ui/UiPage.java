@@ -501,17 +501,4 @@ public abstract class UiPage implements dev.skypocket.ui.host.Layer {
         return dev.skypocket.ui.input.InputKeys.isEscape(event);
     }
 
-    private static int keyModifiers(net.minecraft.client.input.KeyEvent event) {
-        int bits = 0;
-        if (event.hasShiftDown()) {
-            bits |= Modifiers.SHIFT;
-        }
-        if (event.hasControlDown()) {
-            bits |= Modifiers.CONTROL;
-        }
-        if (event.hasAltDown()) {
-            bits |= Modifiers.ALT;
-        }
-        return bits;
     }
-}

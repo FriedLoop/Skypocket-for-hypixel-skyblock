@@ -426,25 +426,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
 
 
 
-    private int canonicalKey(KeyEvent event) {
-        return InputKeys.canonical(event);
-    }
-
-    private int pageModifiers(KeyEvent event) {
-        int bits = 0;
-        if (event.hasShiftDown()) {
-            bits |= Modifiers.SHIFT;
-        }
-        if (event.hasControlDown()) {
-            bits |= Modifiers.CONTROL;
-        }
-        if (event.hasAltDown()) {
-            bits |= Modifiers.ALT;
-        }
-        return bits;
-    }
-
-    private int contentTop() {
+            private int contentTop() {
         // Every page starts at the same row now: the search box that used to sit above the content
         // moved into the top bar.
         return PanelGeometry.CONTENT_TOP;
@@ -759,10 +741,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
     }
 
     /** The current view with a different feature/scroll, for drawing the outgoing side. */
-    private PanelView viewWith(Feature feature, int paneScroll) {
-        return new PanelView(feature, selected, paneScroll, search, ModuleRegistry.features());
-    }
-    /** Browser-style history for the card pane: "" is the grid, otherwise a module id. */
+        /** Browser-style history for the card pane: "" is the grid, otherwise a module id. */
     private final java.util.ArrayDeque<String> backStack = new java.util.ArrayDeque<>();
     private final java.util.ArrayDeque<String> forwardStack = new java.util.ArrayDeque<>();
 
@@ -1184,15 +1163,8 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
         }
 
-        // The top bar is a layer now; the host gave it the press above.
-
-        // The homepage used to be handled here. It is a layer now, so the host above already gave it
-        // the press if it was under the pointer.
-
-        // The module chrome and the settings column are layers now; the host routed the press to
-        // whichever of them owned the point.
-
-        // Shell chrome is only the footer's two buttons now.
+        // The pages and the top bar are layers, so the host already offered them the press. What is
+        // left to route by hand is the shell's footer buttons.
         PanelInput.Hit hit = PanelInput.hit(lx, ly);
         switch (hit.kind()) {
             case FOOTER_BUTTON -> {
@@ -1213,27 +1185,12 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (!inBody(lx, ly)) {
             return false;
         }
-        // The settings column is a layer; the host routed the press to it.
         return super.mouseClicked(new MouseButtonEvent(lx, ly, event.buttonInfo()), doubled);
     }
 
 
 
-    private void showModules() {
-        if (viewingFeature == null) {
-            return;
-        }
-        if (modulesPage != null) {
-            modulesPage.clearHover();
-        }
-        // Goes through the same history as any other navigation, so Back returns to whatever was
-        // open rather than always landing on the grid.
-        backStack.push(currentId());
-        forwardStack.clear();
-        applyNavigation("");
-    }
-
-    private void showSettings() {
+        private void showSettings() {
         if (settingsTabActive()) {
             return;
         }
@@ -1259,11 +1216,8 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
-        // The top bar is a layer; the host already routed the drag.
-        // The homepage is a layer; the host already routed the move.
-        // The module chrome is a layer too, and it is the one that captures a drag that started on
-        // its sidebar; the host asked it before reaching here.
-        // The settings column is a layer; the host routed the drag.
+        // Every pane and the top bar are layers, so the host already routed the drag to whichever
+        // of them captured it; only the drawer's own drag handling is left above.
         float anim = animScale();
         return super.mouseDragged(new MouseButtonEvent(lx, ly, event.buttonInfo()),
                 deltaX / (scaleX * anim), deltaY / (scaleY * anim));
@@ -1281,10 +1235,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         layout();
         double lx = localX(event.x());
         double ly = localY(event.y());
-        // The top bar is a layer; the host already routed the release.
-        // The homepage is a layer; the host already routed the release.
-        // The module chrome is a layer; it released its own capture.
-        // The settings column is a layer; the host routed the release.
+        // Layers released their own captures inside the host.
         return super.mouseReleased(new MouseButtonEvent(lx, ly, event.buttonInfo()));
     }
 
@@ -1306,9 +1257,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
             // (outside the GUI, over the tab strip, or over the footer).
             return false;
         }
-        // The homepage is a layer; the host already routed the wheel.
-        // The module chrome is a layer; the host already offered it the wheel.
-        // The settings column is a layer; the host offered it the wheel.
+        // Layers were offered the wheel inside the host.
         scrollY -= (int) (verticalAmount * 20);
         clampScroll();
         rebuildSettingsWidgets();
@@ -1353,8 +1302,7 @@ public final class OneClickScreen extends dev.skypocket.ui.mc.host.UiHost {
         if (InputKeys.isControl(event)) {
             ctrlDown = false;
         }
-        // The module chrome is a layer; the host already offered it the key.
-        // The settings column is a layer; the host offered it the key.
+        // Layers were offered the key inside the host.
         return super.keyReleased(event);
     }
 

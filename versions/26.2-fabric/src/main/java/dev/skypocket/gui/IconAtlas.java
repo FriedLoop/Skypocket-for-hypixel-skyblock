@@ -23,7 +23,7 @@ import net.minecraft.resources.Identifier;
  * change needs no re-render.
  */
 final class IconAtlas {
-    /** Icons in atlas order. Adding one means adding it here and in render-icons.py. */
+    /** Icons in atlas order. Adding one means adding it here and in render-icons.mjs. */
     enum Icon {
         GEAR,
         PICKAXE,

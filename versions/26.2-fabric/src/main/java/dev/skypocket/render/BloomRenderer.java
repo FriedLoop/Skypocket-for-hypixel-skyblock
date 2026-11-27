@@ -19,10 +19,6 @@ import java.util.List;
  * actually looks at, so raising the grade's exposure makes things bloom.
  */
 public final class BloomRenderer {
-    /** Parameter order, shared by the shader's {@code BloomConfig} block and the template JSON. */
-    private static final int STRENGTH = 0;
-    private static final int THRESHOLD = 1;
-    private static final int RADIUS = 2;
 
     private static final LivePostChain CHAIN =
             new LivePostChain("post_effect/bloom.json", "BloomConfig");

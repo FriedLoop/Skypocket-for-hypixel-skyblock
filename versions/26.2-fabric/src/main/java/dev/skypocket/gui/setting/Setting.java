@@ -19,7 +19,6 @@ import java.util.function.Supplier;
 /** Declarative description of a single settings row in the Click GUI. UI v2 renders these directly. */
 public abstract class Setting {
     private static final int ROW_HEIGHT = 52;
-    private static final int CONTROL_HEIGHT = 40;
     private static final int SECTION_GAP = 16;
     private static final int SECTION_TITLE_HEIGHT = 28;
 
