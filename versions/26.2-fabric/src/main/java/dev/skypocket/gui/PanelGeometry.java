@@ -64,6 +64,17 @@ public final class PanelGeometry {
     // ---- sidebar ----
     public static final int SIDEBAR_W = 290;
     public static final int SIDEBAR_ITEM_H = 44;
+
+    /**
+     * Icon size in a sidebar row.
+     *
+     * <p>Same 24px the footer button uses, which is what the icon set is drawn for. The row is 44px
+     * tall, so this leaves 10px of air above and below.
+     */
+    public static final int SIDEBAR_ICON_SIZE = 24;
+
+    /** Gap between a sidebar row's icon and its label. */
+    public static final int SIDEBAR_ICON_GAP = 10;
     /** Top of the first sidebar row (below the tab bar). */
     public static final int SIDEBAR_TOP = TAB_BAR_H + 16;
 
@@ -112,6 +123,15 @@ public final class PanelGeometry {
     public static final int FOOTER_BTN_H = 36;
     /** Square, so its height and width are both {@link #FOOTER_BTN_H}. */
     public static final int FOOTER_GEAR_SIZE = FOOTER_BTN_H;
+
+    /**
+     * Gap between the gear button's edge and the icon inside it.
+     *
+     * <p>Leaves a 24px icon in a 36px button. 24 is the size the icon set is designed for: the
+     * sources are Lucide's 24-unit grid, and the atlas is rendered at that size. It is also the
+     * largest an icon can be in this button while staying clear of the rounded corners.
+     */
+    public static final int FOOTER_GEAR_INSET = 6;
     /** Gap between the two footer buttons. */
     public static final int FOOTER_BTN_GAP = 8;
     public static final int FOOTER_BTN_W =

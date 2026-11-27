@@ -100,3 +100,6 @@ LPT8
 lpt8
 LPT9
 lpt9
+
+# Development-only tooling (tools/). Not part of the mod build.
+tools/node_modules/

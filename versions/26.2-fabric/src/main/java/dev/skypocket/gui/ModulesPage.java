@@ -185,7 +185,7 @@ final class ModulesPage implements PaneLayer.Pane {
                 .build());
         rows.clear();
         highlightIndex = 0;
-        addSidebarRow(sidebar, null, 0f, false, false, host.selected() == null,
+        addSidebarRow(sidebar, Category.ALL, 0f, false, false, host.selected() == null,
                 () -> host.setSelected(null));
         for (Category category : Category.topLevel()) {
             boolean expanded = host.selected() != null && category.contains(host.selected());

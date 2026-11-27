@@ -1,0 +1,14 @@
+{
+  "name": "skypocket-tools",
+  "private": true,
+  "type": "module",
+  "description": "Development-time scripts. Not part of the mod build or the shipped jar.",
+  "scripts": {
+    "fetch-icons": "node fetch-lucide.mjs",
+    "render-icons": "node render-icons.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "sharp": "^0.34.4"
+  }
+}

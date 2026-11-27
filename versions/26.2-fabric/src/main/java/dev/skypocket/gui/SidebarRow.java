@@ -70,9 +70,22 @@ final class SidebarRow extends Control {
                     bounds().height()), ClickGuiStyle.controlRadius(), ClickGuiStyle.sidebarHover());
         }
 
-        String label = category == null ? Localization.tr("全部")
-                : Localization.tr(category.label());
-        painter.text(label, bounds().x() + 28f + indent,
+        // Every row reserves the icon column, even the "all" row which has no icon. Reserving it
+        // rather than collapsing it is what keeps the labels in one vertical line: without that the
+        // first row's text would sit 26px left of every other row's.
+        int iconSize = PanelGeometry.SIDEBAR_ICON_SIZE;
+        IconAtlas.Icon icon = category.icon();
+        float iconX = bounds().x() + 25f + indent;
+        if (icon != null) {
+            float iconY = bounds().y() + (bounds().height() - iconSize) / 2f;
+            IconAtlas.paint(painter, icon,
+                    new dev.skypocket.ui.Rect(iconX, iconY, iconSize, iconSize),
+                    selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
+        }
+        float textX = iconX + iconSize + PanelGeometry.SIDEBAR_ICON_GAP;
+
+        String label = Localization.tr(category.label());
+        painter.text(label, textX,
                 bounds().y() + (bounds().height() - painter.lineHeight()) / 2f,
                 selected ? ClickGuiStyle.text() : ClickGuiStyle.textDim());
         if (container) {

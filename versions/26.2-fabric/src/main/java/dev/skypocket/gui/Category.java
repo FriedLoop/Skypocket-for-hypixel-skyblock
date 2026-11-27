@@ -14,25 +14,47 @@ import java.util.List;
 public final class Category {
     private final String label;
     private final List<Category> children;
+    /** Icon shown in the sidebar, or null for nodes that have none (containers, the "all" row). */
+    private final IconAtlas.Icon icon;
+
+    /**
+     * The "show everything" node.
+     *
+     * <p>A Category rather than a null, so the row that renders it can carry an icon like every other
+     * row. It is deliberately absent from {@link #topLevel()}: it is not an activity domain, it is the
+     * absence of a filter, and including it there would make it selectable as one.
+     */
+    public static final Category ALL = new Category("全部", IconAtlas.Icon.LAYERS);
 
     /** Top-level activity domains. */
-    public static final Category HUD = new Category("HUD");
-    public static final Category MINING = new Category("挖矿");
-    public static final Category COMBAT = new Category("战斗");
-    public static final Category FISHING = new Category("钓鱼");
-    public static final Category ESP = new Category("ESP");
-    public static final Category RENDER = new Category("渲染");
-    public static final Category NOTIFICATION = new Category("通知");
-    public static final Category MOVEMENT = new Category("移动");
+    public static final Category HUD = new Category("HUD", IconAtlas.Icon.MONITOR);
+    public static final Category MINING = new Category("挖矿", IconAtlas.Icon.PICKAXE);
+    public static final Category COMBAT = new Category("战斗", IconAtlas.Icon.SWORDS);
+    public static final Category FISHING = new Category("钓鱼", IconAtlas.Icon.FISH);
+    public static final Category ESP = new Category("ESP", IconAtlas.Icon.RADAR);
+    public static final Category RENDER = new Category("渲染", IconAtlas.Icon.WIRE_CUBE);
+    public static final Category NOTIFICATION = new Category("通知", IconAtlas.Icon.BELL);
+    public static final Category MOVEMENT = new Category("移动", IconAtlas.Icon.ARROWS);
 
-    private Category(String label, Category... children) {
+    private Category(String label, IconAtlas.Icon icon, Category... children) {
         this.label = label;
+        this.icon = icon;
         this.children = List.of(children);
     }
 
     /** Localized display name key (Chinese literal). */
     public String label() {
         return label;
+    }
+
+    /**
+     * The icon for this node, or null when it has none.
+     *
+     * <p>Nullable rather than returning a placeholder: the "all" row and container rows are not
+     * activities and have no icon, and drawing a generic one for them would be noise.
+     */
+    public IconAtlas.Icon icon() {
+        return icon;
     }
 
     public List<Category> children() {

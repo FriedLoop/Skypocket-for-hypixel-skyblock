@@ -88,9 +88,14 @@ public final class PanelRenderer {
         int gearBg = gearHover ? ClickGuiStyle.buttonHover() : ClickGuiStyle.button();
         Rect gearBox = new Rect(FOOTER_GEAR_X, btnY, FOOTER_GEAR_SIZE, FOOTER_GEAR_SIZE);
         painter.surface(gearBox, ClickGuiStyle.controlRadius(), gearBg, 0);
-        // A drawn gear, not a glyph: neither Inter nor Noto Sans SC carries U+2699. The hole is
-        // punched with the button's own background, which is why the current fill is passed in.
-        GearIcon.paint(painter, gearBox, ClickGuiStyle.text(), gearBg);
+        // Blitted from the icon atlas, not drawn with primitives. The painted version faked rotation
+        // with axis-aligned rectangles and punched its hole with the background colour; at 24px that
+        // read as a smudge. See IconAtlas for where the icons come from and why they are rasterised.
+        IconAtlas.paint(painter, IconAtlas.Icon.GEAR,
+                new Rect(gearBox.x() + FOOTER_GEAR_INSET, gearBox.y() + FOOTER_GEAR_INSET,
+                        gearBox.width() - FOOTER_GEAR_INSET * 2,
+                        gearBox.height() - FOOTER_GEAR_INSET * 2),
+                ClickGuiStyle.text());
     }
 
     // ---- internals -------------------------------------------------------------------------
