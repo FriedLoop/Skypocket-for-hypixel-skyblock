@@ -103,8 +103,3 @@ lpt9
 
 # Development-only tooling (tools/). Not part of the mod build.
 tools/node_modules/
-
-# Local planning notes for the Meowtils / Furiah's Visuals port. Kept out of the
-# repository on purpose - see the owner. Ignored rather than merely left untracked,
-# so a `git add -A` cannot pick it up by accident.
-docs/porting/
