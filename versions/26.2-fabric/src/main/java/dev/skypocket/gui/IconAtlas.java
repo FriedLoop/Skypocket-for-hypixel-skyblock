@@ -37,20 +37,10 @@ final class IconAtlas {
         LAYERS,
     }
 
-    /** Pixels per cell in the source texture. */
-    private static final int CELL = 128;
-    /** Columns in the source texture; the row is derived from the ordinal. */
-    private static final int COLUMNS = 6;
-    /**
-     * Atlas size, which the blit needs as its texture dimensions - not the cell size.
-     *
-     * <p>Derived from the enum rather than written out: a hardcoded row count silently samples the
-     * wrong region as soon as a tenth icon is added, and the symptom (one icon showing a slice of
-     * another) does not obviously point at the constant.
-     */
-    private static final int ATLAS_W = COLUMNS * CELL;
-    private static final int ATLAS_H =
-            ((Icon.values().length + COLUMNS - 1) / COLUMNS) * CELL;
+    private static final int CELL = AtlasSize.SMALL_CELL;
+    private static final int COLUMNS = AtlasSize.SMALL_COLUMNS;
+    private static final int ATLAS_W = AtlasSize.smallWidth();
+    private static final int ATLAS_H = AtlasSize.smallHeight();
 
     private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(
             dev.skypocket.SkyPocketMod.MOD_ID, "textures/gui/sprites/ui/icons.png");

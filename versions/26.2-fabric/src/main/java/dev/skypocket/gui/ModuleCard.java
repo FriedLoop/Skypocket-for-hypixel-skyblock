@@ -107,19 +107,27 @@ final class ModuleCard extends Control {
         painter.fillRounded(bounds(), cardRadius, cardColor);
         painter.fillRounded(bounds(), cardRadius, cardColor);
 
-        Identifier tex = ModuleIcon.texture(feature.id());
-        if (!Minecraft.getInstance().getResourceManager().getResourceStack(tex).isEmpty()) {
-            mc.graphics().blit(RenderPipelines.GUI_TEXTURED, tex,
-                    (int) bounds().x() + CARD_PAD, (int) bounds().y() + CARD_PAD, 0, 0,
-                    ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
-        } else {
-            painter.fill(new Rect(bounds().x() + CARD_PAD, bounds().y() + CARD_PAD,
-                    ICON_SIZE, ICON_SIZE), ClickGuiStyle.accent());
-            String letter = feature.name().isEmpty() ? "?" : feature.name().substring(0, 1);
-            painter.text(letter,
-                    bounds().x() + CARD_PAD + (ICON_SIZE - painter.textWidth(letter)) / 2f,
-                    bounds().y() + CARD_PAD + (ICON_SIZE - painter.lineHeight()) / 2f,
-                    ClickGuiStyle.text());
+        Rect iconBox = new Rect(bounds().x() + CARD_PAD, bounds().y() + CARD_PAD,
+                ICON_SIZE, ICON_SIZE);
+        // Atlas first, then a per-module texture if one was dropped in, then the letter tile. The
+        // atlas covers every module that ships an icon, so the middle step only runs for a module
+        // someone added with its own artwork - see ModuleIcon.texture.
+        if (!ModuleIcons.paint(painter, feature.id(), iconBox, ClickGuiStyle.text())) {
+            Identifier tex = ModuleIcon.texture(feature.id());
+            if (!Minecraft.getInstance().getResourceManager().getResourceStack(tex).isEmpty()) {
+                mc.graphics().blit(RenderPipelines.GUI_TEXTURED, tex,
+                        (int) iconBox.x(), (int) iconBox.y(), 0, 0,
+                        ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            } else {
+                // Neither the atlas nor a per-module texture: a letter tile, so a newly added module
+                // is still identifiable before anyone gives it an icon.
+                painter.fill(iconBox, ClickGuiStyle.accent());
+                String letter = feature.name().isEmpty() ? "?" : feature.name().substring(0, 1);
+                painter.text(letter,
+                        iconBox.x() + (ICON_SIZE - painter.textWidth(letter)) / 2f,
+                        iconBox.y() + (ICON_SIZE - painter.lineHeight()) / 2f,
+                        ClickGuiStyle.text());
+            }
         }
 
         float markerX = bounds().x() + CARD_W - CARD_PAD - MARKER_SIZE;
